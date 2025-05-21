@@ -1,21 +1,22 @@
 // src/firebase/config.js
 
 // Suas credenciais Firebase fornecidas:
-// Estas credenciais são essenciais para o aplicativo se conectar ao seu projeto Firebase.
 const firebaseConfig = {
-    apiKey: "AIzaSyDwWSa_wZPieFpSU4CQNrP09h1TGVe6YvU",
+    apiKey: "AIzaSyDwWSa_wZPieFpSU4CQNrP09h1TGVe6YvU", // Mantenha suas credenciais reais
     authDomain: "controleresiduoshotel.firebaseapp.com",
     projectId: "controleresiduoshotel",
     storageBucket: "controleresiduoshotel.firebasestorage.app",
     messagingSenderId: "878082699301",
-    appId: "1:878082699301:web:2c34692d62577612240fcc"
+    appId: "1:878082699301:web:2c34692d62577612240fcc" // Este é o Measurement ID, não o que usamos para o caminho
 };
 
 // Variáveis globais fornecidas pelo ambiente Canvas (onde o app está rodando).
-// `__app_id`: ID único do seu aplicativo no ambiente Canvas.
-// `__initial_auth_token`: Token de autenticação inicial para o usuário no ambiente Canvas.
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
+// const __app_id_canvas = typeof __app_id !== 'undefined' ? __app_id : null; // Você pode manter isso se precisar do __app_id para outras finalidades
 
-// Exporta as configurações e variáveis de ambiente para serem usadas em outros arquivos.
-export { firebaseConfig, appId, initialAuthToken };
+// ATENÇÃO: Modificado para usar 'default-app-id' consistentemente para o caminho dos perfis de usuário.
+// Se os seus perfis de usuário no Firestore estão SEMPRE sob 'artifacts/default-app-id/users/',
+// então 'appId' deve ser 'default-app-id'.
+const appId = 'default-app-id';
+
+// Exporta as configurações e o appId modificado.
+export { firebaseConfig, appId };

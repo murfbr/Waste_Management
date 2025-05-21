@@ -1,20 +1,23 @@
 // src/components/Login.jsx
 
 import React, { useState, useContext } from 'react';
-import { signInAnonymously } from 'firebase/auth'; // Importa apenas a função de login anônimo
-import AuthContext from '../context/AuthContext'; // Importa o AuthContext (CORRIGIDO: sem chaves)
+import { signInWithEmailAndPassword } from 'firebase/auth'; // Importa a função de login com e-mail e senha
+import AuthContext from '../context/AuthContext'; // Importa o AuthContext
 import MessageBox from './MessageBox'; // Importa o componente MessageBox
 
 /**
  * Componente para a tela de login do aplicativo.
- * Atualmente, suporta apenas login anônimo.
+ * Agora suporta login com e-mail e senha.
  */
 function Login() {
     // Usa o contexto para acessar a instância de autenticação do Firebase e o estado de prontidão.
     const { auth, isAuthReady } = useContext(AuthContext);
-    // Estados locais para a mensagem de feedback e se é um erro.
+    // Estados locais para e-mail, senha, mensagem de feedback e se é um erro.
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
+    const [loadingLogin, setLoadingLogin] = useState(false); // Novo estado para indicar carregamento do login
 
     /**
      * Função interna para exibir mensagens de sucesso ou erro.
@@ -28,22 +31,40 @@ function Login() {
     };
 
     /**
-     * Lida com o processo de login anônimo.
+     * Lida com o processo de login com e-mail e senha.
+     * @param {Event} e - O evento de envio do formulário.
      */
-    const handleAnonymousLogin = async () => {
-        // Verifica se o serviço de autenticação está disponível e pronto.
+    const handleLogin = async (e) => {
+        e.preventDefault(); // Previne o recarregamento da página ao enviar o formulário
+
         if (!auth || !isAuthReady) {
             showMessage('Serviços de autenticação não prontos. Tente novamente.', true);
             return;
         }
+
+        if (!email || !password) {
+            showMessage('Por favor, preencha o e-mail e a senha.', true);
+            return;
+        }
+
+        setLoadingLogin(true); // Inicia o estado de carregamento
         try {
-            // Tenta realizar o login anônimo usando a instância 'auth' do Firebase.
-            await signInAnonymously(auth);
-            showMessage('Login anônimo realizado com sucesso!');
+            // Tenta realizar o login com e-mail e senha usando a instância 'auth' do Firebase.
+            await signInWithEmailAndPassword(auth, email, password);
+            showMessage('Login realizado com sucesso!');
+            // O AuthContext.Provider detectará a mudança de usuário e redirecionará.
         } catch (error) {
-            // Em caso de erro, exibe a mensagem de erro.
-            console.error('Erro no login anônimo:', error);
-            showMessage(`Erro no login anônimo: ${error.message}`, true);
+            console.error('Erro no login:', error);
+            let errorMessage = 'Erro ao fazer login. Verifique suas credenciais.';
+            // Mensagens de erro mais específicas do Firebase
+            if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
+                errorMessage = 'E-mail ou senha inválidos.';
+            } else if (error.code === 'auth/too-many-requests') {
+                errorMessage = 'Muitas tentativas de login. Tente novamente mais tarde.';
+            }
+            showMessage(errorMessage, true);
+        } finally {
+            setLoadingLogin(false); // Finaliza o estado de carregamento
         }
     };
 
@@ -51,21 +72,50 @@ function Login() {
         <div className="bg-white p-8 rounded-lg shadow-md max-w-md mx-auto text-center">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Bem-vindo ao Controle de Resíduos</h2>
             <p className="text-gray-600 mb-6">
-                Para continuar, faça login. Atualmente, apenas o login anônimo está disponível.
-                Futuramente, você poderá adicionar opções de login para clientes.
+                Faça login para acessar o aplicativo.
             </p>
+
             {/* Renderiza o componente MessageBox se houver uma mensagem */}
             <MessageBox message={message} isError={isError} />
-            <button
-                onClick={handleAnonymousLogin}
-                className="btn-primary w-full"
-                disabled={!isAuthReady} // Desabilita o botão se a autenticação não estiver pronta
-            >
-                Entrar como Anônimo
-            </button>
-            {/* Placeholder para futuras opções de login (comentado) */}
-            <div className="mt-4 text-gray-500 text-sm">
-                {/* <p>Ou faça login com e-mail e senha (futuramente)</p> */}
+
+            <form onSubmit={handleLogin} className="space-y-4">
+                <div className="form-group">
+                    <label htmlFor="email">E-mail:</label>
+                    <input
+                        type="email"
+                        id="email"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        required
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        placeholder="seu.email@exemplo.com"
+                    />
+                </div>
+                <div className="form-group">
+                    <label htmlFor="password">Senha:</label>
+                    <input
+                        type="password"
+                        id="password"
+                        value={password}
+                        onChange={(e) => setPassword(e.target.value)}
+                        required
+                        className="w-full p-2 border border-gray-300 rounded-md"
+                        placeholder="Sua senha"
+                    />
+                </div>
+                <button
+                    type="submit"
+                    className="btn-primary w-full"
+                    disabled={!isAuthReady || loadingLogin} // Desabilita o botão durante o carregamento ou se a autenticação não estiver pronta
+                >
+                    {loadingLogin ? 'Entrando...' : 'Entrar'}
+                </button>
+            </form>
+
+            <div className="mt-6 text-gray-600 text-sm">
+                <p>Não tem uma conta? Entre em contato com o administrador para criar uma.</p>
+                {/* Futuramente, um botão ou link para a tela de registro de usuários */}
+                {/* <button className="text-blue-600 hover:underline mt-2">Registrar-se</button> */}
             </div>
         </div>
     );

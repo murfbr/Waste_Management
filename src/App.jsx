@@ -1,10 +1,10 @@
 // src/App.jsx
 
-import React, { useState, useEffect, useContext } from 'react'; // Removido 'createContext' daqui
+import React, { useState, useEffect, useContext } from 'react';
 // Importa as instâncias do Firebase inicializadas
 import { app, db, auth } from './firebase/init';
-// Importa as configurações e variáveis de ambiente
-import { appId, initialAuthToken } from './firebase/config';
+// Importa as configurações e variáveis de ambiente (initialAuthToken removido)
+import { appId } from './firebase/config';
 // Importa funções de autenticação do Firebase
 import { signInAnonymously, signInWithCustomToken, onAuthStateChanged, signOut } from 'firebase/auth';
 // Importa funções do Firestore
@@ -16,86 +16,73 @@ import Login from './components/Login'; // Componente de login
 import WasteForm from './components/WasteForm'; // Componente do formulário de resíduos
 import WasteRecordsList from './components/WasteRecordsList'; // Componente da lista de registros de resíduos
 
-import AuthContext from './context/AuthContext'; // Importa o AuthContext AGORA COMO EXPORTAÇÃO PADRÃO
+// Importa o AuthContext e o AuthProvider do arquivo de contexto
+import AuthContext, { AuthProvider } from './context/AuthContext';
 
 // Componente principal do aplicativo React
 export default function App() {
-    // Estados para armazenar o usuário atual e se a autenticação foi inicializada
-    const [currentUser, setCurrentUser] = useState(null);
-    const [isAuthReady, setIsAuthReady] = useState(false); // Indica se a autenticação foi inicializada
+    // Renderiza o componente principal do aplicativo
+    return (
+        // AuthProvider envolve todo o aplicativo para fornecer o contexto de autenticação e Firebase
+        <AuthProvider>
+            <AppContent /> {/* Componente que contém a lógica de exibição baseada na autenticação */}
+        </AuthProvider>
+    );
+}
 
-    // useEffect para configurar o ouvinte de autenticação do Firebase
-    // Este hook é executado apenas uma vez, após a montagem inicial do componente.
-    useEffect(() => {
-        // onAuthStateChanged é crucial para reagir a logins/logouts
-        const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            if (user) {
-                // Usuário autenticado (pode ser anônimo ou outro método)
-                setCurrentUser(user);
-                setIsAuthReady(true);
-                console.log('Firebase Init Debug: Usuário autenticado:', user.uid);
-            } else {
-                // Nenhum usuário logado, tenta autenticar
-                setCurrentUser(null);
-                if (initialAuthToken) {
-                    // Tenta autenticar com o token personalizado do Canvas
-                    console.log('Firebase Init Debug: Tentando autenticar com token personalizado.');
-                    await signInWithCustomToken(auth, initialAuthToken);
-                } else {
-                    // Se não houver token, tenta autenticar anonimamente
-                    console.log('Firebase Init Debug: Tentando autenticar anonimamente.');
-                    await signInAnonymously(auth);
-                }
-                setIsAuthReady(true); // Autenticação tentada, agora está pronta
-            }
-        });
-
-        // Retorna uma função de limpeza para desinscrever o ouvinte quando o componente é desmontado
-        return () => unsubscribe();
-    }, []); // Array de dependências vazio significa que este efeito roda apenas uma vez
+// Novo componente para o conteúdo principal do aplicativo, que consome o AuthContext
+function AppContent() {
+    const { currentUser, isAuthReady, loadingAuth, auth, userProfile } = useContext(AuthContext);
 
     // Renderiza o componente principal do aplicativo
     return (
-        // AuthContext.Provider torna as instâncias do Firebase e o usuário disponíveis para todos os componentes filhos
-        <AuthContext.Provider value={{ app, db, auth, currentUser, isAuthReady, appId }}>
-            <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
-                <div className="container">
-                    {/* Exibe o ID do usuário se estiver autenticado */}
-                    {isAuthReady && currentUser && (
-                        <div className="mb-4 text-center text-sm text-gray-600">
-                            Seu ID de Usuário: <span className="font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded">{currentUser.uid}</span>
-                            {/* Botão de Logout */}
-                            <button
-                                onClick={() => signOut(auth)} // Usa a instância 'auth' importada
-                                className="ml-4 bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded-lg text-sm transition duration-200"
-                            >
-                                Sair
-                            </button>
-                        </div>
-                    )}
+        <div className="min-h-screen bg-gray-100 flex items-center justify-center p-4">
+            <div className="container">
+                {/* Exibe o ID do usuário e o botão de Logout se estiver autenticado */}
+                {isAuthReady && currentUser && (
+                    <div className="mb-4 text-center text-sm text-gray-600">
+                        Seu ID de Usuário: <span className="font-mono text-gray-800 bg-gray-100 px-2 py-1 rounded">{currentUser.uid}</span>
+                        {userProfile && userProfile.role && (
+                            <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs font-semibold rounded-full">
+                                Nível: {userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)} {/* Exibe o nível de acesso */}
+                            </span>
+                        )}
+                        {/* Botão de Logout */}
+                        <button
+                            onClick={() => signOut(auth)} // Usa a instância 'auth' importada do contexto
+                            className="ml-4 bg-red-500 hover:bg-red-600 text-white font-semibold py-1 px-3 rounded-lg text-sm transition duration-200"
+                        >
+                            Sair
+                        </button>
+                    </div>
+                )}
 
-                    {/* Renderiza o componente de Login ou o WasteTracker, dependendo do estado de autenticação */}
-                    {!isAuthReady ? (
-                        <div className="text-center text-gray-600 text-lg">
-                            Carregando aplicativo...
-                        </div>
-                    ) : currentUser ? (
-                        // Se o usuário estiver autenticado, renderiza o WasteTracker principal
-                        <WasteTrackerContent /> // Renomeado para evitar conflito com o componente WasteTracker
-                    ) : (
-                        // Se não estiver autenticado, renderiza a tela de Login
-                        <Login />
-                    )}
-                </div>
+                {/* Renderiza o conteúdo do aplicativo com base no estado de autenticação */}
+                {loadingAuth ? (
+                    <div className="text-center text-gray-600 text-lg">
+                        Carregando aplicativo...
+                    </div>
+                ) : currentUser ? (
+                    // Se o usuário estiver autenticado, renderiza o WasteTracker principal
+                    <WasteTrackerContent />
+                ) : (
+                    // Se não estiver autenticado, renderiza a tela de Login
+                    <Login />
+                )}
             </div>
-        </AuthContext.Provider>
+        </div>
     );
 }
+
 
 // Novo componente para o conteúdo principal do rastreador de resíduos
 // Isso separa a lógica de exibição do formulário e lista do componente App
 function WasteTrackerContent() {
-    const { db, currentUser, appId } = useContext(AuthContext);
+    const { db, currentUser, appId, userProfile } = useContext(AuthContext); // Adicionado userProfile
+// --- ADICIONE ESTA LINHA ABAIXO ---
+    console.log('DEBUG: WasteTrackerContent - userProfile recebido:', userProfile);
+    console.log('DEBUG: WasteTrackerContent - userProfile.role:', userProfile ? userProfile.role : 'N/A');
+    // --- FIM DA ADIÇÃO ---
 
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
@@ -139,9 +126,10 @@ function WasteTrackerContent() {
 
     // Função para lidar com o envio do formulário de resíduos
     const handleAddWasteRecord = async (newRecordData) => {
-        if (!currentUser) {
-            showMessage('Você precisa estar logado para registrar resíduos.', true);
-            return;
+        // Verifica se o usuário tem permissão para adicionar (ex: Master ou Gerencial)
+        if (!currentUser || (userProfile && (userProfile.role !== 'master' && userProfile.role !== 'gerencial' && userProfile.role !== 'simples'))) {
+            showMessage('Você não tem permissão para registrar resíduos.', true);
+            return false;
         }
         try {
             await addDoc(collection(db, `artifacts/${appId}/public/data/wasteRecords`), {
@@ -160,6 +148,11 @@ function WasteTrackerContent() {
 
     // Função para lidar com a exclusão de um registro
     const handleDeleteRecord = async (recordId) => {
+        // Verifica se o usuário tem permissão para excluir (ex: apenas Master)
+        if (!currentUser || (userProfile && userProfile.role !== 'master')) {
+            showMessage('Você não tem permissão para excluir registros.', true);
+            return;
+        }
         if (window.confirm('Tem certeza que deseja excluir este registro?')) {
             try {
                 const recordRef = doc(db, `artifacts/${appId}/public/data/wasteRecords`, recordId);
@@ -172,24 +165,49 @@ function WasteTrackerContent() {
         }
     };
 
+    // Renderização condicional baseada no nível de acesso
+    const canAccessPesagem = userProfile && (userProfile.role === 'master' || userProfile.role === 'gerencial' || userProfile.role === 'simples');
+    const canAccessDashboards = userProfile && (userProfile.role === 'master' || userProfile.role === 'gerencial');
+
     return (
-        <>
+        <div className="bg-white p-8 rounded-lg shadow-md max-w-3xl mx-auto">
             <h1 className="text-3xl font-bold text-center text-gray-800 mb-6">Controle de Resíduos do Hotel</h1>
 
             {/* Componente de Mensagens */}
             <MessageBox message={message} isError={isError} />
 
-            {/* Componente do Formulário de Resíduos */}
-            <WasteForm onAddWaste={handleAddWasteRecord} />
+            {/* Formulário de Pesagem (visível para Master, Gerencial, Simples) */}
+            {canAccessPesagem && (
+                <>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4">Registro de Pesagem</h2>
+                    <WasteForm onAddWaste={handleAddWasteRecord} />
+                </>
+            )}
 
-            <h2 className="text-2xl font-bold text-gray-800 mb-4">Registros Recentes</h2>
-            {/* Componente da Lista de Registros de Resíduos */}
-            <WasteRecordsList
-                records={wasteRecords}
-                loading={loadingRecords}
-                onDelete={handleDeleteRecord}
-                showMessage={showMessage} // Passa a função showMessage para o componente filho
-            />
-        </>
+            {/* Dashboards (visível para Master, Gerencial) */}
+            {canAccessDashboards && (
+                <>
+                    <h2 className="text-2xl font-bold text-gray-800 mb-4 mt-8">Dashboards (Em Desenvolvimento)</h2>
+                    <p className="text-gray-600 mb-4">Esta seção exibirá gráficos e análises dos dados de resíduos.</p>
+                    {/* Aqui futuramente entrarão os componentes de dashboard */}
+                </>
+            )}
+
+            <h2 className="text-2xl font-bold text-gray-800 mb-4 mt-8">Registros Recentes</h2>
+            {/* Componente da Lista de Registros de Resíduos (visível para Master, Gerencial, Simples) */}
+            {canAccessPesagem && ( // A lista de registros é parte da visão de pesagem
+                <WasteRecordsList
+                    records={wasteRecords}
+                    loading={loadingRecords}
+                    onDelete={handleDeleteRecord}
+                    showMessage={showMessage}
+                    userRole={userProfile ? userProfile.role : null} // Passa o nível de acesso para a lista
+                />
+            )}
+
+            {!canAccessPesagem && !canAccessDashboards && (
+                <p className="text-center text-gray-600">Você não tem permissão para acessar esta funcionalidade.</p>
+            )}
+        </div>
     );
 }
