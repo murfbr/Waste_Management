@@ -3,131 +3,153 @@
 import React, { useState } from 'react';
 import MessageBox from './MessageBox'; // Importa o componente MessageBox
 
+// Ícones de exemplo (opcional, pode instalar react-icons: npm install react-icons)
+// import { FaTrashAlt, FaRecycle, FaBan } from 'react-icons/fa';
+
 /**
- * Componente para o formulário de registro de resíduos.
+ * Componente para o formulário de registo de resíduos.
  *
  * @param {object} props - As propriedades do componente.
- * @param {function} props.onAddWaste - Função de callback para adicionar um novo registro de resíduo.
+ * @param {function} props.onAddWaste - Função de callback para adicionar um novo registo de resíduo.
  */
 function WasteForm({ onAddWaste }) {
     // Estados locais para os campos do formulário
     const [area, setArea] = useState('');
-    const [wasteType, setWasteType] = useState('');
+    const [selectedWasteType, setSelectedWasteType] = useState('');
     const [weight, setWeight] = useState('');
     // Estados para a mensagem de feedback do formulário
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
+    const [submitting, setSubmitting] = useState(false);
 
-    // Listas predefinidas das áreas do hotel e tipos de resíduos
     const areas = [
-        "Cozinha",
-        "Lavanderia",
-        "Quartos",
-        "Restaurante",
-        "Eventos",
-        "Manutenção",
-        "Escritório",
-        "Outros"
+        "Cozinha", "Lavanderia", "Quartos", "Restaurante"
     ];
 
-    const wasteTypes = [
-        "Reciclável",
-        "Não Reciclável",
-        "Rejeito"
+    const wasteTypeOptions = [
+        { label: "Reciclável", value: "Reciclável", icon: null /* <FaRecycle className="mr-2" /> */ },
+        { label: "Não Reciclável", value: "Não Reciclável", icon: null /* <FaTrashAlt className="mr-2" /> */ },
+        { label: "Rejeito", value: "Rejeito", icon: null /* <FaBan className="mr-2" /> */ }
     ];
 
-    /**
-     * Função interna para exibir mensagens de sucesso ou erro.
-     * @param {string} msg - A mensagem a ser exibida.
-     * @param {boolean} error - True se a mensagem for de erro, false para sucesso.
-     */
     const showMessage = (msg, error = false) => {
         setMessage(msg);
         setIsError(error);
-        setTimeout(() => setMessage(''), 5000); // Esconde a mensagem após 5 segundos
+        setTimeout(() => setMessage(''), 5000);
     };
 
-    /**
-     * Lida com o envio do formulário de registro de resíduos.
-     * @param {Event} e - O evento de envio do formulário.
-     */
     const handleSubmit = async (e) => {
-        e.preventDefault(); // Previne o comportamento padrão de recarregar a página
+        e.preventDefault();
+        // Substitui vírgula por ponto para o parseFloat, se o utilizador digitar com vírgula
+        const weightString = String(weight).replace(',', '.');
+        const parsedWeight = parseFloat(weightString);
 
-        const parsedWeight = parseFloat(weight);
-
-        // Validação dos campos
-        if (!area || !wasteType || isNaN(parsedWeight) || parsedWeight <= 0) {
-            showMessage('Por favor, preencha todos os campos corretamente.', true);
+        if (!selectedWasteType) {
+            showMessage('Por favor, selecione um tipo de resíduo.', true);
+            return;
+        }
+        if (!area) {
+            showMessage('Por favor, selecione uma área do hotel.', true);
+            return;
+        }
+        if (isNaN(parsedWeight) || parsedWeight <= 0) {
+            showMessage('Por favor, insira um peso válido.', true);
             return;
         }
 
-        // Chama a função onAddWaste (passada como prop do componente pai)
-        // e espera pelo resultado para saber se o registro foi bem-sucedido.
-        const success = await onAddWaste({ area, wasteType, weight: parsedWeight });
+        setSubmitting(true);
+        const success = await onAddWaste({ area, wasteType: selectedWasteType, weight: parsedWeight });
 
         if (success) {
-            // Limpa o formulário apenas se o registro foi bem-sucedido no Firebase
             setArea('');
-            setWasteType('');
+            setSelectedWasteType('');
             setWeight('');
         }
-        // A mensagem de sucesso/erro é tratada diretamente pela função onAddWaste no componente pai
-        // e repassada para o MessageBox via props.
+        setSubmitting(false);
     };
 
     return (
-        <form onSubmit={handleSubmit} className="mb-8 p-6 bg-gray-50 rounded-lg shadow-inner">
-            {/* Componente de Mensagens para feedback do formulário */}
+        <form onSubmit={handleSubmit} className="space-y-8"> {/* Aumentado o space-y geral */}
             <MessageBox message={message} isError={isError} />
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
-                <div className="form-group">
-                    <label htmlFor="area">Área do Hotel:</label>
-                    <select
-                        id="area"
-                        value={area}
-                        onChange={(e) => setArea(e.target.value)}
+            {/* Campo de Peso (Destacado no topo) */}
+            <div className="form-group"> {/* Removido text-center daqui */}
+                <label htmlFor="weight" className="sr-only">Peso Total (kg):</label>
+                <div className="flex items-baseline justify-center"> {/* Flex para alinhar input e "kg" */}
+                    <input
+                        type="text" // Alterado para text para melhor controlo da vírgula e formatação
+                        inputMode="decimal" // Ajuda em teclados móveis
+                        id="weight"
+                        value={weight}
+                        onChange={(e) => {
+                            // Permite apenas números, ponto e vírgula. Substitui vírgula por ponto internamente se necessário.
+                            const val = e.target.value;
+                            if (/^[0-9]*[.,]?[0-9]{0,2}$/.test(val) || val === "") {
+                                setWeight(val);
+                            }
+                        }}
                         required
-                    >
-                        <option value="">Selecione uma área</option>
-                        {areas.map((a) => (
-                            <option key={a} value={a}>{a}</option>
-                        ))}
-                    </select>
-                </div>
-
-                <div className="form-group">
-                    <label htmlFor="wasteType">Tipo de Resíduo:</label>
-                    <select
-                        id="wasteType"
-                        value={wasteType}
-                        onChange={(e) => setWasteType(e.target.value)}
-                        required
-                    >
-                        <option value="">Selecione o tipo</option>
-                        {wasteTypes.map((type) => (
-                            <option key={type} value={type}>{type}</option>
-                        ))}
-                    </select>
+                        placeholder="0,00"
+                        // Ajustado padding, max-width e removido w-full para centralização via flex
+                        className="w-auto max-w-[200px] p-2 border-2 border-gray-300 rounded-xl text-7xl font-bold text-center text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none"
+                    />
+                    <span className="text-4xl font-semibold text-gray-600 ml-2">kg</span>
                 </div>
             </div>
 
-            <div className="form-group mb-6">
-                <label htmlFor="weight">Peso Total (kg):</label>
-                <input
-                    type="number"
-                    id="weight"
-                    step="0.01"
-                    min="0"
-                    value={weight}
-                    onChange={(e) => setWeight(e.target.value)}
+            {/* Botões para Tipo de Resíduo */}
+            <div className="form-group">
+                <label className="block text-lg font-medium text-gray-700 mb-3 text-center">Tipo de Resíduo</label>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 max-w-lg mx-auto"> {/* max-w-lg e mx-auto para centralizar os botões */}
+                    {wasteTypeOptions.map((option) => (
+                        <button
+                            key={option.value}
+                            type="button"
+                            onClick={() => setSelectedWasteType(option.value)}
+                            className={`
+                                flex items-center justify-center w-full p-3 border-2 rounded-xl 
+                                text-base font-semibold transition-all duration-150 ease-in-out
+                                focus:outline-none focus:ring-2 focus:ring-offset-2
+                                ${selectedWasteType === option.value
+                                    ? 'bg-indigo-600 text-white border-indigo-600 ring-indigo-500 shadow-lg' // Estilo selecionado
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400' // Estilo padrão
+                                }
+                            `}
+                        >
+                            {option.icon}
+                            {option.label}
+                        </button>
+                    ))}
+                </div>
+            </div>
+
+            {/* Dropdown para Área do Hotel */}
+            <div className="form-group max-w-lg mx-auto"> {/* max-w-lg e mx-auto para centralizar */}
+                <label htmlFor="area" className="block text-lg font-medium text-gray-700 mb-2 text-center">Área do Hotel</label>
+                <select
+                    id="area"
+                    value={area}
+                    onChange={(e) => setArea(e.target.value)}
                     required
-                    placeholder="Ex: 10.50"
-                />
+                    className="w-full p-3 border-2 border-gray-300 rounded-xl bg-white text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                >
+                    <option value="">Selecione uma área</option>
+                    {areas.map((a) => (
+                        <option key={a} value={a}>{a}</option>
+                    ))}
+                </select>
             </div>
 
-            <button type="submit" className="btn-primary w-full">Registrar Resíduo</button>
+            {/* Botão de Submissão */}
+            <div className="flex justify-center pt-2"> {/* Div para centralizar o botão */}
+                <button 
+                    type="submit"
+                    className="bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-3 px-10 rounded-xl shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70" // Ajustado padding e removido w-full
+                    disabled={submitting}
+                >
+                    {submitting ? 'A Registar...' : 'Registar Pesagem'}
+                </button>
+            </div>
         </form>
     );
 }
