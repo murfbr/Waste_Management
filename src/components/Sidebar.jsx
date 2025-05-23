@@ -90,8 +90,8 @@ export default function Sidebar({ isOpenOnMobile, toggleMobileSidebar }) {
                 <>
                   <hr className="my-2 border-gray-600" />
                   <p className="px-4 py-2 text-xs text-gray-400 uppercase">Administração</p>
-                  <NavLink to="/admin/usuarios">Gerir Utilizadores</NavLink>
-                  <NavLink to="/admin/hoteis">Gerir Hotéis</NavLink>
+                  <NavLink to="/admin/usuarios">Gerir Usuários</NavLink>
+                  <NavLink to="/admin/clientes">Gerir Clientes</NavLink>
                   <NavLink to="/admin/empresas-coleta">Gerir Empresas de Coleta</NavLink>
                 </>
               )}

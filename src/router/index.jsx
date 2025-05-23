@@ -12,7 +12,7 @@ import Login from '../components/Login';
 import PaginaLancamento from '../pages/PaginaLancamento';
 import PaginaDashboard from '../pages/PaginaDashboard';
 import PaginaAdminUsuarios from '../pages/PaginaAdminUsuarios';
-import PaginaAdminHoteis from '../pages/PaginaAdminHoteis';
+import PaginaAdminClientes from '../pages/PaginaAdminClientes.jsx';
 import PaginaAdminEmpresasColeta from '../pages/PaginaAdminEmpresasColeta'; // Importação que faltava
 import PaginaNotFound from '../pages/PaginaNotFound';
 import PaginaAcessoNegado from '../pages/PaginaAcessoNegado'; // Importação que faltava
@@ -64,7 +64,7 @@ export default function AppRoutes() {
 
         {/* Por enquanto, sem o ProtectedRoute explícito, apenas agrupadas: */}
         <Route path="admin/usuarios" element={<PaginaAdminUsuarios />} />
-        <Route path="admin/hoteis" element={<PaginaAdminHoteis />} />
+        <Route path="admin/clientes" element={<PaginaAdminClientes />} />
         <Route path="admin/empresas-coleta" element={<PaginaAdminEmpresasColeta />} /> {/* Rota que faltava */}
       </Route>
 

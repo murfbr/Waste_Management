@@ -1,125 +1,220 @@
+/* Estilos Base */
+:root {
+  /* Definição das Cores Globais */
+  --color-primary-600: #2563eb; 
+  --color-primary-700: #1d4ed8; 
+  
+  --color-secondary-bg: #ffffff;
+  --color-secondary-text: #374151;
+  --color-secondary-border: #d1d5db; /* Cinza para bordas de input */
+  --color-secondary-hover-bg: #f3f4f6;
 
-        /* Estilos CSS personalizados (copiados do seu style.css anterior) */
-        body {
-            font-family: 'Inter', sans-serif;
-            background-color: #f3f4f6;
-        }
-        .container {
-            max-width: 900px;
-            margin: 2rem auto;
-            padding: 1.5rem;
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: #374151;
-        }
-        .form-group select,
-        .form-group input[type="number"] {
-            width: 100%;
-            padding: 0.75rem;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 1rem;
-            color: #374151;
-            background-color: #f9fafb;
-            transition: border-color 0.2s ease-in-out;
-        }
-        .form-group select:focus,
-        .form-group input[type="number"]:focus {
-            outline: none;
-            border-color: #3b82f6;
-            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
-        }
-        .btn-primary {
-            background-color: #2563eb;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .btn-primary:hover {
-            background-color: #1d4ed8;
-            transform: translateY(-1px);
-        }
-        .btn-primary:active {
-            transform: translateY(0);
-        }
-        .btn-export {
-            background-color: #10b981;
-            color: white;
-            padding: 0.75rem 1.5rem;
-            border-radius: 8px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: background-color 0.2s ease-in-out, transform 0.1s ease-in-out;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-        }
-        .btn-export:hover {
-            background-color: #059669;
-            transform: translateY(-1px);
-        }
-        .btn-export:active {
-            transform: translateY(0);
-        }
-        .message-box {
-            background-color: #d1fae5;
-            color: #065f46;
-            padding: 1rem;
-            border-radius: 8px;
-            margin-bottom: 1rem;
-            display: block; /* Alterado para block para ser visível por padrão quando há mensagem */
-            font-weight: 500;
-            border: 1px solid #a7f3d0;
-        }
-        .message-box.error {
-            background-color: #fee2e2;
-            color: #991b1b;
-            border: 1px solid #fca5a5;
-        }
-        .record-item {
-            background-color: #f9fafb;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5rem;
-        }
-        .record-item strong {
-            color: #1f2937;
-        }
-        .record-item span {
-            color: #4b5563;
-            font-size: 0.9rem;
-        }
-        .record-item .delete-btn {
-            background-color: #ef4444;
-            color: white;
-            padding: 0.3rem 0.7rem;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: background-color 0.2s ease-in-out;
-            align-self: flex-end;
-        }
-        .record-item .delete-btn:hover {
-            background-color: #dc2626;
-        }
-        @media (max-width: 768px) {
-            .container {
-                margin: 1rem;
-                padding: 1rem;
-            }
-            .grid-cols-2 {
-                grid-template-columns: 1fr;
-            }
-        }
+  --color-accent-indigo-500: #4f46e5; /* Cor de foco para anel/borda */
+  --color-accent-indigo-600: #4f46e5; 
+  --color-accent-indigo-700: #4338ca;
+  
+  /* Removido --color-focus-ring e --color-focus-border pois o Tailwind lida com isso com focus:ring e focus:border */
+
+  --color-success-bg: #d1fae5;
+  --color-success-text: #065f46;
+  --color-success-border: #a7f3d0;
+
+  --color-danger-bg: #fee2e2;
+  --color-danger-text: #991b1b;
+  --color-danger-border: #fca5a5;
+
+  --color-green-export-500: #10b981;
+  --color-green-export-600: #059669;
+
+  --color-blue-large-btn-500: #2563eb;
+  --color-blue-large-btn-600: #1d4ed8;
+
+  /* Cores de Texto e Fundo Gerais */
+  --color-text-base: #374151;
+  --color-text-muted: #6b7280;
+  --color-text-heading: #1f2937;
+  --color-bg-body: #f3f4f6;
+  --color-bg-card: #ffffff;
+  --color-bg-input-default: #ffffff; /* Fundo padrão do input (pode ser f9fafb se preferir o cinza claro) */
+
+
+  /* Fontes */
+  --font-sans: 'Inter', sans-serif;
+}
+
+body {
+  @apply font-sans; 
+  background-color: var(--color-bg-body);
+}
+
+/* Classes de Componentes de Formulário */
+.form-label {
+  @apply block mb-1 text-sm font-medium; 
+  color: var(--color-text-base); 
+}
+
+.input-form { 
+  @apply mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm 
+         text-base
+         focus:ring-indigo-500 focus:border-indigo-500;
+  background-color: var(--color-bg-input-default); /* Usa a variável para o fundo */
+  color: var(--color-text-base);
+  /* transition já é aplicado pelo Tailwind nas classes de foco/borda */
+}
+
+.input-form-sm { 
+  @apply mt-1 block w-full p-1.5 border border-gray-300 rounded-md shadow-sm 
+         text-sm
+         focus:ring-indigo-500 focus:border-indigo-500;
+  background-color: var(--color-bg-input-default);
+  color: var(--color-text-base);
+}
+
+.checkbox-form {
+  @apply h-4 w-4 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500;
+  /* A cor do checkmark é controlada por text-indigo-600 */
+}
+.checkbox-form-sm {
+  @apply h-3.5 w-3.5 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500;
+}
+
+/* Classes de Botões (Mantidas como estavam, pois pareciam ok) */
+.btn { 
+  @apply font-semibold rounded-md shadow-sm cursor-pointer
+         transition-all duration-150 ease-in-out
+         focus:outline-none focus:ring-2 focus:ring-offset-2;
+}
+
+.btn-primary {
+  @apply btn px-4 py-2 text-white; /* Ajustado padding para ser mais comum para botões primários */
+  background-color: var(--color-primary-600);
+}
+.btn-primary:hover {
+  background-color: var(--color-primary-700);
+  @apply transform hover:-translate-y-px;
+}
+.btn-primary:active {
+  @apply transform translate-y-0;
+}
+.btn-primary:focus {
+  @apply ring-blue-500; 
+}
+
+
+.btn-secondary {
+  @apply btn px-4 py-2 border text-sm;
+  background-color: var(--color-secondary-bg);
+  color: var(--color-secondary-text);
+  border-color: var(--color-secondary-border);
+}
+.btn-secondary:hover {
+  background-color: var(--color-secondary-hover-bg);
+}
+.btn-secondary:focus {
+   @apply ring-indigo-500;
+}
+
+/* ... (restante do CSS para botões, message-box, etc., pode permanecer como estava na última versão, pois o foco é nos inputs) ... */
+
+/* Botões Específicos do WasteForm */
+.waste-type-btn {
+  @apply btn flex items-center justify-center w-full p-3 border-2 rounded-xl 
+         text-base focus:ring-indigo-500;
+}
+
+.waste-type-btn-default {
+  background-color: var(--color-secondary-bg);
+  color: var(--color-text-base);
+  border-color: var(--color-secondary-border);
+}
+.waste-type-btn-default:hover {
+  background-color: var(--color-secondary-hover-bg);
+  border-color: #a5b4fc; 
+}
+
+.waste-type-btn-selected {
+  background-color: var(--color-accent-indigo-600);
+  color: white;
+  border-color: var(--color-accent-indigo-600);
+  @apply shadow-lg;
+}
+
+.btn-primary-large { 
+  @apply btn w-full text-white text-xl py-4 px-6 rounded-xl disabled:opacity-70;
+  background-color: var(--color-blue-large-btn-500);
+}
+.btn-primary-large:hover {
+  background-color: var(--color-blue-large-btn-600);
+}
+.btn-primary-large:focus {
+  @apply ring-blue-500;
+}
+
+
+/* Componentes de UI */
+.message-box {
+  @apply p-4 mb-4 rounded-md font-medium border;
+}
+.message-box-success { 
+  background-color: var(--color-success-bg);
+  color: var(--color-success-text);
+  border-color: var(--color-success-border);
+}
+.message-box-error { 
+  background-color: var(--color-danger-bg);
+  color: var(--color-danger-text);
+  border-color: var(--color-danger-border);
+}
+
+.record-item {
+  @apply p-4 mb-3 flex flex-col space-y-2 border rounded-lg;
+  background-color: var(--color-bg-input-default); /* Usando o mesmo fundo dos inputs para consistência */
+  border-color: var(--color-secondary-border); 
+}
+
+.record-item strong {
+  @apply font-semibold;
+  color: var(--color-text-heading); 
+}
+
+.record-item span { 
+  @apply text-sm;
+  color: var(--color-text-muted); 
+}
+
+.record-item .delete-btn { 
+  @apply self-end py-1 px-3 text-xs rounded-md text-white;
+  background-color: var(--color-danger-text); 
+}
+.record-item .delete-btn:hover {
+  @apply bg-red-700; 
+}
+
+/* Estilos de Tabela */
+.th-table {
+  @apply px-6 py-3 text-left text-xs font-medium uppercase tracking-wider;
+  color: var(--color-text-muted);
+  background-color: var(--color-bg-input-default); 
+}
+
+.td-table {
+  @apply px-6 py-4 whitespace-nowrap text-sm;
+  color: var(--color-text-muted);
+}
+
+.td-table-actions { 
+    @apply px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2;
+}
+
+/* Badges de Status */
+.status-badge {
+  @apply px-2 inline-flex text-xs leading-5 font-semibold rounded-full;
+}
+.status-active {
+  background-color: var(--color-success-bg); 
+  color: var(--color-success-text); 
+}
+.status-inactive {
+  background-color: var(--color-danger-bg); 
+  color: var(--color-danger-text); 
+}

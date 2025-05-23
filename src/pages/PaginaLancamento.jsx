@@ -2,10 +2,10 @@
 
 import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../context/AuthContext';
-import { collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs, documentId } from 'firebase/firestore';
+import { collection, addDoc, onSnapshot, deleteDoc, doc, query, where, getDocs, documentId, orderBy } from 'firebase/firestore';
 
 import MessageBox from '../components/MessageBox';
-import WasteForm from '../components/WasteForm';
+import WasteForm from '../components/WasteForm'; // Este componente também precisará de atualizações
 import WasteRecordsList from '../components/WasteRecordsList';
 
 export default function PaginaLancamento() {
@@ -17,10 +17,10 @@ export default function PaginaLancamento() {
   const [loadingRecords, setLoadingRecords] = useState(true);
   const [isRecordsVisible, setIsRecordsVisible] = useState(false);
 
-  // NOVOS ESTADOS PARA GESTÃO DE HOTÉIS
-  const [userAllowedHotels, setUserAllowedHotels] = useState([]); // Lista de objetos de hotel
-  const [selectedHotelId, setSelectedHotelId] = useState('');   // ID do hotel selecionado para lançamento/visualização
-  const [loadingUserHotels, setLoadingUserHotels] = useState(true);
+  const [userAllowedClientes, setUserAllowedClientes] = useState([]);
+  const [selectedClienteId, setSelectedClienteId] = useState('');
+  const [selectedClienteData, setSelectedClienteData] = useState(null); // Para guardar os dados completos do cliente selecionado
+  const [loadingUserClientes, setLoadingUserClientes] = useState(true);
 
   const showMessage = (msg, error = false) => {
     setMessage(msg);
@@ -28,62 +28,73 @@ export default function PaginaLancamento() {
     setTimeout(() => setMessage(''), 5000);
   };
 
-  // EFEITO PARA CARREGAR OS DETALHES DOS HOTÉIS PERMITIDOS AO UTILIZADOR
+  // Carregar os detalhes dos CLIENTES permitidos ao utilizador
   useEffect(() => {
     if (!db || !userProfile) {
-      setLoadingUserHotels(false);
-      setUserAllowedHotels([]);
+      setLoadingUserClientes(false);
+      setUserAllowedClientes([]);
+      setSelectedClienteData(null);
       return;
     }
 
-    const fetchUserHotels = async () => {
-      setLoadingUserHotels(true);
-      let hotelIdsToFetch = [];
+    const fetchUserClientes = async () => {
+      setLoadingUserClientes(true);
+      setSelectedClienteData(null); // Limpa dados do cliente anterior
+      let clienteIdsToFetch = [];
+      let loadedClientes = [];
 
       if (userProfile.role === 'master') {
-        // Master tem acesso a todos os hotéis
         try {
-          const hoteisQuery = query(collection(db, "hoteis"), where("ativo", "==", true));
-          const querySnapshot = await getDocs(hoteisQuery);
-          const todosHoteis = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setUserAllowedHotels(todosHoteis);
-          if (todosHoteis.length > 0) {
-            setSelectedHotelId(todosHoteis[0].id); // Seleciona o primeiro por defeito para o master
+          const clientesQuery = query(collection(db, "clientes"), where("ativo", "==", true), orderBy("nome"));
+          const querySnapshot = await getDocs(clientesQuery);
+          loadedClientes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } catch (error) {
+          console.error("Erro ao carregar todos os clientes para master:", error);
+        }
+      } else if (userProfile.clientesPermitidos && userProfile.clientesPermitidos.length > 0) {
+        clienteIdsToFetch = userProfile.clientesPermitidos;
+        try {
+          // Firestore 'in' query limit is 30 elements. For more, batch or redesign.
+          // For now, assuming less than 30 permitted clients per user.
+          if (clienteIdsToFetch.length > 0) {
+            const clientesQuery = query(collection(db, "clientes"), where(documentId(), "in", clienteIdsToFetch), where("ativo", "==", true), orderBy("nome"));
+            const querySnapshot = await getDocs(clientesQuery);
+            loadedClientes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
           }
         } catch (error) {
-          console.error("Erro ao carregar todos os hotéis para master:", error);
-          setUserAllowedHotels([]);
+          console.error("Erro ao carregar clientes permitidos:", error);
         }
-      } else if (userProfile.hoteisPermitidos && userProfile.hoteisPermitidos.length > 0) {
-        hotelIdsToFetch = userProfile.hoteisPermitidos;
-        try {
-          const hoteisQuery = query(collection(db, "hoteis"), where(documentId(), "in", hotelIdsToFetch), where("ativo", "==", true));
-          const querySnapshot = await getDocs(hoteisQuery);
-          const permittedHotelsData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setUserAllowedHotels(permittedHotelsData);
-          if (permittedHotelsData.length > 0) {
-            setSelectedHotelId(permittedHotelsData[0].id); // Seleciona o primeiro hotel permitido por defeito
-          }
-        } catch (error) {
-          console.error("Erro ao carregar hotéis permitidos:", error);
-          setUserAllowedHotels([]);
-        }
-      } else {
-        // Utilizador não é master e não tem hotéis permitidos
-        setUserAllowedHotels([]);
       }
-      setLoadingUserHotels(false);
+      
+      setUserAllowedClientes(loadedClientes);
+      if (loadedClientes.length > 0) {
+        setSelectedClienteId(loadedClientes[0].id); // Seleciona o primeiro por defeito
+        setSelectedClienteData(loadedClientes[0]);
+      } else {
+        setSelectedClienteId('');
+      }
+      setLoadingUserClientes(false);
     };
 
-    fetchUserHotels();
+    fetchUserClientes();
   }, [db, userProfile]);
 
-
-  // useEffect para buscar registos de resíduos, AGORA FILTRADOS PELO selectedHotelId
+  // Atualiza selectedClienteData quando selectedClienteId muda
   useEffect(() => {
-    if (!db || !currentUser || !userProfile || !selectedHotelId) { // Adicionado !selectedHotelId
+    if (selectedClienteId && userAllowedClientes.length > 0) {
+      const cliente = userAllowedClientes.find(c => c.id === selectedClienteId);
+      setSelectedClienteData(cliente || null);
+    } else {
+      setSelectedClienteData(null);
+    }
+  }, [selectedClienteId, userAllowedClientes]);
+
+
+  // Buscar registos de resíduos, filtrados pelo selectedClienteId
+  useEffect(() => {
+    if (!db || !currentUser || !userProfile || !selectedClienteId) {
       setLoadingRecords(false);
-      setWasteRecords([]); // Limpa os registos se não houver hotel selecionado
+      setWasteRecords([]);
       return;
     }
     
@@ -95,20 +106,14 @@ export default function PaginaLancamento() {
     }
 
     setLoadingRecords(true);
-    // Query AGORA FILTRA POR hotelId
     const wasteRecordsQuery = query(
-      collection(db, `artifacts/${appId}/public/data/wasteRecords`),
-      where("hotelId", "==", selectedHotelId), // FILTRO POR HOTEL
-      // orderBy("timestamp", "desc") // Adicionar orderBy se tiver índice
+      collection(db, `artifacts/${appId}/public/data/wasteRecords`), // Mantendo este caminho para wasteRecords por agora
+      where("clienteId", "==", selectedClienteId), // FILTRO POR CLIENTE
+      orderBy("timestamp", "desc") // Adicionado orderBy
     );
 
     const unsubscribe = onSnapshot(wasteRecordsQuery, (snapshot) => {
-      const records = [];
-      snapshot.forEach(doc => {
-        records.push({ id: doc.id, ...doc.data() });
-      });
-      // Ordenação local, já que orderBy com timestamp pode exigir índice composto com hotelId
-      records.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+      const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setWasteRecords(records);
       setLoadingRecords(false);
     }, (error) => {
@@ -118,29 +123,31 @@ export default function PaginaLancamento() {
     });
 
     return () => unsubscribe();
-  }, [db, currentUser, appId, userProfile, selectedHotelId]); // Adicionado selectedHotelId às dependências
+  }, [db, currentUser, appId, userProfile, selectedClienteId]);
 
 
-  const handleAddWasteRecord = async (newRecordData) => {
+  const handleAddWasteRecord = async (formDataFromWasteForm) => {
     if (!currentUser || !userProfile || !['master', 'gerente', 'operacional'].includes(userProfile.role)) {
       showMessage('Você não tem permissão para registar resíduos.', true);
       return false;
     }
-    if (!selectedHotelId) { // Verifica se um hotel está selecionado
-        showMessage('Por favor, selecione um hotel para o lançamento.', true);
+    if (!selectedClienteId || !selectedClienteData) {
+        showMessage('Por favor, selecione um cliente para o lançamento.', true);
         return false;
     }
+    // Validações que dependem do selectedClienteData (ex: área está nas áreas permitidas)
+    // podem ser adicionadas aqui ou no WasteForm.
 
     try {
       await addDoc(collection(db, `artifacts/${appId}/public/data/wasteRecords`), {
-        ...newRecordData,
-        hotelId: selectedHotelId, // ADICIONADO hotelId ao registo
+        ...formDataFromWasteForm, // Contém areaLancamento, wasteType, peso
+        clienteId: selectedClienteId, // ADICIONADO clienteId ao registo
         timestamp: Date.now(),
         userId: currentUser.uid,
         userEmail: currentUser.email,
       });
       showMessage('Resíduo registado com sucesso!');
-      return true; // WasteForm limpará os campos se isto for true
+      return true; 
     } catch (error) {
       console.error('Erro ao registar resíduo:', error);
       showMessage('Erro ao registar resíduo. Tente novamente.', true);
@@ -149,7 +156,6 @@ export default function PaginaLancamento() {
   };
 
   const handleDeleteRecord = async (recordId) => {
-    // ... (lógica inalterada, mas a lista já estará filtrada pelo hotel)
     if (!currentUser || !userProfile || userProfile.role !== 'master') {
       showMessage('Você não tem permissão para excluir registos.', true);
       return;
@@ -171,8 +177,8 @@ export default function PaginaLancamento() {
   };
 
   // Renderização de Loading ou Mensagens de Permissão
-  if (loadingUserHotels) {
-    return <div className="text-center text-gray-600 p-8">A carregar dados do hotel...</div>;
+  if (loadingUserClientes) {
+    return <div className="text-center text-gray-600 p-8">A carregar dados do cliente...</div>;
   }
   if (!userProfile && currentUser) {
     return <div className="text-center text-gray-600 p-8">A carregar perfil do utilizador...</div>;
@@ -185,32 +191,30 @@ export default function PaginaLancamento() {
       </div>
     );
   }
-  if (userProfile.role !== 'master' && userAllowedHotels.length === 0) {
+  if (userProfile.role !== 'master' && userAllowedClientes.length === 0 && !loadingUserClientes) {
     return (
       <div className="text-center text-orange-600 p-8">
-        Você não tem acesso a nenhum hotel para realizar lançamentos. Contacte o administrador.
+        Você não tem acesso a nenhum cliente para realizar lançamentos. Contacte o administrador.
       </div>
     );
   }
-
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
         <h1 className="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Lançamento de Pesagem</h1>
-        {/* Dropdown para Seleção de Hotel */}
-        {userAllowedHotels.length > 0 && (
-          <div className="w-full sm:w-auto">
-            <label htmlFor="hotelSelect" className="sr-only">Selecionar Hotel</label>
+        {userAllowedClientes.length > 0 && (
+          <div className="w-full sm:w-auto sm:max-w-xs md:max-w-sm"> {/* Limitando a largura do select */}
+            <label htmlFor="clienteSelect" className="sr-only">Selecionar Cliente</label>
             <select
-              id="hotelSelect"
-              value={selectedHotelId}
-              onChange={(e) => setSelectedHotelId(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+              id="clienteSelect"
+              value={selectedClienteId}
+              onChange={(e) => setSelectedClienteId(e.target.value)}
+              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" // Usando estilo padrão
             >
-              {userAllowedHotels.map(hotel => (
-                <option key={hotel.id} value={hotel.id}>
-                  {hotel.nome} ({hotel.cidade || 'N/A'})
+              {userAllowedClientes.map(cliente => (
+                <option key={cliente.id} value={cliente.id}>
+                  {cliente.nome} ({cliente.cidade || 'N/A'})
                 </option>
               ))}
             </select>
@@ -220,13 +224,13 @@ export default function PaginaLancamento() {
       
       <MessageBox message={message} isError={isError} />
 
-      {selectedHotelId ? (
+      {selectedClienteId && selectedClienteData ? (
         <>
           <div className="bg-white p-6 rounded-lg shadow">
             <WasteForm 
               onAddWaste={handleAddWasteRecord} 
-              // Se o WasteForm precisar de saber o hotelId para algo (ex: buscar áreas específicas do hotel), passe-o
-              // selectedHotelId={selectedHotelId} 
+              // Passa os dados do cliente selecionado para o WasteForm
+              clienteSelecionado={selectedClienteData} 
             />
           </div>
 
@@ -238,7 +242,7 @@ export default function PaginaLancamento() {
               aria-controls="waste-records-list"
             >
               <h2 className="text-2xl font-semibold text-gray-700">
-                Registos Recentes de: <span className="text-indigo-600">{userAllowedHotels.find(h => h.id === selectedHotelId)?.nome || 'Hotel Selecionado'}</span>
+                Registos Recentes de: <span className="text-indigo-600">{selectedClienteData?.nome || 'Cliente Selecionado'}</span>
               </h2>
               <span className="text-2xl text-gray-600 transform transition-transform duration-200">
                 {isRecordsVisible ? '▲' : '▼'}
@@ -259,9 +263,9 @@ export default function PaginaLancamento() {
         </>
       ) : (
         <div className="text-center text-gray-500 p-8">
-          {userProfile.role === 'master' && userAllowedHotels.length === 0 && !loadingUserHotels 
-            ? "Nenhum hotel cadastrado no sistema. Adicione um hotel na área de administração."
-            : "Por favor, selecione um hotel para continuar."
+          { (userProfile.role === 'master' && userAllowedClientes.length === 0 && !loadingUserClientes) 
+            ? "Nenhum cliente cadastrado no sistema. Adicione um cliente na área de administração."
+            : "Por favor, selecione um cliente para continuar."
           }
         </div>
       )}
