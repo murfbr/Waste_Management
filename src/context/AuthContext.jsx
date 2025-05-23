@@ -4,8 +4,8 @@ import React, { createContext, useState, useEffect } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc } from 'firebase/firestore';
 
-import { app, db, auth } from '../firebase/init'; // Supondo que 'app' seja inicializado aqui
-import { appId } from '../firebase/config';
+import { app, db, auth } from '../firebase/init'; 
+import { appId } from '../firebase/config'; // Importa o appId aqui no topo
 
 const AuthContext = createContext(null);
 
@@ -16,48 +16,53 @@ export const AuthProvider = ({ children }) => {
     const [loadingAuth, setLoadingAuth] = useState(true);
 
     useEffect(() => {
-        // console.log('DEBUG: AuthProvider - useEffect para onAuthStateChanged EXECUTADO');
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
-            setLoadingAuth(true); // Inicia o carregamento ao detectar mudança no auth
+            setLoadingAuth(true); 
             if (user) {
                 setCurrentUser(user);
-                // console.log('DEBUG: AuthProvider - Usuário autenticado:', user.uid);
+                console.log('DEBUG: AuthContext - Utilizador autenticado UID:', user.uid);
 
                 try {
-                    const userProfileRef = doc(db, `artifacts/${appId}/users/${user.uid}`);
-                    // console.log('DEBUG: AuthProvider - Tentando buscar perfil em:', userProfileRef.path);
+                    const userProfileRef = doc(db, `users/${user.uid}`); 
+                    console.log('DEBUG: AuthContext - Tentando buscar perfil em:', userProfileRef.path);
                     const docSnap = await getDoc(userProfileRef);
 
                     if (docSnap.exists()) {
                         const profileData = docSnap.data();
                         setUserProfile({ id: docSnap.id, ...profileData });
-                        console.log('DEBUG: AuthProvider - Perfil do usuário carregado:', { id: docSnap.id, ...profileData });
+                        console.log('DEBUG: AuthContext - Perfil do utilizador carregado de /users:', { id: docSnap.id, ...profileData });
                     } else {
-                        console.warn(`DEBUG: AuthProvider - Perfil NÃO encontrado para UID: ${user.uid} em ${userProfileRef.path}`);
+                        console.warn(`DEBUG: AuthContext - Perfil NÃO encontrado em /users para UID: ${user.uid}`);
                         setUserProfile(null);
                     }
                 } catch (profileError) {
-                    console.error('DEBUG: AuthProvider - Erro ao buscar perfil:', profileError);
+                    console.error('DEBUG: AuthContext - Erro ao buscar perfil em /users:', profileError);
                     setUserProfile(null);
                 }
             } else {
                 setCurrentUser(null);
                 setUserProfile(null);
-                // console.log('DEBUG: AuthProvider - Nenhum usuário logado.');
+                console.log('DEBUG: AuthContext - Nenhum utilizador logado.');
             }
             setIsAuthReady(true);
-            setLoadingAuth(false); // Finaliza o carregamento
+            setLoadingAuth(false);
         });
 
-        // Função de limpeza para desinscrever o listener quando o componente for desmontado
         return () => {
-            // console.log('DEBUG: AuthProvider - useEffect para onAuthStateChanged LIMPO (unsubscribe)');
             unsubscribe();
         };
-    }, [auth]); // Dependência: 'auth' - se a instância de auth mudar, o efeito re-executa.
+    }, [auth, db]);
 
+    // appId é importado no topo do ficheiro e já está no escopo aqui.
     const contextValue = {
-        app, db, auth, currentUser, userProfile, isAuthReady, loadingAuth
+        app, 
+        db, 
+        auth, 
+        currentUser, 
+        userProfile, 
+        isAuthReady, 
+        loadingAuth,
+        appId // appId (importado no topo) é incluído no contexto
     };
 
     return (

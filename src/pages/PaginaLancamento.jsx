@@ -20,13 +20,13 @@ export default function PaginaLancamento() {
   const [isError, setIsError] = useState(false);
   const [wasteRecords, setWasteRecords] = useState([]);
   const [loadingRecords, setLoadingRecords] = useState(true);
-  const [isRecordsVisible, setIsRecordsVisible] = useState(false); // Novo estado para controlar a visibilidade dos registos
+  const [isRecordsVisible, setIsRecordsVisible] = useState(false);
 
   // Função para exibir mensagens (sucesso/erro)
   const showMessage = (msg, error = false) => {
     setMessage(msg);
     setIsError(error);
-    setTimeout(() => setMessage(''), 5000); // Esconde a mensagem após 5 segundos
+    setTimeout(() => setMessage(''), 5000);
   };
 
   // useEffect para configurar o ouvinte de registos do Firestore em tempo real
@@ -35,11 +35,13 @@ export default function PaginaLancamento() {
       setLoadingRecords(false);
       return;
     }
+    
     const canViewRecords = ['master', 'gerente', 'operacional'].includes(userProfile.role);
+
     if (!canViewRecords) {
-        setLoadingRecords(false);
-        setWasteRecords([]);
-        return;
+      setLoadingRecords(false);
+      setWasteRecords([]);
+      return;
     }
 
     setLoadingRecords(true);
@@ -55,12 +57,14 @@ export default function PaginaLancamento() {
       setWasteRecords(records);
       setLoadingRecords(false);
     }, (error) => {
-      console.error("Erro ao buscar registos em tempo real:", error);
+      console.error("PAGINA LANCAMENTO - Erro ao buscar registos em tempo real:", error); // Mantido
       showMessage('Erro ao carregar registos. Tente recarregar a página.', true);
       setLoadingRecords(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+      unsubscribe();
+    };
   }, [db, currentUser, appId, userProfile]);
 
   // Função para lidar com o envio do formulário de resíduos
@@ -79,7 +83,7 @@ export default function PaginaLancamento() {
       showMessage('Resíduo registado com sucesso!');
       return true;
     } catch (error) {
-      console.error('Erro ao registar resíduo:', error);
+      console.error('Erro ao registar resíduo:', error); // Mantido
       showMessage('Erro ao registar resíduo. Tente novamente.', true);
       return false;
     }
@@ -96,8 +100,8 @@ export default function PaginaLancamento() {
         const recordRef = doc(db, `artifacts/${appId}/public/data/wasteRecords`, recordId);
         await deleteDoc(recordRef);
         showMessage('Registo excluído com sucesso!');
-      } catch (error) {
-        console.error('Erro ao excluir registo:', error);
+      } catch (error) { 
+        console.error('Erro ao excluir registo:', error); // Mantido
         showMessage('Erro ao excluir registo. Tente novamente.', true);
       }
     }
@@ -128,11 +132,9 @@ export default function PaginaLancamento() {
       <MessageBox message={message} isError={isError} />
 
       <div className="bg-white p-6 rounded-lg shadow">
-        {/* O título "Registar Nova Pesagem" não é mais necessário aqui se o WasteForm já for claro */}
         <WasteForm onAddWaste={handleAddWasteRecord} />
       </div>
 
-      {/* Secção da Lista de Registos Colapsável */}
       <div className="bg-white rounded-lg shadow">
         <button
           onClick={toggleRecordsVisibility}
@@ -141,14 +143,11 @@ export default function PaginaLancamento() {
           aria-controls="waste-records-list"
         >
           <h2 className="text-2xl font-semibold text-gray-700">Registos Recentes</h2>
-          {/* Ícone de seta (pode substituir por react-icons ou SVGs) */}
           <span className="text-2xl text-gray-600 transform transition-transform duration-200">
             {isRecordsVisible ? '▲' : '▼'}
-            {/* {isRecordsVisible ? <FaChevronUp /> : <FaChevronDown />} */}
           </span>
         </button>
         
-        {/* Conteúdo colapsável */}
         {isRecordsVisible && (
           <div id="waste-records-list" className="p-6 border-t border-gray-200">
             <WasteRecordsList

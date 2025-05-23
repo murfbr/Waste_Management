@@ -54,7 +54,8 @@ export default function Sidebar() {
                 <p className="px-4 py-2 text-xs text-gray-400 uppercase">Administração</p>
                 <NavLink to="/admin/usuarios">Gerir Utilizadores</NavLink>
                 <NavLink to="/admin/hoteis">Gerir Hotéis</NavLink>
-                {/* Adicionar mais links de admin aqui */}
+                <NavLink to="/admin/empresas-coleta">Gerir Empresas de Coleta</NavLink>
+                
               </>
             )}
           </>
