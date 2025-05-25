@@ -2,6 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 
+// Lista de fallback para subtipos de recicláveis se o cliente não tiver definido os seus próprios
+const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
+
+
 export default function WasteForm({ onAddWaste, clienteSelecionado }) {
   const [areaLancamento, setAreaLancamento] = useState('');
   const [selectedWasteType, setSelectedWasteType] = useState('');
@@ -12,26 +16,49 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
   const [opcoesTipoResiduo, setOpcoesTipoResiduo] = useState([]);
 
   useEffect(() => {
+    console.log('WASTEFORM - useEffect acionado por clienteSelecionado:', clienteSelecionado);
+
     if (clienteSelecionado) {
       const areasCliente = Array.isArray(clienteSelecionado.areasPersonalizadas) ? clienteSelecionado.areasPersonalizadas.filter(a => a && a.trim() !== '') : [];
       setOpcoesArea(areasCliente);
-      // Não seleciona a primeira área por padrão para botões, para forçar uma escolha clara
       setAreaLancamento(''); 
 
       let tiposResiduoDisponiveis = [];
-      if (clienteSelecionado.fazSeparacaoReciclaveisCompleta && Array.isArray(clienteSelecionado.tiposReciclaveisPersonalizados) && clienteSelecionado.tiposReciclaveisPersonalizados.length > 0) {
-        const categoriasPrincipaisSemReciclavelDetalhado = (Array.isArray(clienteSelecionado.categoriasPrincipaisResiduo) ? clienteSelecionado.categoriasPrincipaisResiduo : []).filter(
-            cat => cat.toLowerCase() !== 'reciclável' && cat.toLowerCase() !== 'reciclaveis'
-        );
-        tiposResiduoDisponiveis = [...new Set([...categoriasPrincipaisSemReciclavelDetalhado, ...clienteSelecionado.tiposReciclaveisPersonalizados])];
-      } else if (Array.isArray(clienteSelecionado.categoriasPrincipaisResiduo)) {
-        tiposResiduoDisponiveis = clienteSelecionado.categoriasPrincipaisResiduo;
+      const categoriasPrincipais = (Array.isArray(clienteSelecionado.categoriasPrincipaisResiduo) 
+                                      ? clienteSelecionado.categoriasPrincipaisResiduo 
+                                      : []).filter(cat => cat && cat.trim() !== '');
+
+      const tiposPersonalizadosCliente = (Array.isArray(clienteSelecionado.tiposReciclaveisPersonalizados)
+                                      ? clienteSelecionado.tiposReciclaveisPersonalizados
+                                      : []).filter(sub => sub && sub.trim() !== '');
+
+      console.log('WASTEFORM - Cliente tem fazSeparacaoReciclaveisCompleta:', clienteSelecionado.fazSeparacaoReciclaveisCompleta);
+      console.log('WASTEFORM - Cliente categoriasPrincipaisResiduo (limpas):', categoriasPrincipais);
+      console.log('WASTEFORM - Cliente tiposReciclaveisPersonalizados (limpos):', tiposPersonalizadosCliente);
+
+      // Inicia com as categorias principais do cliente
+      tiposResiduoDisponiveis = [...categoriasPrincipais];
+
+      if (clienteSelecionado.fazSeparacaoReciclaveisCompleta) {
+        let subtiposParaAdicionar = tiposPersonalizadosCliente;
+        if (tiposPersonalizadosCliente.length === 0) {
+          // Se não há subtipos personalizados, mas ele detalha, usamos o fallback
+          subtiposParaAdicionar = SUBTIPOS_RECICLAVEIS_FALLBACK;
+          console.log('WASTEFORM - Usando SUBTIPOS_RECICLAVEIS_FALLBACK para detalhamento.');
+        }
+        // Adiciona os subtipos à lista, garantindo que não haja duplicados
+        tiposResiduoDisponiveis = [...new Set([...tiposResiduoDisponiveis, ...subtiposParaAdicionar])];
+        console.log('WASTEFORM - Gerou COM detalhamento (principais + subtipos/fallback):', tiposResiduoDisponiveis);
+      } else { 
+        // Se não detalha recicláveis, tiposResiduoDisponiveis já contém apenas as categoriasPrincipais
+        console.log('WASTEFORM - Gerou SEM detalhamento (apenas principais):', tiposResiduoDisponiveis);
       }
       
-      tiposResiduoDisponiveis = tiposResiduoDisponiveis.filter(tipo => tipo && tipo.trim() !== '');
-      setOpcoesTipoResiduo(tiposResiduoDisponiveis);
-      setSelectedWasteType('');
+      setOpcoesTipoResiduo(tiposResiduoDisponiveis.filter(tipo => tipo && tipo.trim() !== ''));
+      setSelectedWasteType(''); 
+
     } else {
+      console.log('WASTEFORM - Nenhum cliente selecionado, limpando opções.');
       setOpcoesArea([]);
       setAreaLancamento('');
       setOpcoesTipoResiduo([]);
@@ -45,7 +72,7 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
       alert('Por favor, selecione um tipo de resíduo.');
       return;
     }
-    if (!areaLancamento && opcoesArea.length > 0) { // Só exige área se houver opções e nenhuma selecionada
+    if (!areaLancamento && opcoesArea.length > 0) {
       alert('Por favor, selecione uma área de lançamento.');
       return;
     }
@@ -59,7 +86,7 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
 
     setSubmitting(true);
     const success = await onAddWaste({
-      areaLancamento: areaLancamento || (opcoesArea.length === 0 ? "Geral" : "Não especificada"), // Se não há opções, pode ser "Geral"
+      areaLancamento: areaLancamento || (opcoesArea.length === 0 ? "Geral" : "Não especificada"),
       wasteType: selectedWasteType,
       peso: parsedPeso,
     });
@@ -72,7 +99,7 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
     setSubmitting(false);
   };
 
-  const labelStyle = "block text-sm font-medium text-gray-700 text-center text-lg mb-3"; // Ajustado mb-3 para consistência
+  const labelStyle = "block text-sm font-medium text-gray-700 text-center text-lg mb-3";
   
   if (!clienteSelecionado) {
     return <p className="text-center text-gray-500">Selecione um cliente para iniciar o lançamento.</p>;
@@ -110,7 +137,7 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {opcoesTipoResiduo.map((tipo) => (
               <button
-                key={`type-${tipo}`} // Adicionado prefixo para evitar conflito de key com áreas
+                key={`type-${tipo}`}
                 type="button"
                 onClick={() => setSelectedWasteType(tipo)}
                 className={`
@@ -129,7 +156,7 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
           </div>
         </div>
       ) : (
-        <p className="text-center text-gray-500">Este cliente não possui tipos de resíduo configurados para lançamento.</p>
+        <p className="text-center text-gray-500">Este cliente não possui tipos de resíduo válidos configurados para lançamento.</p>
       )}
 
       {/* Botões para Área de Lançamento (Dinâmicos) */}
@@ -139,7 +166,7 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {opcoesArea.map((areaOption) => (
               <button
-                key={`area-${areaOption}`} // Adicionado prefixo
+                key={`area-${areaOption}`}
                 type="button"
                 onClick={() => setAreaLancamento(areaOption)}
                 className={`
@@ -147,8 +174,8 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
                     text-base font-semibold transition-all duration-150 ease-in-out
                     focus:outline-none focus:ring-2 focus:ring-offset-2
                     ${areaLancamento === areaOption
-                        ? 'bg-indigo-600 text-white border-indigo-600 ring-indigo-500 shadow-lg' // Estilo selecionado
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400' // Estilo padrão
+                        ? 'bg-indigo-600 text-white border-indigo-600 ring-indigo-500 shadow-lg'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
                     }
                 `}
               >

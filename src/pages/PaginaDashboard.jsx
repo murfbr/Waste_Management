@@ -3,14 +3,16 @@
 import React, { useContext, useEffect, useState } from 'react';
 import AuthContext from '../context/AuthContext';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { collection, onSnapshot, query, where, getDocs, documentId } from 'firebase/firestore';
+import { collection, onSnapshot, query, where, getDocs, documentId, orderBy } from 'firebase/firestore'; // Adicionado orderBy
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#3D9140', '#FF5733', '#8333FF'];
 
+// Estas funções operam sobre os 'wasteRecords' já filtrados, então não precisam de grandes mudanças,
+// mas os nomes dos campos (wasteType, area) nos registos devem estar corretos.
 const processDataForWasteTypeChart = (records) => {
   if (!records || records.length === 0) return [];
   const counts = records.reduce((acc, record) => {
-    const type = record.wasteType || 'Não especificado';
+    const type = record.wasteType || 'Não especificado'; // 'wasteType' é o campo no wasteRecord
     acc[type] = (acc[type] || 0) + 1;
     return acc;
   }, {});
@@ -20,7 +22,7 @@ const processDataForWasteTypeChart = (records) => {
 const processDataForHotelAreaChart = (records) => {
   if (!records || records.length === 0) return [];
   const counts = records.reduce((acc, record) => {
-    const area = record.area || 'Não especificado';
+    const area = record.areaLancamento || 'Não especificado'; // 'areaLancamento' é o novo campo no wasteRecord
     acc[area] = (acc[area] || 0) + 1;
     return acc;
   }, {});
@@ -34,60 +36,59 @@ export default function PaginaDashboard() {
   const [wasteRecords, setWasteRecords] = useState([]);
   const [loadingRecords, setLoadingRecords] = useState(true);
 
-  // Estados para seleção de hotel (AGORA UM ARRAY DE IDs)
-  const [userAllowedHotels, setUserAllowedHotels] = useState([]);
-  const [selectedHotelIds, setSelectedHotelIds] = useState([]); 
-  const [loadingUserHotels, setLoadingUserHotels] = useState(true);
-  const [selectAllToggle, setSelectAllToggle] = useState(true); // Para o checkbox "Selecionar Todos"
+  // Renomeado para refletir "Clientes"
+  const [userAllowedClientes, setUserAllowedClientes] = useState([]);
+  const [selectedClienteIds, setSelectedClienteIds] = useState([]); 
+  const [loadingUserClientes, setLoadingUserClientes] = useState(true);
+  const [selectAllToggle, setSelectAllToggle] = useState(true);
 
-  // Carregar hotéis permitidos/todos os hotéis
+  // Carregar clientes permitidos/todos os clientes
   useEffect(() => {
     if (!db || !userProfile) {
-      setLoadingUserHotels(false);
-      setUserAllowedHotels([]);
-      setSelectedHotelIds([]);
+      setLoadingUserClientes(false);
+      setUserAllowedClientes([]);
+      setSelectedClienteIds([]);
       return;
     }
 
-    const fetchUserHotels = async () => {
-      setLoadingUserHotels(true);
-      let loadedHotels = [];
+    const fetchUserClientes = async () => {
+      setLoadingUserClientes(true);
+      let loadedClientes = [];
       try {
         if (userProfile.role === 'master') {
-          const hoteisQuery = query(collection(db, "hoteis"), where("ativo", "==", true));
-          const querySnapshot = await getDocs(hoteisQuery);
-          loadedHotels = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } else if (userProfile.hoteisPermitidos && userProfile.hoteisPermitidos.length > 0) {
-          const hoteisQuery = query(collection(db, "hoteis"), where(documentId(), "in", userProfile.hoteisPermitidos), where("ativo", "==", true));
-          const querySnapshot = await getDocs(hoteisQuery);
-          loadedHotels = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const clientesQuery = query(collection(db, "clientes"), where("ativo", "==", true), orderBy("nome")); // Busca da coleção "clientes"
+          const querySnapshot = await getDocs(clientesQuery);
+          loadedClientes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } else if (userProfile.clientesPermitidos && userProfile.clientesPermitidos.length > 0) { // Usa "clientesPermitidos"
+          const clientesQuery = query(collection(db, "clientes"), where(documentId(), "in", userProfile.clientesPermitidos), where("ativo", "==", true), orderBy("nome"));
+          const querySnapshot = await getDocs(clientesQuery);
+          loadedClientes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         }
         
-        setUserAllowedHotels(loadedHotels);
-        // Por padrão, seleciona todos os hotéis carregados
-        setSelectedHotelIds(loadedHotels.map(h => h.id));
-        setSelectAllToggle(true); // Assume que todos estão selecionados inicialmente
+        setUserAllowedClientes(loadedClientes);
+        setSelectedClienteIds(loadedClientes.map(c => c.id)); // Seleciona todos por padrão
+        setSelectAllToggle(true);
 
       } catch (error) {
-        console.error("Erro ao carregar hotéis para dashboard:", error);
-        setUserAllowedHotels([]);
-        setSelectedHotelIds([]);
+        console.error("Erro ao carregar clientes para dashboard:", error);
+        setUserAllowedClientes([]);
+        setSelectedClienteIds([]);
       }
-      setLoadingUserHotels(false);
+      setLoadingUserClientes(false);
     };
 
-    fetchUserHotels();
+    fetchUserClientes();
   }, [db, userProfile]);
 
-  // Buscar os registos de resíduos com base nos hotéis selecionados
+  // Buscar os registos de resíduos com base nos clientes selecionados
   useEffect(() => {
-    if (!db || !currentUser || !userProfile || loadingUserHotels) { 
+    if (!db || !currentUser || !userProfile || loadingUserClientes) { 
       setLoadingRecords(false);
       setWasteRecords([]);
       return;
     }
 
-    if (selectedHotelIds.length === 0) { // Se nenhum hotel estiver selecionado
+    if (selectedClienteIds.length === 0) {
         setLoadingRecords(false);
         setWasteRecords([]);
         return;
@@ -96,14 +97,16 @@ export default function PaginaDashboard() {
     setLoadingRecords(true);
     let wasteRecordsQuery;
 
-    // Query agora usa 'in' para múltiplos IDs
+    // Query usa 'in' para múltiplos clienteId
     wasteRecordsQuery = query(
-      collection(db, `artifacts/${appId}/public/data/wasteRecords`),
-      where("hotelId", "in", selectedHotelIds)
+      collection(db, `artifacts/${appId}/public/data/wasteRecords`), // Caminho dos wasteRecords
+      where("clienteId", "in", selectedClienteIds) // Filtra por clienteId
     );
     
     const unsubscribe = onSnapshot(wasteRecordsQuery, (snapshot) => {
       const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      // A ordenação por timestamp pode ser feita aqui se não houver no query por causa do 'in'
+      records.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
       setWasteRecords(records);
       setLoadingRecords(false);
     }, (error) => {
@@ -113,21 +116,16 @@ export default function PaginaDashboard() {
     });
 
     return () => unsubscribe();
-  }, [db, currentUser, appId, userProfile, selectedHotelIds, loadingUserHotels]);
+  }, [db, currentUser, appId, userProfile, selectedClienteIds, loadingUserClientes]);
 
 
-  const handleHotelSelectionChange = (hotelId) => {
-    setSelectedHotelIds(prevSelected => {
-      const newSelection = prevSelected.includes(hotelId)
-        ? prevSelected.filter(id => id !== hotelId)
-        : [...prevSelected, hotelId];
+  const handleClienteSelectionChange = (clienteId) => {
+    setSelectedClienteIds(prevSelected => {
+      const newSelection = prevSelected.includes(clienteId)
+        ? prevSelected.filter(id => id !== clienteId)
+        : [...prevSelected, clienteId];
       
-      // Atualiza o estado do checkbox "Selecionar Todos"
-      if (newSelection.length === userAllowedHotels.length) {
-        setSelectAllToggle(true);
-      } else {
-        setSelectAllToggle(false);
-      }
+      setSelectAllToggle(newSelection.length === userAllowedClientes.length);
       return newSelection;
     });
   };
@@ -136,19 +134,18 @@ export default function PaginaDashboard() {
     const newToggleState = !selectAllToggle;
     setSelectAllToggle(newToggleState);
     if (newToggleState) {
-      setSelectedHotelIds(userAllowedHotels.map(h => h.id));
+      setSelectedClienteIds(userAllowedClientes.map(c => c.id));
     } else {
-      setSelectedHotelIds([]);
+      setSelectedClienteIds([]);
     }
   };
 
-
   const wasteTypeData = processDataForWasteTypeChart(wasteRecords);
-  const hotelAreaData = processDataForHotelAreaChart(wasteRecords);
+  const hotelAreaData = processDataForHotelAreaChart(wasteRecords); // Renomear para clienteAreaData se preferir
 
   // Lógica de renderização de loading e permissões
-  if (loadingUserHotels) {
-    return <div className="text-center text-gray-600 p-8">A carregar dados dos hotéis...</div>;
+  if (loadingUserClientes) {
+    return <div className="text-center text-gray-600 p-8">A carregar dados dos clientes...</div>;
   }
   if (!userProfile && currentUser) {
     return <div className="text-center text-gray-600 p-8">A carregar perfil do utilizador...</div>;
@@ -161,30 +158,29 @@ export default function PaginaDashboard() {
       </div>
     );
   }
-  if (userProfile.role === 'gerente' && userAllowedHotels.length === 0 && !loadingUserHotels) {
+  if (userProfile.role === 'gerente' && userAllowedClientes.length === 0 && !loadingUserClientes) {
     return (
         <div className="text-center text-orange-600 p-8">
-            Você não tem acesso a nenhum hotel ativo para visualizar dashboards. Contacte o administrador.
+            Você não tem acesso a nenhum cliente ativo para visualizar dashboards. Contacte o administrador.
         </div>
     );
   }
-  if (userProfile.role === 'master' && userAllowedHotels.length === 0 && !loadingUserHotels) {
+  if (userProfile.role === 'master' && userAllowedClientes.length === 0 && !loadingUserClientes) {
     return (
         <div className="text-center text-orange-600 p-8">
-            Nenhum hotel ativo cadastrado no sistema para exibir dashboards.
+            Nenhum cliente ativo cadastrado no sistema para exibir dashboards.
         </div>
     );
   }
 
-  // Determina o nome do hotel ou a descrição da seleção para o título
   let dashboardTitleContext = "";
-  if (selectedHotelIds.length === 1) {
-    const hotel = userAllowedHotels.find(h => h.id === selectedHotelIds[0]);
-    dashboardTitleContext = hotel ? ` de: ${hotel.nome}` : "";
-  } else if (selectedHotelIds.length > 1 && selectedHotelIds.length < userAllowedHotels.length) {
-    dashboardTitleContext = ` de ${selectedHotelIds.length} hotéis selecionados`;
-  } else if (selectedHotelIds.length > 0 && selectedHotelIds.length === userAllowedHotels.length) {
-     dashboardTitleContext = userProfile.role === 'master' ? " (Todos os Hotéis Ativos)" : " (Todos os Seus Hotéis Permitidos)";
+  if (selectedClienteIds.length === 1) {
+    const cliente = userAllowedClientes.find(c => c.id === selectedClienteIds[0]);
+    dashboardTitleContext = cliente ? ` de: ${cliente.nome}` : "";
+  } else if (selectedClienteIds.length > 1 && selectedClienteIds.length < userAllowedClientes.length) {
+    dashboardTitleContext = ` de ${selectedClienteIds.length} clientes selecionados`;
+  } else if (selectedClienteIds.length > 0 && selectedClienteIds.length === userAllowedClientes.length) {
+     dashboardTitleContext = userProfile.role === 'master' ? " (Todos os Clientes Ativos)" : " (Todos os Seus Clientes Permitidos)";
   }
 
 
@@ -194,35 +190,35 @@ export default function PaginaDashboard() {
         <h1 className="text-3xl font-bold text-gray-800">Dashboards</h1>
       </div>
 
-      {/* Seleção de Hotéis com Checkboxes */}
-      {userAllowedHotels.length > 0 && (
+      {/* Seleção de Clientes com Checkboxes */}
+      {userAllowedClientes.length > 0 && (
         <div className="bg-white p-4 rounded-lg shadow mb-6">
           <div className="mb-3">
-            <label htmlFor="selectAllHotelsToggle" className="flex items-center cursor-pointer">
+            <label htmlFor="selectAllClientesToggle" className="flex items-center cursor-pointer">
               <input
                 type="checkbox"
-                id="selectAllHotelsToggle"
+                id="selectAllClientesToggle"
                 checked={selectAllToggle}
                 onChange={handleSelectAllToggleChange}
                 className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
               />
               <span className="ml-2 text-sm font-medium text-gray-700">
-                {userProfile.role === 'master' ? 'Selecionar Todos os Hotéis Ativos' : 'Selecionar Todos os Meus Hotéis'}
+                {userProfile.role === 'master' ? 'Selecionar Todos os Clientes Ativos' : 'Selecionar Todos os Meus Clientes'}
               </span>
             </label>
           </div>
           <div className="max-h-40 overflow-y-auto space-y-2 border p-3 rounded-md">
-            {userAllowedHotels.map(hotel => (
-              <label key={hotel.id} htmlFor={`hotel-cb-${hotel.id}`} className="flex items-center cursor-pointer p-1 hover:bg-gray-100 rounded">
+            {userAllowedClientes.map(cliente => (
+              <label key={cliente.id} htmlFor={`cliente-cb-${cliente.id}`} className="flex items-center cursor-pointer p-1 hover:bg-gray-100 rounded">
                 <input
                   type="checkbox"
-                  id={`hotel-cb-${hotel.id}`}
-                  value={hotel.id}
-                  checked={selectedHotelIds.includes(hotel.id)}
-                  onChange={() => handleHotelSelectionChange(hotel.id)}
+                  id={`cliente-cb-${cliente.id}`}
+                  value={cliente.id}
+                  checked={selectedClienteIds.includes(cliente.id)}
+                  onChange={() => handleClienteSelectionChange(cliente.id)}
                   className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                 />
-                <span className="ml-2 text-sm text-gray-700">{hotel.nome} ({hotel.cidade || 'N/A'})</span>
+                <span className="ml-2 text-sm text-gray-700">{cliente.nome} ({cliente.cidade || 'N/A'})</span>
               </label>
             ))}
           </div>
@@ -231,9 +227,9 @@ export default function PaginaDashboard() {
       
       {loadingRecords ? (
         <div className="text-center text-gray-600 p-8">A carregar dados dos gráficos...</div>
-      ) : selectedHotelIds.length === 0 ? (
+      ) : selectedClienteIds.length === 0 ? (
          <div className="bg-white p-6 rounded-lg shadow text-center">
-            <p className="text-gray-600">Selecione pelo menos um hotel para visualizar os dados.</p>
+            <p className="text-gray-600">Selecione pelo menos um cliente para visualizar os dados.</p>
         </div>
       ) : wasteRecords.length === 0 ? (
         <div className="bg-white p-6 rounded-lg shadow text-center">
@@ -262,9 +258,9 @@ export default function PaginaDashboard() {
               </div>
             ) : <p className="text-center text-gray-500 lg:col-span-1">Sem dados para o gráfico de tipo de resíduo.</p>}
 
-            {hotelAreaData.length > 0 ? (
+            {hotelAreaData.length > 0 ? ( // Pode renomear para clienteAreaData se quiser
               <div className="bg-gray-50 p-4 rounded-lg shadow h-[450px]">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">Total de Registos por Área do Hotel</h3>
+                <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">Total de Registos por Área do Cliente</h3>
                 <ResponsiveContainer width="100%" height="90%">
                   <PieChart>
                     <Pie data={hotelAreaData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`} outerRadius={120} fill="#82ca9d" dataKey="value">
@@ -275,7 +271,7 @@ export default function PaginaDashboard() {
                   </PieChart>
                 </ResponsiveContainer>
               </div>
-            ) : <p className="text-center text-gray-500 lg:col-span-1">Sem dados para o gráfico de área do hotel.</p>}
+            ) : <p className="text-center text-gray-500 lg:col-span-1">Sem dados para o gráfico de área do cliente.</p>}
           </div>
         </div>
       )}
