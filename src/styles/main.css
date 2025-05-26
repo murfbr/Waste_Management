@@ -1,6 +1,6 @@
 /* Estilos Base */
 :root {
-  /* Definição das Cores Globais */
+  /* ... (suas variáveis CSS globais permanecem as mesmas) ... */
   --color-primary-600: #2563eb; 
   --color-primary-700: #1d4ed8; 
   
@@ -13,7 +13,9 @@
   --color-accent-indigo-600: #4f46e5; 
   --color-accent-indigo-700: #4338ca;
   
-  /* Removido --color-focus-ring e --color-focus-border pois o Tailwind lida com isso com focus:ring e focus:border */
+  --color-focus-border: #3b82f6; /* Cor da borda de foco do seu original */
+  --color-focus-ring-tailwind: var(--color-accent-indigo-500); /* Variável para cor do anel de foco Tailwind */
+
 
   --color-success-bg: #d1fae5;
   --color-success-text: #065f46;
@@ -35,8 +37,7 @@
   --color-text-heading: #1f2937;
   --color-bg-body: #f3f4f6;
   --color-bg-card: #ffffff;
-  --color-bg-input-default: #ffffff; /* Fundo padrão do input (pode ser f9fafb se preferir o cinza claro) */
-
+  --color-bg-input-default: #ffffff; 
 
   /* Fontes */
   --font-sans: 'Inter', sans-serif;
@@ -54,31 +55,40 @@ body {
 }
 
 .input-form { 
-  @apply mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm 
-         text-base
-         focus:ring-indigo-500 focus:border-indigo-500;
-  background-color: var(--color-bg-input-default); /* Usa a variável para o fundo */
+  @apply mt-1 block w-full p-2 text-base border rounded-lg shadow-sm 
+         focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50; /* Usando ring do Tailwind */
+  border-color: var(--color-secondary-border);
+  background-color: var(--color-bg-input-default); 
   color: var(--color-text-base);
-  /* transition já é aplicado pelo Tailwind nas classes de foco/borda */
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.input-form:focus { 
+  outline: none;
+  border-color: var(--color-focus-border); 
 }
 
 .input-form-sm { 
-  @apply mt-1 block w-full p-1.5 border border-gray-300 rounded-md shadow-sm 
-         text-sm
-         focus:ring-indigo-500 focus:border-indigo-500;
+  @apply mt-1 block w-full p-1.5 text-sm border rounded-md shadow-sm
+         focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50;
+  border-color: var(--color-secondary-border);
   background-color: var(--color-bg-input-default);
   color: var(--color-text-base);
+  transition: border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.input-form-sm:focus {
+  outline: none;
+  border-color: var(--color-focus-border);
 }
 
 .checkbox-form {
-  @apply h-4 w-4 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500;
-  /* A cor do checkmark é controlada por text-indigo-600 */
-}
-.checkbox-form-sm {
-  @apply h-3.5 w-3.5 border-gray-300 rounded text-indigo-600 focus:ring-indigo-500;
+  @apply h-4 w-4 border-gray-300 rounded text-indigo-600 focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500;
 }
 
-/* Classes de Botões (Mantidas como estavam, pois pareciam ok) */
+.checkbox-form-sm {
+  @apply h-3.5 w-3.5 border-gray-300 rounded text-indigo-600 focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500;
+}
+
+/* Classes de Botões */
 .btn { 
   @apply font-semibold rounded-md shadow-sm cursor-pointer
          transition-all duration-150 ease-in-out
@@ -86,7 +96,7 @@ body {
 }
 
 .btn-primary {
-  @apply btn px-4 py-2 text-white; /* Ajustado padding para ser mais comum para botões primários */
+  @apply btn px-4 py-2 text-white focus:ring-blue-500; 
   background-color: var(--color-primary-600);
 }
 .btn-primary:hover {
@@ -96,13 +106,9 @@ body {
 .btn-primary:active {
   @apply transform translate-y-0;
 }
-.btn-primary:focus {
-  @apply ring-blue-500; 
-}
-
 
 .btn-secondary {
-  @apply btn px-4 py-2 border text-sm;
+  @apply btn px-4 py-2 border text-sm focus:ring-indigo-500;
   background-color: var(--color-secondary-bg);
   color: var(--color-secondary-text);
   border-color: var(--color-secondary-border);
@@ -110,16 +116,39 @@ body {
 .btn-secondary:hover {
   background-color: var(--color-secondary-hover-bg);
 }
-.btn-secondary:focus {
-   @apply ring-indigo-500;
+
+.btn-export {
+  @apply btn px-6 py-3 text-white focus:ring-green-500;
+  background-color: var(--color-green-export-500);
+}
+.btn-export:hover {
+  background-color: var(--color-green-export-600);
+  @apply transform hover:-translate-y-px;
+}
+.btn-export:active {
+  @apply transform translate-y-0;
 }
 
-/* ... (restante do CSS para botões, message-box, etc., pode permanecer como estava na última versão, pois o foco é nos inputs) ... */
+.btn-link-indigo {
+  @apply font-medium;
+  color: var(--color-accent-indigo-600);
+}
+.btn-link-indigo:hover {
+  color: var(--color-accent-indigo-700);
+}
+
+.btn-link-red {
+  @apply font-medium;
+  color: var(--color-danger-text); 
+}
+.btn-link-red:hover {
+  @apply text-red-700; 
+}
 
 /* Botões Específicos do WasteForm */
 .waste-type-btn {
   @apply btn flex items-center justify-center w-full p-3 border-2 rounded-xl 
-         text-base focus:ring-indigo-500;
+         text-base focus:ring-offset-2 focus:ring-indigo-500;
 }
 
 .waste-type-btn-default {
@@ -140,16 +169,12 @@ body {
 }
 
 .btn-primary-large { 
-  @apply btn w-full text-white text-xl py-4 px-6 rounded-xl disabled:opacity-70;
+  @apply btn w-full text-white text-xl py-4 px-6 rounded-xl disabled:opacity-70 focus:ring-blue-500;
   background-color: var(--color-blue-large-btn-500);
 }
 .btn-primary-large:hover {
   background-color: var(--color-blue-large-btn-600);
 }
-.btn-primary-large:focus {
-  @apply ring-blue-500;
-}
-
 
 /* Componentes de UI */
 .message-box {
@@ -168,7 +193,7 @@ body {
 
 .record-item {
   @apply p-4 mb-3 flex flex-col space-y-2 border rounded-lg;
-  background-color: var(--color-bg-input-default); /* Usando o mesmo fundo dos inputs para consistência */
+  background-color: var(--color-bg-input-default); 
   border-color: var(--color-secondary-border); 
 }
 
@@ -192,13 +217,14 @@ body {
 
 /* Estilos de Tabela */
 .th-table {
-  @apply px-6 py-3 text-left text-xs font-medium uppercase tracking-wider;
+  /* AJUSTADO: text-sm para corresponder aos td, removido uppercase e tracking-wider por padrão */
+  @apply px-6 py-3 text-left text-sm font-medium; 
   color: var(--color-text-muted);
   background-color: var(--color-bg-input-default); 
 }
 
 .td-table {
-  @apply px-6 py-4 whitespace-nowrap text-sm;
+  @apply px-6 py-4 text-sm; 
   color: var(--color-text-muted);
 }
 
@@ -218,3 +244,4 @@ body {
   background-color: var(--color-danger-bg); 
   color: var(--color-danger-text); 
 }
+
