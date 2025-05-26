@@ -1,179 +1,199 @@
 // src/pages/PaginaDashboard.jsx
 
-import React, { useContext, useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState, useMemo } from 'react';
 import AuthContext from '../context/AuthContext';
-import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { collection, onSnapshot, query, where, getDocs, documentId, orderBy } from 'firebase/firestore'; // Adicionado orderBy
+import { 
+    PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
+    BarChart, Bar, XAxis, YAxis, CartesianGrid,
+    LineChart, Line, ReferenceLine
+} from 'recharts';
+import { collection, onSnapshot, query, where, getDocs, documentId, orderBy, Timestamp } from 'firebase/firestore';
+import DashboardFilters from '../components/DashboardFilters'; // IMPORTA O NOVO COMPONENTE
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#3D9140', '#FF5733', '#8333FF'];
+const MESES = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-// Estas funções operam sobre os 'wasteRecords' já filtrados, então não precisam de grandes mudanças,
-// mas os nomes dos campos (wasteType, area) nos registos devem estar corretos.
-const processDataForWasteTypeChart = (records) => {
-  if (!records || records.length === 0) return [];
+// Funções de processamento de dados (inalteradas)
+const processDataForPieChartByWeight = (records, groupByField) => {
+  if (!records || records.length === 0) return { pieData: [], totalWeight: 0 };
+  let totalWeight = 0;
   const counts = records.reduce((acc, record) => {
-    const type = record.wasteType || 'Não especificado'; // 'wasteType' é o campo no wasteRecord
-    acc[type] = (acc[type] || 0) + 1;
+    const key = record[groupByField] || 'Não especificado';
+    const weight = parseFloat(record.peso || 0);
+    acc[key] = (acc[key] || 0) + weight;
+    totalWeight += weight;
     return acc;
   }, {});
-  return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  const pieData = Object.entries(counts).map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }));
+  return { pieData, totalWeight: parseFloat(totalWeight.toFixed(2)) };
 };
 
-const processDataForHotelAreaChart = (records) => {
-  if (!records || records.length === 0) return [];
-  const counts = records.reduce((acc, record) => {
-    const area = record.areaLancamento || 'Não especificado'; // 'areaLancamento' é o novo campo no wasteRecord
-    acc[area] = (acc[area] || 0) + 1;
-    return acc;
-  }, {});
-  return Object.entries(counts).map(([name, value]) => ({ name, value }));
+const processDataForDailyVolumeBarChart = (records) => {
+    if (!records || records.length === 0) return [];
+    const dailyVolumes = records.reduce((acc, record) => {
+        const date = new Date(record.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        const weight = parseFloat(record.peso || 0);
+        acc[date] = (acc[date] || 0) + weight;
+        return acc;
+    }, {});
+    return Object.entries(dailyVolumes)
+        .map(([name, volume]) => ({ name, volume: parseFloat(volume.toFixed(2)) }))
+        .sort((a,b) => {
+            const [dayA, monthA] = a.name.split('/');
+            const [dayB, monthB] = b.name.split('/');
+            return new Date(`2000/${monthA}/${dayA}`) - new Date(`2000/${monthB}/${dayB}`);
+        });
+};
+
+const processDataForLixoZeroChart = (records, rejectCategoryName = "Rejeito") => {
+    if (!records || records.length === 0) return [];
+    const dailyData = records.reduce((acc, record) => {
+        const date = new Date(record.timestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        const weight = parseFloat(record.peso || 0);
+        acc[date] = acc[date] || { total: 0, rejeito: 0 };
+        acc[date].total += weight;
+        if (record.wasteType === rejectCategoryName) {
+            acc[date].rejeito += weight;
+        }
+        return acc;
+    }, {});
+
+    return Object.entries(dailyData)
+        .map(([name, data]) => ({
+            name,
+            percentualRejeito: data.total > 0 ? parseFloat(((data.rejeito / data.total) * 100).toFixed(2)) : 0,
+            total: parseFloat(data.total.toFixed(2)),
+            rejeito: parseFloat(data.rejeito.toFixed(2))
+        }))
+        .sort((a,b) => {
+            const [dayA, monthA] = a.name.split('/');
+            const [dayB, monthB] = b.name.split('/');
+            return new Date(`2000/${monthA}/${dayA}`) - new Date(`2000/${monthB}/${dayB}`);
+        });
 };
 
 
 export default function PaginaDashboard() {
   const { userProfile, db, appId, currentUser } = useContext(AuthContext);
   
-  const [wasteRecords, setWasteRecords] = useState([]);
+  const [allWasteRecords, setAllWasteRecords] = useState([]);
+  const [filteredWasteRecords, setFilteredWasteRecords] = useState([]); 
   const [loadingRecords, setLoadingRecords] = useState(true);
 
-  // Renomeado para refletir "Clientes"
   const [userAllowedClientes, setUserAllowedClientes] = useState([]);
   const [selectedClienteIds, setSelectedClienteIds] = useState([]); 
   const [loadingUserClientes, setLoadingUserClientes] = useState(true);
   const [selectAllToggle, setSelectAllToggle] = useState(true);
 
-  // Carregar clientes permitidos/todos os clientes
-  useEffect(() => {
-    if (!db || !userProfile) {
-      setLoadingUserClientes(false);
-      setUserAllowedClientes([]);
-      setSelectedClienteIds([]);
-      return;
-    }
+  const currentYear = new Date().getFullYear();
+  const currentMonth = new Date().getMonth();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth);
 
+  const [availableAreas, setAvailableAreas] = useState([]);
+  const [selectedAreaLixoZero, setSelectedAreaLixoZero] = useState('ALL');
+
+  const availableYears = useMemo(() => {
+    const years = new Set();
+    allWasteRecords.forEach(record => {
+        if (record.timestamp) years.add(new Date(record.timestamp).getFullYear());
+    });
+    if (years.size === 0) years.add(currentYear);
+    return Array.from(years).sort((a,b) => b - a);
+  }, [allWasteRecords, currentYear]);
+
+  // Carregar clientes (lógica inalterada)
+  useEffect(() => { 
+    if (!db || !userProfile) { setLoadingUserClientes(false); setUserAllowedClientes([]); setSelectedClienteIds([]); return; }
     const fetchUserClientes = async () => {
-      setLoadingUserClientes(true);
-      let loadedClientes = [];
+      setLoadingUserClientes(true); let loadedClientes = [];
       try {
         if (userProfile.role === 'master') {
-          const clientesQuery = query(collection(db, "clientes"), where("ativo", "==", true), orderBy("nome")); // Busca da coleção "clientes"
-          const querySnapshot = await getDocs(clientesQuery);
-          loadedClientes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } else if (userProfile.clientesPermitidos && userProfile.clientesPermitidos.length > 0) { // Usa "clientesPermitidos"
-          const clientesQuery = query(collection(db, "clientes"), where(documentId(), "in", userProfile.clientesPermitidos), where("ativo", "==", true), orderBy("nome"));
-          const querySnapshot = await getDocs(clientesQuery);
-          loadedClientes = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+          const q = query(collection(db, "clientes"), where("ativo", "==", true), orderBy("nome"));
+          loadedClientes = (await getDocs(q)).docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        } else if (userProfile.clientesPermitidos && userProfile.clientesPermitidos.length > 0) {
+          const q = query(collection(db, "clientes"), where(documentId(), "in", userProfile.clientesPermitidos), where("ativo", "==", true), orderBy("nome"));
+          loadedClientes = (await getDocs(q)).docs.map(doc => ({ id: doc.id, ...doc.data() }));
         }
-        
         setUserAllowedClientes(loadedClientes);
-        setSelectedClienteIds(loadedClientes.map(c => c.id)); // Seleciona todos por padrão
+        setSelectedClienteIds(loadedClientes.map(c => c.id));
         setSelectAllToggle(true);
-
-      } catch (error) {
-        console.error("Erro ao carregar clientes para dashboard:", error);
-        setUserAllowedClientes([]);
-        setSelectedClienteIds([]);
-      }
+      } catch (e) { console.error("Erro ao carregar clientes para dashboard:", e); setUserAllowedClientes([]); setSelectedClienteIds([]); }
       setLoadingUserClientes(false);
     };
-
     fetchUserClientes();
   }, [db, userProfile]);
 
-  // Buscar os registos de resíduos com base nos clientes selecionados
+  // Buscar TODOS os registos de resíduos para os clientes selecionados (lógica inalterada)
   useEffect(() => {
-    if (!db || !currentUser || !userProfile || loadingUserClientes) { 
-      setLoadingRecords(false);
-      setWasteRecords([]);
-      return;
+    if (!db || !currentUser || loadingUserClientes || selectedClienteIds.length === 0) {
+      setAllWasteRecords([]); setLoadingRecords(false); return;
     }
-
-    if (selectedClienteIds.length === 0) {
-        setLoadingRecords(false);
-        setWasteRecords([]);
-        return;
-    }
-
     setLoadingRecords(true);
-    let wasteRecordsQuery;
-
-    // Query usa 'in' para múltiplos clienteId
-    wasteRecordsQuery = query(
-      collection(db, `artifacts/${appId}/public/data/wasteRecords`), // Caminho dos wasteRecords
-      where("clienteId", "in", selectedClienteIds) // Filtra por clienteId
-    );
-    
-    const unsubscribe = onSnapshot(wasteRecordsQuery, (snapshot) => {
-      const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      // A ordenação por timestamp pode ser feita aqui se não houver no query por causa do 'in'
-      records.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
-      setWasteRecords(records);
+    const q = query(collection(db, `artifacts/${appId}/public/data/wasteRecords`), where("clienteId", "in", selectedClienteIds));
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const records = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data(), timestamp: doc.data().timestamp }));
+      setAllWasteRecords(records);
       setLoadingRecords(false);
     }, (error) => {
-      console.error("Erro ao buscar registos para dashboard:", error);
-      setWasteRecords([]); 
-      setLoadingRecords(false);
+      console.error("Erro ao buscar todos os registos para dashboard:", error);
+      setAllWasteRecords([]); setLoadingRecords(false);
     });
-
     return () => unsubscribe();
-  }, [db, currentUser, appId, userProfile, selectedClienteIds, loadingUserClientes]);
+  }, [db, currentUser, appId, selectedClienteIds, loadingUserClientes]);
 
+  // Filtrar registos e popular áreas (lógica inalterada)
+  useEffect(() => {
+    if (allWasteRecords.length === 0) {
+      setFilteredWasteRecords([]); setAvailableAreas([]); setSelectedAreaLixoZero('ALL'); return;
+    }
+    const firstDayOfMonth = new Date(selectedYear, selectedMonth, 1).getTime();
+    const lastDayOfMonth = new Date(selectedYear, selectedMonth + 1, 0, 23, 59, 59, 999).getTime();
+    const recordsForMonth = allWasteRecords.filter(record => {
+      const recordDate = typeof record.timestamp === 'number' ? record.timestamp : record.timestamp?.toDate?.().getTime();
+      return recordDate >= firstDayOfMonth && recordDate <= lastDayOfMonth;
+    });
+    setFilteredWasteRecords(recordsForMonth);
+    const areasInMonth = new Set();
+    recordsForMonth.forEach(record => { if(record.areaLancamento) areasInMonth.add(record.areaLancamento); });
+    setAvailableAreas(Array.from(areasInMonth).sort());
+  }, [allWasteRecords, selectedYear, selectedMonth]);
 
-  const handleClienteSelectionChange = (clienteId) => {
-    setSelectedClienteIds(prevSelected => {
-      const newSelection = prevSelected.includes(clienteId)
-        ? prevSelected.filter(id => id !== clienteId)
-        : [...prevSelected, clienteId];
-      
-      setSelectAllToggle(newSelection.length === userAllowedClientes.length);
-      return newSelection;
+  const lixoZeroChartRecords = useMemo(() => { // Lógica inalterada
+    if (selectedAreaLixoZero === 'ALL') return filteredWasteRecords;
+    return filteredWasteRecords.filter(record => record.areaLancamento === selectedAreaLixoZero);
+  }, [filteredWasteRecords, selectedAreaLixoZero]);
+
+  const handleClienteSelectionChange = (clienteId) => { // Lógica inalterada
+    setSelectedClienteIds(prev => {
+      const nS = prev.includes(clienteId) ? prev.filter(id => id !== clienteId) : [...prev, clienteId];
+      setSelectAllToggle(nS.length === userAllowedClientes.length); return nS;
     });
   };
-
-  const handleSelectAllToggleChange = () => {
-    const newToggleState = !selectAllToggle;
-    setSelectAllToggle(newToggleState);
-    if (newToggleState) {
-      setSelectedClienteIds(userAllowedClientes.map(c => c.id));
-    } else {
-      setSelectedClienteIds([]);
-    }
+  const handleSelectAllToggleChange = () => { // Lógica inalterada
+    const nT = !selectAllToggle; setSelectAllToggle(nT);
+    if (nT) setSelectedClienteIds(userAllowedClientes.map(c => c.id)); else setSelectedClienteIds([]);
   };
 
-  const wasteTypeData = processDataForWasteTypeChart(wasteRecords);
-  const hotelAreaData = processDataForHotelAreaChart(wasteRecords); // Renomear para clienteAreaData se preferir
+  const { pieData: wasteTypeData, totalWeight: totalWasteWeight } = processDataForPieChartByWeight(allWasteRecords, 'wasteType');
+  const { pieData: areaData } = processDataForPieChartByWeight(allWasteRecords, 'areaLancamento');
+  const dailyVolumeData = processDataForDailyVolumeBarChart(filteredWasteRecords);
+  const lixoZeroData = processDataForLixoZeroChart(lixoZeroChartRecords);
 
-  // Lógica de renderização de loading e permissões
-  if (loadingUserClientes) {
-    return <div className="text-center text-gray-600 p-8">A carregar dados dos clientes...</div>;
-  }
-  if (!userProfile && currentUser) {
-    return <div className="text-center text-gray-600 p-8">A carregar perfil do utilizador...</div>;
-  }
+  // Lógica de renderização de loading e permissões (inalterada)
+  if (loadingUserClientes) return <div className="text-center text-gray-600 p-8">A carregar dados dos clientes...</div>;
+  if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">A carregar perfil...</div>;
   if (!userProfile || (userProfile.role !== 'master' && userProfile.role !== 'gerente')) {
-    return (
-      <div className="text-center text-red-500 p-8">
-        Você não tem permissão para aceder a esta página de Dashboards.
-        {userProfile && ` (Seu nível: ${userProfile.role})`}
-      </div>
-    );
+    return <div className="text-center text-red-500 p-8">Acesso Negado.</div>;
   }
   if (userProfile.role === 'gerente' && userAllowedClientes.length === 0 && !loadingUserClientes) {
-    return (
-        <div className="text-center text-orange-600 p-8">
-            Você não tem acesso a nenhum cliente ativo para visualizar dashboards. Contacte o administrador.
-        </div>
-    );
+    return <div className="text-center text-orange-600 p-8">Sem acesso a clientes.</div>;
   }
-  if (userProfile.role === 'master' && userAllowedClientes.length === 0 && !loadingUserClientes) {
-    return (
-        <div className="text-center text-orange-600 p-8">
-            Nenhum cliente ativo cadastrado no sistema para exibir dashboards.
-        </div>
-    );
+   if (userProfile.role === 'master' && userAllowedClientes.length === 0 && !loadingUserClientes) {
+    return <div className="text-center text-orange-600 p-8">Nenhum cliente ativo cadastrado.</div>;
   }
 
-  let dashboardTitleContext = "";
+  let dashboardTitleContext = ""; // Lógica inalterada
   if (selectedClienteIds.length === 1) {
     const cliente = userAllowedClientes.find(c => c.id === selectedClienteIds[0]);
     dashboardTitleContext = cliente ? ` de: ${cliente.nome}` : "";
@@ -183,97 +203,113 @@ export default function PaginaDashboard() {
      dashboardTitleContext = userProfile.role === 'master' ? " (Todos os Clientes Ativos)" : " (Todos os Seus Clientes Permitidos)";
   }
 
-
   return (
     <div className="space-y-8">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-800">Dashboards</h1>
       </div>
 
-      {/* Seleção de Clientes com Checkboxes */}
-      {userAllowedClientes.length > 0 && (
-        <div className="bg-white p-4 rounded-lg shadow mb-6">
-          <div className="mb-3">
-            <label htmlFor="selectAllClientesToggle" className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                id="selectAllClientesToggle"
-                checked={selectAllToggle}
-                onChange={handleSelectAllToggleChange}
-                className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-              />
-              <span className="ml-2 text-sm font-medium text-gray-700">
-                {userProfile.role === 'master' ? 'Selecionar Todos os Clientes Ativos' : 'Selecionar Todos os Meus Clientes'}
-              </span>
-            </label>
-          </div>
-          <div className="max-h-40 overflow-y-auto space-y-2 border p-3 rounded-md">
-            {userAllowedClientes.map(cliente => (
-              <label key={cliente.id} htmlFor={`cliente-cb-${cliente.id}`} className="flex items-center cursor-pointer p-1 hover:bg-gray-100 rounded">
-                <input
-                  type="checkbox"
-                  id={`cliente-cb-${cliente.id}`}
-                  value={cliente.id}
-                  checked={selectedClienteIds.includes(cliente.id)}
-                  onChange={() => handleClienteSelectionChange(cliente.id)}
-                  className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">{cliente.nome} ({cliente.cidade || 'N/A'})</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* USA O NOVO COMPONENTE DE FILTROS */}
+      <DashboardFilters
+        userProfile={userProfile}
+        userAllowedClientes={userAllowedClientes}
+        selectedClienteIds={selectedClienteIds}
+        onClienteSelectionChange={handleClienteSelectionChange}
+        selectAllToggle={selectAllToggle}
+        onSelectAllToggleChange={handleSelectAllToggleChange}
+        availableYears={availableYears}
+        selectedYear={selectedYear}
+        onYearChange={setSelectedYear} // Passa a função de set diretamente
+        // MESES é uma constante global, não precisa ser passada se DashboardFilters a importar também
+        selectedMonth={selectedMonth}
+        onMonthChange={setSelectedMonth} // Passa a função de set diretamente
+        availableAreas={availableAreas}
+        selectedAreaLixoZero={selectedAreaLixoZero}
+        onAreaLixoZeroChange={setSelectedAreaLixoZero} // Passa a função de set diretamente
+        loadingUserClientes={loadingUserClientes}
+      />
       
-      {loadingRecords ? (
-        <div className="text-center text-gray-600 p-8">A carregar dados dos gráficos...</div>
-      ) : selectedClienteIds.length === 0 ? (
-         <div className="bg-white p-6 rounded-lg shadow text-center">
-            <p className="text-gray-600">Selecione pelo menos um cliente para visualizar os dados.</p>
-        </div>
-      ) : wasteRecords.length === 0 ? (
-        <div className="bg-white p-6 rounded-lg shadow text-center">
-            <p className="text-gray-600">
-                Não há dados de resíduos registados para a seleção atual.
-            </p>
-        </div>
+      {/* Secção de Gráficos (lógica de renderização condicional e JSX dos gráficos inalterada) */}
+      {loadingRecords ? ( <div className="text-center text-gray-600 p-8">A carregar dados dos gráficos...</div>
+      ) : selectedClienteIds.length === 0 ? ( <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Selecione pelo menos um cliente para visualizar os dados.</p></div>
+      ) : allWasteRecords.length === 0 && filteredWasteRecords.length === 0 ? ( <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Não há dados de resíduos registados para a seleção atual.</p></div>
       ) : (
-        <div className="bg-white p-6 rounded-lg shadow">
-          <h2 className="text-2xl font-semibold text-gray-700 mb-4">
-            Visão Geral dos Resíduos{dashboardTitleContext}
-          </h2>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
-            {wasteTypeData.length > 0 ? (
-              <div className="bg-gray-50 p-4 rounded-lg shadow h-[450px]">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">Total de Registos por Tipo de Resíduo</h3>
-                <ResponsiveContainer width="100%" height="90%">
-                  <PieChart>
-                    <Pie data={wasteTypeData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`} outerRadius={120} fill="#8884d8" dataKey="value">
-                      {wasteTypeData.map((entry, index) => (<Cell key={`cell-type-${index}`} fill={COLORS[index % COLORS.length]} />))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            ) : <p className="text-center text-gray-500 lg:col-span-1">Sem dados para o gráfico de tipo de resíduo.</p>}
-
-            {hotelAreaData.length > 0 ? ( // Pode renomear para clienteAreaData se quiser
-              <div className="bg-gray-50 p-4 rounded-lg shadow h-[450px]">
-                <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">Total de Registos por Área do Cliente</h3>
-                <ResponsiveContainer width="100%" height="90%">
-                  <PieChart>
-                    <Pie data={hotelAreaData} cx="50%" cy="50%" labelLine={false} label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`} outerRadius={120} fill="#82ca9d" dataKey="value">
-                      {hotelAreaData.map((entry, index) => (<Cell key={`cell-area-${index}`} fill={COLORS[index % COLORS.length]} />))}
-                    </Pie>
-                    <Tooltip />
-                    <Legend />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            ) : <p className="text-center text-gray-500 lg:col-span-1">Sem dados para o gráfico de área do cliente.</p>}
+        <>
+          {/* Gráfico de Barras: Volume Diário */}
+          <div className="bg-white p-6 rounded-lg shadow">
+            <h2 className="text-xl font-semibold text-gray-700 mb-4">Volume Diário de Resíduos ({MESES[selectedMonth]}/{selectedYear}){dashboardTitleContext}</h2>
+            {dailyVolumeData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <BarChart data={dailyVolumeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis label={{ value: 'Peso (kg)', angle: -90, position: 'insideLeft' }} />
+                  <Tooltip formatter={(value) => `${value.toFixed(2)} kg`} />
+                  <Legend />
+                  <Bar dataKey="volume" fill="#8884d8" name="Volume Total (kg)" />
+                </BarChart>
+              </ResponsiveContainer>
+            ) : <p className="text-center text-gray-500">Sem dados para o gráfico de volume diário neste período.</p>}
           </div>
-        </div>
+
+          {/* Gráfico de Linha: Meta Lixo Zero */}
+          <div className="bg-white p-6 rounded-lg shadow mt-8">
+            <h2 className="text-xl font-semibold text-gray-700 mb-4">
+              Meta Lixo Zero: Percentual de Rejeito ({MESES[selectedMonth]}/{selectedYear})
+              {selectedAreaLixoZero !== 'ALL' ? ` - Área: ${selectedAreaLixoZero}` : ' - Todas as Áreas'}
+              {dashboardTitleContext}
+            </h2>
+            {lixoZeroData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={400}>
+                <LineChart data={lixoZeroData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="name" />
+                  <YAxis label={{ value: '% Rejeito', angle: -90, position: 'insideLeft' }} domain={[0, 'dataMax + 10']} allowDataOverflow />
+                  <Tooltip formatter={(value) => `${value.toFixed(2)}%`} />
+                  <Legend />
+                  <Line type="monotone" dataKey="percentualRejeito" stroke="#FF8042" name="% Rejeito" activeDot={{ r: 8 }} />
+                  <ReferenceLine y={10} label={{ value: "Meta 10%", position: "insideTopRight", fill: "#FF8042" }} stroke="#FF8042" strokeDasharray="3 3" />
+                </LineChart>
+              </ResponsiveContainer>
+            ) : <p className="text-center text-gray-500">Sem dados para o gráfico Meta Lixo Zero neste período/área.</p>}
+          </div>
+
+          {/* Gráficos de Pizza */}
+          <div className="bg-white p-6 rounded-lg shadow mt-8">
+            <h2 className="text-xl font-semibold text-gray-700 mb-4">Composição Geral dos Resíduos (Total: {totalWasteWeight.toFixed(2)} kg){dashboardTitleContext}</h2>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
+              {wasteTypeData.length > 0 ? (
+                <div className="bg-gray-50 p-4 rounded-lg shadow h-[450px]">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">Por Tipo de Resíduo (Peso)</h3>
+                  <ResponsiveContainer width="100%" height="90%">
+                    <PieChart>
+                      <Pie data={wasteTypeData} cx="50%" cy="50%" labelLine={false} label={({ name, value, percent }) => `${name}: ${value.toFixed(2)} kg (${(percent * 100).toFixed(0)}%)`} outerRadius={120} fill="#8884d8" dataKey="value">
+                        {wasteTypeData.map((entry, index) => (<Cell key={`cell-type-${index}`} fill={COLORS[index % COLORS.length]} />))}
+                      </Pie>
+                      <Tooltip formatter={(value, name) => [`${value.toFixed(2)} kg`, name]}/>
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : <p className="text-center text-gray-500 lg:col-span-1">Sem dados para o gráfico de tipo de resíduo.</p>}
+
+              {areaData.length > 0 ? (
+                <div className="bg-gray-50 p-4 rounded-lg shadow h-[450px]">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">Por Área do Cliente (Peso)</h3>
+                  <ResponsiveContainer width="100%" height="90%">
+                    <PieChart>
+                      <Pie data={areaData} cx="50%" cy="50%" labelLine={false} label={({ name, value, percent }) => `${name}: ${value.toFixed(2)} kg (${(percent * 100).toFixed(0)}%)`} outerRadius={120} fill="#82ca9d" dataKey="value">
+                        {areaData.map((entry, index) => (<Cell key={`cell-area-${index}`} fill={COLORS[index % COLORS.length]} />))}
+                      </Pie>
+                      <Tooltip formatter={(value, name) => [`${value.toFixed(2)} kg`, name]}/>
+                      <Legend />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+              ) : <p className="text-center text-gray-500 lg:col-span-1">Sem dados para o gráfico de área do cliente.</p>}
+            </div>
+          </div>
+        </>
       )}
     </div>
   );

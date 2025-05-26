@@ -1,7 +1,7 @@
 // src/router/ProtectedRoute.jsx
 
 import React, { useContext } from 'react';
-import { Navigate, Outlet } from 'react-router-dom';
+import { Navigate, Outlet, useLocation } from 'react-router-dom'; // Adicionado useLocation
 import AuthContext from '../context/AuthContext';
 
 /**
@@ -9,44 +9,46 @@ import AuthContext from '../context/AuthContext';
  * @param {object} props
  * @param {Array<string>} props.allowedRoles - Array de strings com os roles permitidos para aceder à rota.
  * @param {React.ReactNode} [props.children] - Usado se este componente envolver um único elemento filho diretamente.
-                                                Para rotas de layout com múltiplas sub-rotas, o <Outlet /> é preferível.
+ * Para rotas de layout com múltiplas sub-rotas (usando <Outlet />), não passe children.
  */
 export default function ProtectedRoute({ allowedRoles, children }) {
-  const { userProfile, currentUser, loadingAuth } = useContext(AuthContext);
+  const { userProfile, currentUser, loadingAuth, isAuthReady } = useContext(AuthContext);
+  const location = useLocation(); // Para guardar a localização atual antes de redirecionar para login
 
-  if (loadingAuth) {
-    // Enquanto o estado de autenticação e perfil estão a carregar
-    return <div className="flex justify-center items-center min-h-screen">A verificar permissões...</div>;
+  // Se ainda está a carregar o estado de autenticação ou o perfil, mostra um loader.
+  // isAuthReady fica true depois que o onAuthStateChanged executa pela primeira vez.
+  if (loadingAuth || !isAuthReady) {
+    return <div className="flex justify-center items-center min-h-screen">A verificar autenticação...</div>;
   }
 
+  // Se terminou de verificar a autenticação e não há utilizador, redireciona para login.
   if (!currentUser) {
-    // Utilizador não está logado, redireciona para a página de login
-    // Passa a localização atual para que possa ser redirecionado de volta após o login (opcional)
-    return <Navigate to="/login" replace />;
+    // Passa a localização atual para que possa ser redirecionado de volta após o login.
+    // O componente Login precisará de ler este estado e redirecionar.
+    return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Se o utilizador está logado, mas o perfil ainda não carregou
+  // (pode acontecer brevemente ou se houver um erro no carregamento do perfil)
   if (!userProfile) {
-    // Perfil ainda não carregou, mas o utilizador está logado (pode acontecer brevemente)
-    // Poderia mostrar um loader específico ou aguardar. Por simplicidade, pode-se tratar como "a verificar".
-    // Ou, se isto persistir, pode ser um problema no carregamento do perfil.
-    return <div className="flex justify-center items-center min-h-screen">A carregar perfil para verificação...</div>;
+    // Este estado idealmente não deveria persistir. Se persistir, indica um problema no AuthContext ao carregar o perfil.
+    // Considerar mostrar uma mensagem de erro específica ou um loader diferente.
+    console.warn("ProtectedRoute: Utilizador logado, mas perfil não disponível.");
+    return <div className="flex justify-center items-center min-h-screen">A carregar dados do perfil...</div>;
   }
 
   // Verifica se o role do utilizador está entre os roles permitidos
-  const hasPermission = allowedRoles && allowedRoles.includes(userProfile.role);
+  const hasPermission = allowedRoles && userProfile.role && allowedRoles.includes(userProfile.role);
 
   if (!hasPermission) {
     // Utilizador logado, mas não tem o role necessário.
-    // Redireciona para uma página de acesso negado ou mostra uma mensagem.
-    // Por enquanto, vamos redirecionar para uma rota que podemos criar depois: /acesso-negado
-    // Ou, para simplificar, pode redirecionar para a página inicial ou mostrar uma mensagem inline.
-    console.warn(`Acesso negado para o utilizador ${currentUser.uid} com role "${userProfile.role}". Roles permitidos: ${allowedRoles.join(', ')}`);
-    return <Navigate to="/acesso-negado" replace />; // Certifique-se de ter uma rota para /acesso-negado
-    // Alternativa: return <div>Acesso Negado: Você não tem permissão para ver esta página.</div>;
+    console.warn(`ProtectedRoute: Acesso negado para ${currentUser.uid} com role "${userProfile.role}". Roles permitidos: ${allowedRoles.join(', ')} para a rota ${location.pathname}`);
+    // Redireciona para uma página de acesso negado.
+    return <Navigate to="/acesso-negado" state={{ from: location }} replace />;
   }
 
   // Se o utilizador tem permissão, renderiza o conteúdo da rota.
-  // Se 'children' for passado, renderiza 'children'. Caso contrário, renderiza <Outlet />.
-  // <Outlet /> é usado quando ProtectedRoute envolve outras definições de <Route> (rotas aninhadas).
+  // Se 'children' for passado (para proteger um único componente), renderiza 'children'.
+  // Caso contrário (para rotas de layout aninhadas), renderiza <Outlet />.
   return children ? children : <Outlet />;
 }
