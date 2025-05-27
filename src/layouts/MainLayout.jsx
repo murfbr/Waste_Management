@@ -19,17 +19,15 @@ export default function MainLayout() {
   };
 
   return (
-    // MODIFICADO: trocado h-screen por min-h-screen e removido overflow-hidden daqui
-    <div className="relative md:flex min-h-screen bg-gray-100"> 
+    <div className="relative min-h-screen bg-gray-100">
       {/* Sidebar */}
       <Sidebar 
         isOpenOnMobile={isMobileSidebarOpen} 
         toggleMobileSidebar={toggleMobileSidebar} 
       />
 
-      {/* Conteúdo Principal */}
-      {/* MODIFICADO: removido overflow-hidden daqui */}
-      <div className="flex-1 flex flex-col"> 
+      {/* Conteúdo Principal - com margem para compensar o sidebar fixo */}
+      <div className="flex flex-col min-h-screen md:ml-64">
         {/* Header da Área de Conteúdo (onde o botão hamburger pode ficar) */}
         <header className="bg-white shadow-md md:hidden"> 
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -55,7 +53,6 @@ export default function MainLayout() {
         </header>
 
         {/* Área de Conteúdo Principal com scroll interno */}
-        {/* A classe overflow-y-auto aqui é crucial e já estava correta */}
         <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
           <div className="max-w-7xl mx-auto">
             <Outlet />
