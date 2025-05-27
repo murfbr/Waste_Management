@@ -1,6 +1,6 @@
 // src/pages/PaginaDashboard.jsx
 
-import React, { useContext, useEffect, useState, useMemo } from 'react';
+import React, { useContext, useEffect, useState, useMemo, useRef } from 'react'; // Adicionado useRef
 import AuthContext from '../context/AuthContext';
 import { 
     PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
@@ -13,7 +13,7 @@ import DashboardFilters from '../components/DashboardFilters';
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#3D9140', '#FF5733', '#8333FF'];
 const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-// Funções de processamento de dados
+// Funções de processamento de dados (inalteradas)
 const processDataForPieChartByWeight = (records, groupByField) => {
   if (!Array.isArray(records) || records.length === 0) return { pieData: [], totalWeight: 0 };
   let totalWeight = 0;
@@ -28,14 +28,12 @@ const processDataForPieChartByWeight = (records, groupByField) => {
   const pieData = Object.entries(counts).map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }));
   return { pieData, totalWeight: parseFloat(totalWeight.toFixed(2)) };
 };
-
 const processDataForDailyVolumeBarChart = (records) => {
     if (!Array.isArray(records) || records.length === 0) return [];
     const dailyVolumes = records.reduce((acc, record) => {
         if (!record || !record.timestamp) return acc;
         const recordTimestamp = typeof record.timestamp === 'number' ? record.timestamp : record.timestamp?.toDate?.().getTime();
         if (!recordTimestamp) return acc;
-
         const date = new Date(recordTimestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
         const weight = parseFloat(record.peso || 0);
         acc[date] = (acc[date] || 0) + weight;
@@ -50,14 +48,12 @@ const processDataForDailyVolumeBarChart = (records) => {
             return new Date(`2000/${monthA}/${dayA}`) - new Date(`2000/${monthB}/${dayB}`);
         });
 };
-
 const processDataForLixoZeroChart = (records, rejectCategoryName = "Rejeito") => {
     if (!Array.isArray(records) || records.length === 0) return [];
     const dailyDataAggregated = records.reduce((acc, record) => {
         if (!record || !record.timestamp) return acc;
         const recordTimestamp = typeof record.timestamp === 'number' ? record.timestamp : record.timestamp?.toDate?.().getTime();
         if (!recordTimestamp) return acc;
-
         const dateKey = new Date(recordTimestamp).toISOString().split('T')[0]; 
         const weight = parseFloat(record.peso || 0);
         acc[dateKey] = acc[dateKey] || { total: 0, rejeito: 0 };
@@ -76,14 +72,10 @@ const processDataForLixoZeroChart = (records, rejectCategoryName = "Rejeito") =>
             percentualRejeito: data.total > 0 ? parseFloat(((data.rejeito / data.total) * 100).toFixed(2)) : 0
         }))
         .sort((a, b) => new Date(a.dateKey) - new Date(b.dateKey)); 
-    
     let acumuladoSomaPercentual = 0;
     return sortedDailyData.map((dataPoint, index) => {
         acumuladoSomaPercentual += dataPoint.percentualRejeito;
-        return {
-            ...dataPoint,
-            mediaPercentualRejeito: parseFloat((acumuladoSomaPercentual / (index + 1)).toFixed(2))
-        };
+        return { ...dataPoint, mediaPercentualRejeito: parseFloat((acumuladoSomaPercentual / (index + 1)).toFixed(2)) };
     });
 };
 
@@ -92,7 +84,9 @@ export default function PaginaDashboard() {
   
   const [selectedClienteIds, setSelectedClienteIds] = useState([]); 
   const [selectAllClientesToggle, setSelectAllClientesToggle] = useState(false);
-  
+  const [isClienteDropdownOpen, setIsClienteDropdownOpen] = useState(false); // Novo estado
+  const clienteDropdownRef = useRef(null); // Novo ref
+
   const currentYear = new Date().getFullYear();
   const currentMonthIndex = new Date().getMonth();
   const [selectedYear, setSelectedYear] = useState(currentYear);
@@ -106,19 +100,31 @@ export default function PaginaDashboard() {
   const [filteredWasteRecords, setFilteredWasteRecords] = useState([]); 
   const [loadingRecords, setLoadingRecords] = useState(true);
 
+  // Efeito para fechar dropdown de cliente ao clicar fora
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (clienteDropdownRef.current && !clienteDropdownRef.current.contains(event.target)) {
+        setIsClienteDropdownOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, [clienteDropdownRef]);
+
   useEffect(() => {
     if (userAllowedClientes && userAllowedClientes.length > 0) {
         const initialSelectedIds = userAllowedClientes.map(c => c.id);
         setSelectedClienteIds(initialSelectedIds);
-        setSelectAllClientesToggle(true);
+        setSelectAllClientesToggle(true); // Assume que se há clientes permitidos, todos são selecionados inicialmente
     } else {
         setSelectedClienteIds([]);
         setSelectAllClientesToggle(false);
     }
   }, [userAllowedClientes]);
 
-
-  const availableYears = useMemo(() => {
+  const availableYears = useMemo(() => { /* ... (inalterado) ... */
     const years = new Set();
     if (Array.isArray(allWasteRecords)) {
       allWasteRecords.forEach(record => {
@@ -132,7 +138,7 @@ export default function PaginaDashboard() {
     return Array.from(years).sort((a,b) => b - a);
   }, [allWasteRecords, currentYear]);
 
-  useEffect(() => {
+  useEffect(() => { /* ... (busca de allWasteRecords inalterada) ... */
     if (!db || !currentUser || loadingAllowedClientes || !selectedClienteIds || selectedClienteIds.length === 0) {
       setAllWasteRecords([]); setLoadingRecords(false); return;
     }
@@ -157,7 +163,7 @@ export default function PaginaDashboard() {
     return () => unsubscribe();
   }, [db, currentUser, appId, selectedClienteIds, loadingAllowedClientes]);
 
-  useEffect(() => {
+  useEffect(() => { /* ... (lógica de filteredWasteRecords e availableAreas inalterada, mas revisada a parte de selectedAreas) ... */
     if (!Array.isArray(allWasteRecords) || allWasteRecords.length === 0) {
       setFilteredWasteRecords([]); 
       setAvailableAreas([]);    
@@ -172,30 +178,29 @@ export default function PaginaDashboard() {
       return recordYearValue === selectedYear && Array.isArray(selectedMonths) && selectedMonths.includes(recordMonthValue);
     });
     setFilteredWasteRecords(recordsInPeriod);
-
     const areasInMonth = new Set();
     recordsInPeriod.forEach(record => { if(record && record.areaLancamento) areasInMonth.add(record.areaLancamento); });
     const newAvailableAreas = Array.from(areasInMonth).sort();
     setAvailableAreas(newAvailableAreas);
-    
     if (selectedAreas.length > 0) {
         const stillAvailable = selectedAreas.filter(sa => newAvailableAreas.includes(sa));
         if (stillAvailable.length !== selectedAreas.length || !selectedAreas.every(sa => stillAvailable.includes(sa))) {
             setSelectedAreas(stillAvailable); 
         }
     }
-
   }, [allWasteRecords, selectedYear, selectedMonths]);
 
-  const recordsFilteredByArea = useMemo(() => {
+  const recordsFilteredByArea = useMemo(() => { /* ... (inalterado) ... */
     if (!Array.isArray(filteredWasteRecords)) return [];
     if (selectedAreas.length === 0) return filteredWasteRecords; 
     return filteredWasteRecords.filter(record => record && record.areaLancamento && selectedAreas.includes(record.areaLancamento));
   }, [filteredWasteRecords, selectedAreas]);
 
+  // Handlers de cliente (mantidos, pois a lógica de estado é a mesma)
   const handleClienteSelectionChange = (clienteId) => { 
     setSelectedClienteIds(prev => {
       const newSelection = prev.includes(clienteId) ? prev.filter(id => id !== clienteId) : [...prev, clienteId];
+      // Atualiza o selectAllClientesToggle com base na nova seleção
       if (userAllowedClientes) {
         setSelectAllClientesToggle(newSelection.length === userAllowedClientes.length && userAllowedClientes.length > 0);
       }
@@ -212,15 +217,19 @@ export default function PaginaDashboard() {
       }
       return newToggleState;
     });
+    // Fecha o dropdown se o toggle "todos" for usado
+    setIsClienteDropdownOpen(false); 
   };
-  const handleMonthToggle = (monthIndex) => {
+  
+  // Handlers de mês e área (inalterados)
+  const handleMonthToggle = (monthIndex) => { /* ... */ 
     setSelectedMonths(prev => {
         const newSelection = prev.includes(monthIndex) ? prev.filter(m => m !== monthIndex) : [...prev, monthIndex];
         setAllMonthsSelected(newSelection.length === MESES_COMPLETOS.length);
         return newSelection;
     });
   };
-  const handleSelectAllMonthsToggle = () => {
+  const handleSelectAllMonthsToggle = () => { /* ... */ 
     setAllMonthsSelected(prev => {
       const newToggleState = !prev;
       if (newToggleState) setSelectedMonths(MESES_COMPLETOS.map((_, index) => index));
@@ -228,26 +237,38 @@ export default function PaginaDashboard() {
       return newToggleState;
     });
   };
-
-  const handleSelectedAreasChange = (newAreas) => {
-    // ADICIONADO CONSOLE.LOG PARA DEPURAÇÃO
-    console.log("PaginaDashboard - handleSelectedAreasChange - Recebido:", newAreas);
+  const handleSelectedAreasChange = (newAreas) => { /* ... */ 
     setSelectedAreas(Array.isArray(newAreas) ? newAreas : []);
   };
 
+  // Função para determinar o texto do botão de seleção de clientes
+  const getClienteDisplayValue = () => {
+    if (!userAllowedClientes || userAllowedClientes.length === 0) return "Nenhum cliente";
+    if (selectAllClientesToggle || selectedClienteIds.length === userAllowedClientes.length) {
+      return userProfile?.role === 'master' ? "Todos Clientes Ativos" : "Todos Seus Clientes";
+    }
+    if (selectedClienteIds.length === 1) {
+      const cliente = userAllowedClientes.find(c => c.id === selectedClienteIds[0]);
+      return cliente ? cliente.nome : "1 cliente selecionado";
+    }
+    if (selectedClienteIds.length > 1) {
+      return `${selectedClienteIds.length} clientes selecionados`;
+    }
+    return "Selecionar cliente(s)";
+  };
 
   const { pieData: wasteTypeData, totalWeight: totalWasteWeight } = processDataForPieChartByWeight(allWasteRecords, 'wasteType');
   const { pieData: areaData } = processDataForPieChartByWeight(allWasteRecords, 'areaLancamento');
-  
   const dailyVolumeData = processDataForDailyVolumeBarChart(recordsFilteredByArea);
   const lixoZeroData = processDataForLixoZeroChart(recordsFilteredByArea);
 
-  if (loadingAllowedClientes) return <div className="text-center text-gray-600 p-8">A carregar dados de clientes...</div>;
+  // Lógica de mensagens de loading e permissão (adaptada)
+  if (loadingAllowedClientes && !userProfile) return <div className="text-center text-gray-600 p-8">A carregar dados...</div>;
   if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">A carregar perfil...</div>;
   if (!userProfile || (userProfile.role !== 'master' && userProfile.role !== 'gerente')) {
     return <div className="text-center text-red-500 p-8">Acesso Negado.</div>;
   }
-  
+  // Adicionado loadingAllowedClientes na condição para evitar piscar de mensagens
   const currentAllowedClientesFromAuth = userAllowedClientes || []; 
   if (userProfile.role === 'gerente' && currentAllowedClientesFromAuth.length === 0 && !loadingAllowedClientes) {
     return <div className="text-center text-orange-600 p-8">Sem acesso a clientes.</div>;
@@ -256,17 +277,18 @@ export default function PaginaDashboard() {
     return <div className="text-center text-orange-600 p-8">Nenhum cliente ativo cadastrado.</div>;
   }
 
+  // Lógica de dashboardTitleContext e periodTitle (adaptada)
   let dashboardTitleContext = ""; 
-  if (Array.isArray(selectedClienteIds) && selectedClienteIds.length === 1 && currentAllowedClientesFromAuth.length > 0) {
+  if (selectAllClientesToggle || (Array.isArray(selectedClienteIds) && currentAllowedClientesFromAuth.length > 0 && selectedClienteIds.length === currentAllowedClientesFromAuth.length)) {
+    dashboardTitleContext = userProfile.role === 'master' ? " (Todos os Clientes Ativos)" : " (Todos os Seus Clientes Permitidos)";
+  } else if (Array.isArray(selectedClienteIds) && selectedClienteIds.length === 1 && currentAllowedClientesFromAuth.length > 0) {
     const cliente = currentAllowedClientesFromAuth.find(c => c.id === selectedClienteIds[0]);
     dashboardTitleContext = cliente ? ` de: ${cliente.nome}` : "";
-  } else if (Array.isArray(selectedClienteIds) && selectedClienteIds.length > 1 && selectedClienteIds.length < currentAllowedClientesFromAuth.length) {
+  } else if (Array.isArray(selectedClienteIds) && selectedClienteIds.length > 1) {
     dashboardTitleContext = ` de ${selectedClienteIds.length} clientes selecionados`;
-  } else if (Array.isArray(selectedClienteIds) && currentAllowedClientesFromAuth.length > 0 && selectedClienteIds.length === currentAllowedClientesFromAuth.length) {
-     dashboardTitleContext = userProfile.role === 'master' ? " (Todos os Clientes Ativos)" : " (Todos os Seus Clientes Permitidos)";
   }
-
-  let periodTitle = "";
+  
+  let periodTitle = ""; /* ... (inalterado) ... */
   if (allMonthsSelected || (Array.isArray(selectedMonths) && selectedMonths.length === MESES_COMPLETOS.length)) {
     periodTitle = `${selectedYear}`;
   } else if (Array.isArray(selectedMonths) && selectedMonths.length > 0) {
@@ -274,28 +296,68 @@ export default function PaginaDashboard() {
   } else {
     periodTitle = `Nenhum mês selecionado/${selectedYear}`;
   }
-
-  let areaTitleSegment = ' - Todas as Áreas';
-  if (selectedAreas.length === 1) {
-    areaTitleSegment = ` - Área: ${selectedAreas[0]}`;
-  } else if (selectedAreas.length > 1) {
-    areaTitleSegment = ` - Áreas Selecionadas (${selectedAreas.length})`;
-  }
-
+  let areaTitleSegment = ' - Todas as Áreas'; /* ... (inalterado) ... */
+  if (selectedAreas.length === 1) { areaTitleSegment = ` - Área: ${selectedAreas[0]}`; } 
+  else if (selectedAreas.length > 1) { areaTitleSegment = ` - Áreas Selecionadas (${selectedAreas.length})`;}
 
   return (
     <div className="space-y-8">
+      {/* MODIFICADO: Cabeçalho com título e dropdown de cliente */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Dashboards</h1>
+        <h1 className="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Dashboards</h1>
+        
+        {/* Novo Dropdown Multi-Select de Cliente */}
+        {(!loadingAllowedClientes && userAllowedClientes && userAllowedClientes.length > 0) && (
+          <div className="relative w-full sm:w-auto sm:min-w-[250px]" ref={clienteDropdownRef}>
+            <button
+              type="button"
+              onClick={() => setIsClienteDropdownOpen(!isClienteDropdownOpen)}
+              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              aria-haspopup="listbox"
+              aria-expanded={isClienteDropdownOpen}
+            >
+              <span className="block truncate">{getClienteDisplayValue()}</span>
+              <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
+                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                  <path fillRule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              </span>
+            </button>
+
+            {isClienteDropdownOpen && (
+              <div className="absolute z-20 mt-1 w-full sm:w-72 bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+                <label className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mr-2"
+                    checked={selectAllClientesToggle}
+                    onChange={handleSelectAllClientesToggleChange}
+                  />
+                  {userProfile?.role === 'master' ? "Todos Clientes Ativos" : "Todos Seus Clientes"}
+                </label>
+                {userAllowedClientes.map(cliente => (
+                  <label key={cliente.id} className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mr-2"
+                      value={cliente.id}
+                      checked={selectedClienteIds.includes(cliente.id)}
+                      onChange={() => handleClienteSelectionChange(cliente.id)}
+                      disabled={selectAllClientesToggle} // Desabilita individual se "todos" estiver marcado
+                    />
+                    {cliente.nome}
+                  </label>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+        {loadingAllowedClientes && <div className="text-sm text-gray-500 mt-1 sm:ml-4">Carregando clientes...</div>}
       </div>
 
+      {/* DashboardFilters agora não lida mais com seleção de clientes */}
       <DashboardFilters 
         userProfile={userProfile} 
-        userAllowedClientes={userAllowedClientes || []} 
-        selectedClienteIds={selectedClienteIds} 
-        onClienteSelectionChange={handleClienteSelectionChange} 
-        selectAllToggle={selectAllClientesToggle} 
-        onSelectAllToggleChange={handleSelectAllClientesToggleChange} 
         availableYears={availableYears || []}
         selectedYear={selectedYear} 
         onYearChange={setSelectedYear} 
@@ -306,9 +368,10 @@ export default function PaginaDashboard() {
         availableAreas={availableAreas || []} 
         selectedAreas={selectedAreas}                 
         onSelectedAreasChange={handleSelectedAreasChange} 
-        loadingUserClientes={loadingAllowedClientes} 
+        // Removidas props de cliente: userAllowedClientes, selectedClienteIds, onClienteSelectionChange, selectAllToggle, onSelectAllToggleChange, loadingUserClientes
       /> 
       
+      {/* Seção de Gráficos (sem alterações na lógica, mas o contexto do título foi adaptado) */}
       {loadingRecords && Array.isArray(selectedClienteIds) && selectedClienteIds.length > 0 ? ( <div className="text-center text-gray-600 p-8">A carregar dados dos gráficos...</div>
       ) : !Array.isArray(selectedClienteIds) || selectedClienteIds.length === 0 ? ( <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Selecione pelo menos um cliente para visualizar os dados.</p></div>
       ) : (filteredWasteRecords.length === 0 && allWasteRecords.length > 0) && (!selectedMonths || selectedMonths.length === 0) ? ( 
@@ -316,6 +379,7 @@ export default function PaginaDashboard() {
       ) : (allWasteRecords.length === 0 && selectedClienteIds.length > 0) ? ( <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Não há dados de resíduos registados para a seleção atual.</p></div>
       ) : (
         <>
+          {/* ... (Gráficos JSX inalterados) ... */}
           <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">
               Volume Diário de Resíduos ({periodTitle})

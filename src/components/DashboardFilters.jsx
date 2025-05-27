@@ -4,13 +4,18 @@ import React, { useState, useEffect, useRef } from 'react';
 const MESES_FILTRO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 export default function DashboardFilters({
+  // Props de Cliente REMOVIDAS:
+  // userProfile, (ainda pode ser útil para outros contextos, mas não para o filtro de cliente aqui)
+  // userAllowedClientes,
+  // selectedClienteIds,
+  // onClienteSelectionChange,
+  // selectAllToggle,
+  // onSelectAllToggleChange,
+  // loadingUserClientes,
+
+  // Props restantes
+  userProfile, // Mantida caso seja usada para outros fins no futuro dentro deste componente
   availableYears,
-  userProfile,
-  userAllowedClientes,
-  selectedClienteIds = [],
-  onClienteSelectionChange = () => {},
-  selectAllToggle = false,
-  onSelectAllToggleChange = () => {},
   selectedYear,
   onYearChange = () => {},
   selectedMonths = [],
@@ -18,16 +23,13 @@ export default function DashboardFilters({
   allMonthsSelected = false,
   onSelectAllMonthsToggle = () => {},
   availableAreas = [],
-  // MODIFICADO: Props para seleção múltipla de áreas
-  selectedAreas = [], // Espera um array de strings. Array vazio significa "Todas as Áreas"
-  onSelectedAreasChange = () => {}, // Função para atualizar o array de áreas selecionadas
-  loadingUserClientes
+  selectedAreas = [], 
+  onSelectedAreasChange = () => {}, 
 }) {
 
   const [isAreaDropdownOpen, setIsAreaDropdownOpen] = useState(false);
   const areaDropdownRef = useRef(null);
 
-  // Efeito para fechar o dropdown de área ao clicar fora dele
   useEffect(() => {
     function handleClickOutside(event) {
       if (areaDropdownRef.current && !areaDropdownRef.current.contains(event.target)) {
@@ -43,15 +45,12 @@ export default function DashboardFilters({
   const handleAreaSelectionToggle = (areaName) => {
     let newSelectedAreas;
     if (areaName === 'ALL') {
-      newSelectedAreas = []; // Selecionar "Todas as Áreas" limpa as seleções individuais
+      newSelectedAreas = []; 
     } else {
-      // Se 'ALL' estava implícito (array vazio), e uma área específica é selecionada,
-      // começamos uma nova seleção com essa área.
       const currentIsAll = selectedAreas.length === 0;
       if (currentIsAll) {
         newSelectedAreas = [areaName];
       } else {
-        // Senão, alterna a área na seleção atual
         if (selectedAreas.includes(areaName)) {
           newSelectedAreas = selectedAreas.filter(a => a !== areaName);
         } else {
@@ -72,53 +71,12 @@ export default function DashboardFilters({
     return `Áreas Selecionadas (${selectedAreas.length})`;
   };
 
-  if (loadingUserClientes && (!userAllowedClientes || userAllowedClientes.length === 0)) {
-    return (
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <p className="text-sm text-gray-500">A carregar lista de clientes para filtro...</p>
-      </div>
-    );
-  }
+  // A verificação de loadingUserClientes foi removida, pois não há mais filtro de cliente aqui.
+  // Se houver outro tipo de loading geral para os filtros, pode ser adicionado.
 
   return (
     <>
-      {userAllowedClientes && userAllowedClientes.length > 0 ? (
-        <div className="bg-white p-4 rounded-lg shadow mb-6">
-          <h3 className="text-lg font-medium text-gray-700 mb-3">Selecionar Cliente(s)</h3>
-          <div className="mb-3">
-            <label htmlFor="selectAllClientesFilterToggle" className="flex items-center cursor-pointer">
-              <input
-                type="checkbox"
-                id="selectAllClientesFilterToggle"
-                checked={selectAllToggle} 
-                onChange={onSelectAllToggleChange} 
-                className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-              />
-              <span className="ml-2 text-sm font-medium text-gray-700">
-                {userProfile && userProfile.role === 'master' ? 'Selecionar Todos os Clientes Ativos' : 'Selecionar Todos os Meus Clientes'}
-              </span>
-            </label>
-          </div>
-          <div className="max-h-40 overflow-y-auto space-y-2 border p-3 rounded-md">
-            {userAllowedClientes.map(cliente => (
-              <label key={cliente.id} htmlFor={`filter-cliente-cb-${cliente.id}`} className="flex items-center cursor-pointer p-1 hover:bg-gray-100 rounded">
-                <input
-                  type="checkbox"
-                  id={`filter-cliente-cb-${cliente.id}`}
-                  value={cliente.id}
-                  checked={selectedClienteIds.includes(cliente.id)} 
-                  onChange={() => onClienteSelectionChange(cliente.id)} 
-                  className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                />
-                <span className="ml-2 text-sm text-gray-700">{cliente.nome} ({cliente.cidade || 'N/A'})</span>
-              </label>
-            ))}
-          </div>
-        </div>
-      ) : (
-         !loadingUserClientes && userAllowedClientes && userAllowedClientes.length === 0 &&
-         <div className="bg-white p-4 rounded-lg shadow mb-6"><p className="text-sm text-gray-500">Nenhum cliente disponível para seleção.</p></div>
-      )}
+      {/* SEÇÃO DE SELEÇÃO DE CLIENTES FOI REMOVIDA DESTE COMPONENTE */}
       
       <div className="bg-white p-4 rounded-lg shadow mb-6">
         <h3 className="text-lg font-medium text-gray-700 mb-2">Filtrar Período e Área</h3>
@@ -136,7 +94,6 @@ export default function DashboardFilters({
             </select>
           </div>
 
-          {/* Dropdown Multi-Select Customizado para Áreas */}
           <div className="relative" ref={areaDropdownRef}>
             <label htmlFor="areaFilterButton" className="block text-sm font-medium text-gray-700 mb-1">Área de Lançamento</label>
             <button
@@ -174,8 +131,7 @@ export default function DashboardFilters({
                       value={area}
                       checked={selectedAreas.includes(area)}
                       onChange={() => handleAreaSelectionToggle(area)}
-                      // Se "Todas as Áreas" estiver selecionado (selectedAreas é vazio), desabilita checkboxes individuais
-                     // disabled={selectedAreas.length === 0 && !selectedAreas.includes(area)} 
+                      // Removido o disabled para permitir a seleção mesmo quando "Todas as Áreas" está ativo
                     />
                     {area}
                   </label>
