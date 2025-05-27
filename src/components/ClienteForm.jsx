@@ -10,7 +10,7 @@ const SUBTIPOS_RECICLAVEIS_COMUNS = ["Papel", "Vidro", "Metal", "Plástico", "Ba
 const NOVA_CATEGORIA_VALUE = "__NOVA__";
 
 // Lista inicial de categorias de cliente.
-const CATEGORIAS_CLIENTE_INICIAIS = ["Hotel", "Escola", "Condomínio", "Aeroporto"];
+const CATEGORIAS_CLIENTE_INICIAIS = ["Hotel","Evento", "Escola", "Condomínio", "Aeroporto"];
 
 export default function ClienteForm({ 
     initialData, 

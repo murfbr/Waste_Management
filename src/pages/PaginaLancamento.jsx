@@ -5,7 +5,6 @@ import AuthContext from '../context/AuthContext';
 import { 
     collection, 
     addDoc, 
-    onSnapshot, // Manteremos onSnapshot para atualizações em tempo real dos primeiros N, ou mudar para getDocs para paginação simples
     deleteDoc, 
     doc, 
     query, 
@@ -13,15 +12,15 @@ import {
     getDocs, 
     documentId, 
     orderBy, 
-    limit, // Para limitar o número de documentos
-    startAfter // Para paginação
+    limit, 
+    startAfter 
 } from 'firebase/firestore';
 
 import MessageBox from '../components/MessageBox';
 import WasteForm from '../components/WasteForm';
 import WasteRecordsList from '../components/WasteRecordsList';
 
-const REGISTOS_POR_PAGINA = 20; // Define quantos registos carregar de cada vez
+const REGISTOS_POR_PAGINA = 20; 
 
 export default function PaginaLancamento() {
   const { db, currentUser, appId, userProfile } = useContext(AuthContext);
@@ -30,13 +29,12 @@ export default function PaginaLancamento() {
   const [isError, setIsError] = useState(false);
   
   const [wasteRecords, setWasteRecords] = useState([]);
-  const [loadingRecords, setLoadingRecords] = useState(false); // Inicialmente false
+  const [loadingRecords, setLoadingRecords] = useState(false); 
   const [isRecordsVisible, setIsRecordsVisible] = useState(false);
 
-  // Estados para paginação
-  const [lastVisibleRecord, setLastVisibleRecord] = useState(null); // Último documento da busca anterior
-  const [hasMoreRecords, setHasMoreRecords] = useState(false); // Se há mais registos para carregar
-  const [loadingMore, setLoadingMore] = useState(false); // Loading para o botão "Carregar Mais"
+  const [lastVisibleRecord, setLastVisibleRecord] = useState(null); 
+  const [hasMoreRecords, setHasMoreRecords] = useState(false); 
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const [userAllowedClientes, setUserAllowedClientes] = useState([]);
   const [selectedClienteId, setSelectedClienteId] = useState('');
@@ -51,42 +49,61 @@ export default function PaginaLancamento() {
 
   // Carregar os detalhes dos CLIENTES permitidos ao utilizador
   useEffect(() => {
-    // ... (lógica de carregar clientes inalterada) ...
-    if (!db || !userProfile) { setLoadingUserClientes(false); setUserAllowedClientes([]); setSelectedClienteData(null); return; }
+    if (!db || !userProfile) { 
+      setLoadingUserClientes(false); 
+      setUserAllowedClientes([]); 
+      setSelectedClienteData(null); 
+      return; 
+    }
     const fetchUserClientes = async () => {
-      setLoadingUserClientes(true); setSelectedClienteData(null); let clienteIdsToFetch = []; let loadedClientes = [];
+      setLoadingUserClientes(true); 
+      //setSelectedClienteData(null); // Removido para evitar reset desnecessário se selectedClienteId já estiver definido
+      let clienteIdsToFetch = []; 
+      let loadedClientes = [];
       if (userProfile.role === 'master') {
         try {
           const q = query(collection(db, "clientes"), where("ativo", "==", true), orderBy("nome"));
-          loadedClientes = (await getDocs(q)).docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        } catch (e) { console.error("Erro master clientes:", e); }
+          const querySnapshot = await getDocs(q);
+          loadedClientes = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+        } catch (e) { console.error("Erro ao carregar clientes (master):", e); }
       } else if (userProfile.clientesPermitidos && userProfile.clientesPermitidos.length > 0) {
         clienteIdsToFetch = userProfile.clientesPermitidos;
-        try {
-          if (clienteIdsToFetch.length > 0) {
-            const q = query(collection(db, "clientes"), where(documentId(), "in", clienteIdsToFetch), where("ativo", "==", true), orderBy("nome"));
-            loadedClientes = (await getDocs(q)).docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          }
-        } catch (e) { console.error("Erro gerente/op clientes:", e); }
+        const CHUNK_SIZE = 30; 
+        for (let i = 0; i < clienteIdsToFetch.length; i += CHUNK_SIZE) {
+            const chunk = clienteIdsToFetch.slice(i, i + CHUNK_SIZE);
+            if (chunk.length > 0) {
+                try {
+                    const q = query(collection(db, "clientes"), where(documentId(), "in", chunk), where("ativo", "==", true), orderBy("nome"));
+                    const querySnapshot = await getDocs(q);
+                    loadedClientes.push(...querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() })));
+                } catch (e) { console.error("Erro ao carregar clientes (gerente/operacional):", e); }
+            }
+        }
+        loadedClientes.sort((a, b) => a.nome.localeCompare(b.nome));
       }
       setUserAllowedClientes(loadedClientes);
-      if (loadedClientes.length > 0) { setSelectedClienteId(loadedClientes[0].id); setSelectedClienteData(loadedClientes[0]); }
-      else { setSelectedClienteId(''); }
+      if (loadedClientes.length > 0 && !selectedClienteId) { // Define o primeiro cliente apenas se nenhum estiver selecionado
+        setSelectedClienteId(loadedClientes[0].id); 
+      } else if (loadedClientes.length === 0) {
+        setSelectedClienteId('');
+      }
       setLoadingUserClientes(false);
     };
     fetchUserClientes();
-  }, [db, userProfile]);
+  }, [db, userProfile, selectedClienteId]); // Adicionado selectedClienteId para reavaliar se necessário
 
   // Atualiza selectedClienteData quando selectedClienteId muda
   useEffect(() => {
-    // ... (lógica inalterada) ...
     if (selectedClienteId && userAllowedClientes.length > 0) {
       const cliente = userAllowedClientes.find(c => c.id === selectedClienteId);
       setSelectedClienteData(cliente || null);
-    } else { setSelectedClienteData(null); }
+      // Log para depuração do objeto cliente selecionado
+      // console.log("Cliente Selecionado (useEffect userAllowedClientes):", cliente);
+    } else { 
+      setSelectedClienteData(null); 
+    }
   }, [selectedClienteId, userAllowedClientes]);
 
-  // Função para buscar os registos iniciais (ou quando o cliente muda)
   const fetchInitialRecords = async () => {
     if (!db || !currentUser || !userProfile || !selectedClienteId) {
       setWasteRecords([]); setLoadingRecords(false); setHasMoreRecords(false); setLastVisibleRecord(null);
@@ -107,7 +124,7 @@ export default function PaginaLancamento() {
         limit(REGISTOS_POR_PAGINA)
       );
       const documentSnapshots = await getDocs(firstBatchQuery);
-      const records = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const records = documentSnapshots.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
       
       setWasteRecords(records);
       setLastVisibleRecord(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
@@ -122,14 +139,19 @@ export default function PaginaLancamento() {
     setLoadingRecords(false);
   };
   
-  // useEffect para buscar registos iniciais quando selectedClienteId muda
   useEffect(() => {
-    fetchInitialRecords();
-  }, [selectedClienteId, db, currentUser, userProfile, appId]); // Adicionado db, currentUser, userProfile, appId como dependências
+    if (selectedClienteId) { 
+        fetchInitialRecords();
+    } else { 
+        setWasteRecords([]);
+        setLoadingRecords(false);
+        setHasMoreRecords(false);
+        setLastVisibleRecord(null);
+    }
+  }, [selectedClienteId, db, currentUser, userProfile, appId]); // Mantidas as dependências originais
 
-  // Função para carregar mais registos
   const carregarMaisRegistos = async () => {
-    if (!lastVisibleRecord || !selectedClienteId) return;
+    if (!lastVisibleRecord || !selectedClienteId || loadingMore) return; 
     setLoadingMore(true);
     try {
       const nextBatchQuery = query(
@@ -140,7 +162,7 @@ export default function PaginaLancamento() {
         limit(REGISTOS_POR_PAGINA)
       );
       const documentSnapshots = await getDocs(nextBatchQuery);
-      const newRecords = documentSnapshots.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const newRecords = documentSnapshots.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
 
       setWasteRecords(prevRecords => [...prevRecords, ...newRecords]);
       setLastVisibleRecord(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
@@ -153,85 +175,143 @@ export default function PaginaLancamento() {
     setLoadingMore(false);
   };
 
-
   const handleAddWasteRecord = async (formDataFromWasteForm) => {
-    // ... (lógica inalterada, mas após adicionar, pode querer recarregar os registos iniciais)
-    if (!currentUser || !userProfile || !['master', 'gerente', 'operacional'].includes(userProfile.role)) { /* ... */ return false; }
-    if (!selectedClienteId || !selectedClienteData) { /* ... */ return false; }
+    if (!currentUser || !userProfile || !['master', 'gerente', 'operacional'].includes(userProfile.role)) { 
+        showMessage("Ação não permitida.", true);
+        return false; 
+    }
+    if (!selectedClienteId || !selectedClienteData) { 
+        showMessage("Nenhum cliente selecionado para o lançamento.", true);
+        return false; 
+    }
     try {
       await addDoc(collection(db, `artifacts/${appId}/public/data/wasteRecords`), {
-        ...formDataFromWasteForm, clienteId: selectedClienteId, timestamp: Date.now(),
-        userId: currentUser.uid, userEmail: currentUser.email,
+        ...formDataFromWasteForm, 
+        clienteId: selectedClienteId, 
+        timestamp: Date.now(), 
+        userId: currentUser.uid, 
+        userEmail: currentUser.email,
       });
       showMessage('Resíduo registado com sucesso!');
-      fetchInitialRecords(); // Recarrega a primeira página para mostrar o novo registo no topo
+      fetchInitialRecords(); 
       return true; 
-    } catch (error) { /* ... */ return false; }
+    } catch (error) { 
+        console.error("Erro ao adicionar registo de resíduo:", error);
+        showMessage('Erro ao registar resíduo. Tente novamente.', true);
+        return false; 
+    }
   };
 
   const handleDeleteRecord = async (recordId) => {
-    // ... (lógica inalterada, mas após excluir, pode querer recarregar)
-    if (!currentUser || !userProfile || userProfile.role !== 'master') { /* ... */ return; }
+    if (!currentUser || !userProfile || userProfile.role !== 'master') { 
+        showMessage("Apenas administradores master podem excluir registos.", true);
+        return; 
+    }
     if (window.confirm('Tem certeza que deseja excluir este registo?')) {
       try {
         await deleteDoc(doc(db, `artifacts/${appId}/public/data/wasteRecords`, recordId));
         showMessage('Registo excluído com sucesso!');
-        // Recarrega para refletir a exclusão. Poderia ser mais otimizado removendo do estado local.
         fetchInitialRecords(); 
-      } catch (error) { /* ... */ }
+      } catch (error) { 
+        console.error("Erro ao excluir registo:", error);
+        showMessage('Erro ao excluir registo. Tente novamente.', true);
+      }
     }
   };
 
   const toggleRecordsVisibility = () => setIsRecordsVisible(!isRecordsVisible);
 
-  // ... (lógica de renderização de loading e permissões inalterada) ...
-  if (loadingUserClientes) return <div className="text-center text-gray-600 p-8">A carregar dados do cliente...</div>;
+  // Logs para depuração - Adicionados aqui para verificar os dados do cliente selecionado
+  // console.log("Renderizando PaginaLancamento. selectedClienteData:", selectedClienteData);
+  // if (selectedClienteData) {
+  //   console.log("selectedClienteData.logoUrl:", selectedClienteData.logoUrl);
+  // }
+
+
+  if (loadingUserClientes && !userProfile) return <div className="text-center text-gray-600 p-8">A carregar dados...</div>;
   if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">A carregar perfil...</div>;
   if (!userProfile || !['master', 'gerente', 'operacional'].includes(userProfile.role)) {
     return <div className="text-center text-red-600 p-8">Acesso Negado.</div>;
   }
   if (userProfile.role !== 'master' && userAllowedClientes.length === 0 && !loadingUserClientes) {
-    return <div className="text-center text-orange-600 p-8">Sem acesso a clientes.</div>;
+    return <div className="text-center text-orange-600 p-8">Sem acesso a clientes. Contacte o administrador.</div>;
+  }
+  if (userProfile.role === 'master' && userAllowedClientes.length === 0 && !loadingUserClientes) {
+    return <div className="text-center text-orange-600 p-8">Nenhum cliente ativo cadastrado no sistema.</div>;
   }
 
   return (
     <div className="space-y-6">
-      {/* ... (JSX do título e dropdown de cliente inalterado) ... */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Lançamento de Pesagem</h1>
+        <div className="flex items-center space-x-3 mb-4 sm:mb-0">
+          {selectedClienteData && selectedClienteData.logoUrl && (
+            <img 
+              src={selectedClienteData.logoUrl} 
+              alt={`Logo de ${selectedClienteData.nome || 'Cliente'}`} 
+              className="h-16 w-16 object-contain rounded-md"
+              onError={(e) => { 
+                console.error("Erro ao carregar imagem da logo:", selectedClienteData.logoUrl, e);
+                e.target.style.display = 'none'; 
+              }}
+            />
+          )}
+          <h1 className="text-3xl font-bold text-gray-800">Lançamento de Pesagem</h1>
+        </div>
+        
         {userAllowedClientes.length > 0 && (
           <div className="w-full sm:w-auto sm:max-w-xs md:max-w-sm">
-            <label htmlFor="clienteSelect" className="sr-only">Selecionar Cliente</label>
-            <select id="clienteSelect" value={selectedClienteId} onChange={(e) => setSelectedClienteId(e.target.value)}
-              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-              {userAllowedClientes.map(cliente => (<option key={cliente.id} value={cliente.id}>{cliente.nome} ({cliente.cidade || 'N/A'})</option>))}
+            <label htmlFor="clienteSelectLancamento" className="sr-only">Selecionar Cliente</label>
+            <select 
+              id="clienteSelectLancamento" 
+              value={selectedClienteId} 
+              onChange={(e) => setSelectedClienteId(e.target.value)}
+              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              disabled={loadingUserClientes}
+            >
+              {loadingUserClientes && <option value="">A carregar clientes...</option>}
+              {!loadingUserClientes && userAllowedClientes.length === 0 && <option value="">Nenhum cliente disponível</option>}
+              {!loadingUserClientes && userAllowedClientes.map(cliente => (
+                <option key={cliente.id} value={cliente.id}>
+                  {cliente.nome} ({cliente.cidade || 'N/A'})
+                </option>
+              ))}
             </select>
           </div>
         )}
       </div>
-      <MessageBox message={message} isError={isError} />
+      <MessageBox message={message} isError={isError} onClose={() => setMessage('')} />
 
-      {selectedClienteId && selectedClienteData ? (
+      {loadingUserClientes && userAllowedClientes.length === 0 && (
+          <div className="text-center text-gray-500 p-8">A carregar lista de clientes...</div>
+      )}
+
+      {!loadingUserClientes && selectedClienteId && selectedClienteData ? (
         <>
           <div className="bg-white p-6 rounded-lg shadow">
-            <WasteForm onAddWaste={handleAddWasteRecord} clienteSelecionado={selectedClienteData} />
+            <WasteForm 
+                onAddWaste={handleAddWasteRecord} 
+                clienteSelecionado={selectedClienteData} 
+            />
           </div>
           <div className="bg-white rounded-lg shadow">
-            <button onClick={toggleRecordsVisibility} className="w-full flex justify-between items-center p-6 text-left focus:outline-none"
-              aria-expanded={isRecordsVisible} aria-controls="waste-records-list">
+            <button 
+              onClick={toggleRecordsVisibility} 
+              className="w-full flex justify-between items-center p-6 text-left focus:outline-none"
+              aria-expanded={isRecordsVisible} 
+              aria-controls="waste-records-list-lancamento"
+            >
               <h2 className="text-2xl font-semibold text-gray-700">
                 Registos Recentes de: <span className="text-indigo-600">{selectedClienteData?.nome || 'Cliente Selecionado'}</span>
               </h2>
               <span className="text-2xl text-gray-600 transform transition-transform duration-200">{isRecordsVisible ? '▲' : '▼'}</span>
             </button>
             {isRecordsVisible && (
-              <div id="waste-records-list" className="p-6 border-t border-gray-200">
+              <div id="waste-records-list-lancamento" className="p-6 border-t border-gray-200">
                 <WasteRecordsList
                   records={wasteRecords}
-                  loading={loadingRecords} // Passa o loading principal para a lista
+                  loading={loadingRecords} 
                   onDelete={handleDeleteRecord}
                   userRole={userProfile ? userProfile.role : null}
-                  // Novas props para paginação
                   hasMoreRecords={hasMoreRecords}
                   onLoadMore={carregarMaisRegistos}
                   loadingMore={loadingMore}
@@ -241,14 +321,9 @@ export default function PaginaLancamento() {
             )}
           </div>
         </>
-      ) : ( /* ... (JSX de fallback inalterado) ... */
-        <div className="text-center text-gray-500 p-8">
-          { (userProfile.role === 'master' && userAllowedClientes.length === 0 && !loadingUserClientes) 
-            ? "Nenhum cliente cadastrado no sistema."
-            : "Por favor, selecione um cliente para continuar."
-          }
-        </div>
-      )}
+      ) : !loadingUserClientes && userAllowedClientes.length > 0 && !selectedClienteId ? (
+         <div className="text-center text-gray-500 p-8">Por favor, selecione um cliente para continuar.</div>
+      ) : null}
     </div>
   );
 }
