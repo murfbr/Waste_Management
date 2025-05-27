@@ -8,11 +8,11 @@ import {
   query, 
   doc, 
   updateDoc, 
-  setDoc, // Para criar o perfil do novo usuário
+  setDoc, 
   orderBy,
   serverTimestamp 
 } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth'; // Para criar o usuário na autenticação
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import MessageBox from '../components/MessageBox';
 
 const ROLES_DISPONIVEIS = ["master", "gerente", "operacional"];
@@ -23,38 +23,33 @@ export default function PaginaAdminUsuarios() {
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   
-  const [hoteis, setHoteis] = useState([]);
-  const [loadingHoteis, setLoadingHoteis] = useState(true);
+  const [clientesList, setClientesList] = useState([]); 
+  const [loadingClientes, setLoadingClientes] = useState(true); // Adicionado para clareza
 
-  // Estados para o formulário de EDIÇÃO
   const [editingUser, setEditingUser] = useState(null);
   const [selectedRole, setSelectedRole] = useState('');
-  const [selectedHoteisPermitidos, setSelectedHoteisPermitidos] = useState([]);
+  const [selectedClientesPermitidos, setSelectedClientesPermitidos] = useState([]); 
 
-  // NOVOS ESTADOS para o formulário de CRIAÇÃO
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [newUserName, setNewUserName] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserPassword, setNewUserPassword] = useState('');
-  const [newUserRole, setNewUserRole] = useState(ROLES_DISPONIVEIS[2]); // Padrão para 'operacional'
-  const [newUserHoteisPermitidos, setNewUserHoteisPermitidos] = useState([]);
+  const [newUserRole, setNewUserRole] = useState(ROLES_DISPONIVEIS[2]); 
+  const [newUserClientesPermitidos, setNewUserClientesPermitidos] = useState([]);
   const [creatingUser, setCreatingUser] = useState(false);
 
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
 
-  const showMessage = (msg, error = false) => {
+  const showMessage = (msg, error = false, duration = 6000) => {
     setMessage(msg);
     setIsError(error);
-    setTimeout(() => setMessage(''), 5000);
+    setTimeout(() => setMessage(''), duration);
   };
 
-  // Carregar usuários
+  // Carregar utilizadores
   useEffect(() => {
-    if (!db) {
-      setLoadingUsers(false);
-      return;
-    }
+    if (!db) { setLoadingUsers(false); return; }
     setLoadingUsers(true);
     const qUsers = query(collection(db, "users"), orderBy("email")); 
     const unsubscribeUsers = onSnapshot(qUsers, (querySnapshot) => {
@@ -72,48 +67,45 @@ export default function PaginaAdminUsuarios() {
     return () => unsubscribeUsers();
   }, [db]);
 
-  // Carregar hotéis
+  // Carregar CLIENTES para o seletor
   useEffect(() => {
-    if (!db) {
-      setLoadingHoteis(false);
-      return;
-    }
-    setLoadingHoteis(true);
-    const qHoteis = query(collection(db, "hoteis"), orderBy("nome"));
-    const unsubscribeHoteis = onSnapshot(qHoteis, (querySnapshot) => {
-      const hoteisData = [];
+    if (!db) { setLoadingClientes(false); return; }
+    setLoadingClientes(true);
+    const qClientes = query(collection(db, "clientes"), orderBy("nome")); 
+    const unsubscribeClientes = onSnapshot(qClientes, (querySnapshot) => {
+      const clientesData = [];
       querySnapshot.forEach((doc) => {
-        hoteisData.push({ id: doc.id, ...doc.data() });
+        clientesData.push({ id: doc.id, ...doc.data() });
       });
-      setHoteis(hoteisData);
-      setLoadingHoteis(false);
+      setClientesList(clientesData); 
+      setLoadingClientes(false);
     }, (error) => {
-      console.error("Erro ao carregar hotéis para seleção: ", error);
-      setLoadingHoteis(false);
+      console.error("Erro ao carregar clientes para seleção: ", error);
+      setLoadingClientes(false);
     });
-    return () => unsubscribeHoteis();
+    return () => unsubscribeClientes();
   }, [db]);
 
   const handleEditUser = (userToEdit) => {
     setEditingUser(userToEdit);
     setSelectedRole(userToEdit.role || '');
-    setSelectedHoteisPermitidos(Array.isArray(userToEdit.hoteisPermitidos) ? userToEdit.hoteisPermitidos : []);
-    setShowCreateForm(false); // Esconde o formulário de criação se estiver aberto
+    setSelectedClientesPermitidos(Array.isArray(userToEdit.clientesPermitidos) ? userToEdit.clientesPermitidos : []);
+    setShowCreateForm(false); 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  const handleHotelPermissionChange = (hotelId, formType = 'edit') => {
+  const handleClientePermissionChange = (clienteId, formType = 'edit') => {
     if (formType === 'edit') {
-      setSelectedHoteisPermitidos(prev => 
-        prev.includes(hotelId) 
-          ? prev.filter(id => id !== hotelId) 
-          : [...prev, hotelId]
+      setSelectedClientesPermitidos(prev => 
+        prev.includes(clienteId) 
+          ? prev.filter(id => id !== clienteId) 
+          : [...prev, clienteId]
       );
     } else { // formType === 'create'
-      setNewUserHoteisPermitidos(prev =>
-        prev.includes(hotelId)
-          ? prev.filter(id => id !== hotelId)
-          : [...prev, hotelId]
+      setNewUserClientesPermitidos(prev =>
+        prev.includes(clienteId)
+          ? prev.filter(id => id !== clienteId)
+          : [...prev, clienteId]
       );
     }
   };
@@ -121,7 +113,7 @@ export default function PaginaAdminUsuarios() {
   const resetEditForm = () => {
     setEditingUser(null);
     setSelectedRole('');
-    setSelectedHoteisPermitidos([]);
+    setSelectedClientesPermitidos([]);
   };
 
   const resetCreateForm = () => {
@@ -129,7 +121,7 @@ export default function PaginaAdminUsuarios() {
     setNewUserEmail('');
     setNewUserPassword('');
     setNewUserRole(ROLES_DISPONIVEIS[2]);
-    setNewUserHoteisPermitidos([]);
+    setNewUserClientesPermitidos([]);
     setShowCreateForm(false);
     setCreatingUser(false);
   };
@@ -153,8 +145,9 @@ export default function PaginaAdminUsuarios() {
     try {
       await updateDoc(userDocRef, {
         role: selectedRole,
-        hoteisPermitidos: selectedRole === 'master' ? [] : selectedHoteisPermitidos, // Master não precisa de hoteisPermitidos explicitamente
-        // nome: pode ser atualizado aqui se houver um campo no formulário de edição
+        clientesPermitidos: selectedRole === 'master' ? [] : selectedClientesPermitidos, 
+        nome: editingUser.nome, 
+        email: editingUser.email 
       });
       showMessage("Perfil do utilizador atualizado com sucesso!");
       resetEditForm();
@@ -164,37 +157,29 @@ export default function PaginaAdminUsuarios() {
     }
   };
 
-  // NOVA FUNÇÃO para criar utilizador
   const handleCreateUser = async (e) => {
     e.preventDefault();
     if (!authInstance || !db || !masterProfile || masterProfile.role !== 'master') {
-      showMessage("Ação não permitida.", true);
-      return;
+      showMessage("Ação não permitida.", true); return;
     }
     if (!newUserEmail.trim() || !newUserPassword.trim() || !newUserName.trim()) {
-      showMessage("Nome, email e senha são obrigatórios para criar um novo utilizador.", true);
-      return;
+      showMessage("Nome, email e senha são obrigatórios para criar um novo utilizador.", true); return;
     }
     if (!newUserRole) {
-        showMessage("Por favor, selecione um nível de acesso para o novo utilizador.", true);
-        return;
+        showMessage("Por favor, selecione um nível de acesso para o novo utilizador.", true); return;
     }
 
     setCreatingUser(true);
     try {
-      // 1. Criar o utilizador no Firebase Authentication
       const userCredential = await createUserWithEmailAndPassword(authInstance, newUserEmail, newUserPassword);
       const newUserAuth = userCredential.user;
-      console.log("Utilizador criado na autenticação:", newUserAuth.uid);
 
-      // 2. Criar o perfil do utilizador no Firestore
       const userProfileData = {
         nome: newUserName.trim(),
         email: newUserEmail.trim().toLowerCase(),
         role: newUserRole,
-        hoteisPermitidos: newUserRole === 'master' ? [] : newUserHoteisPermitidos,
+        clientesPermitidos: newUserRole === 'master' ? [] : newUserClientesPermitidos,
         dataCriacaoPerfil: serverTimestamp(),
-        // uid: newUserAuth.uid, // O ID do documento já será o UID
       };
       await setDoc(doc(db, "users", newUserAuth.uid), userProfileData);
       
@@ -215,48 +200,51 @@ export default function PaginaAdminUsuarios() {
     }
   };
 
+  if (!masterProfile && masterCurrentUser) return <div className="p-8 text-center">A carregar perfil do administrador...</div>;
+  if (!masterProfile || masterProfile.role !== 'master') return <div className="p-8 text-center text-red-600">Acesso negado.</div>;
 
-  if (!masterProfile && masterCurrentUser) {
-    return <div className="p-8 text-center">A carregar perfil do administrador...</div>;
-  }
-  if (!masterProfile || masterProfile.role !== 'master') {
-    return <div className="p-8 text-center text-red-600">Acesso negado. Apenas administradores master podem aceder a esta página.</div>;
-  }
+  // Estilos Tailwind para inputs e labels (consistentes com PaginaAdminEmpresasColeta.jsx)
+  const inputStyle = "mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
+  const labelStyle = "block text-sm font-medium text-gray-700";
+  const checkboxStyle = "h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500";
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <h1 className="text-3xl font-bold text-gray-800">Gerir Utilizadores</h1>
       <MessageBox message={message} isError={isError} />
 
-      {/* Botão para mostrar/esconder formulário de criação */}
       <div className="my-4">
         <button
           onClick={() => { setShowCreateForm(!showCreateForm); resetEditForm(); }}
-          className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md shadow-sm"
+          className={`px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 
+            ${showCreateForm 
+              ? "bg-yellow-500 hover:bg-yellow-600 focus:ring-yellow-500" 
+              : "bg-green-600 hover:bg-green-700 focus:ring-green-500"
+            }`} // Botão verde para Adicionar, Amarelo para Cancelar Criação
         >
           {showCreateForm ? 'Cancelar Criação' : '+ Adicionar Novo Utilizador'}
         </button>
       </div>
 
-      {/* Formulário de CRIAÇÃO (condicional) */}
+      {/* Formulário de CRIAÇÃO */}
       {showCreateForm && (
         <form onSubmit={handleCreateUser} className="bg-white p-6 rounded-lg shadow space-y-4 mb-8 border border-green-300">
           <h2 className="text-xl font-semibold text-gray-700 mb-1">Criar Novo Utilizador</h2>
           <div>
-            <label htmlFor="newUserName" className="block text-sm font-medium text-gray-700">Nome*</label>
-            <input type="text" id="newUserName" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} required className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm"/>
+            <label htmlFor="newUserName" className={labelStyle}>Nome*</label>
+            <input type="text" id="newUserName" value={newUserName} onChange={(e) => setNewUserName(e.target.value)} required className={inputStyle}/>
           </div>
           <div>
-            <label htmlFor="newUserEmail" className="block text-sm font-medium text-gray-700">Email*</label>
-            <input type="email" id="newUserEmail" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} required className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm"/>
+            <label htmlFor="newUserEmail" className={labelStyle}>Email*</label>
+            <input type="email" id="newUserEmail" value={newUserEmail} onChange={(e) => setNewUserEmail(e.target.value)} required className={inputStyle}/>
           </div>
           <div>
-            <label htmlFor="newUserPassword" className="block text-sm font-medium text-gray-700">Senha* (mínimo 6 caracteres)</label>
-            <input type="password" id="newUserPassword" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} required className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm"/>
+            <label htmlFor="newUserPassword" className={labelStyle}>Senha* (mínimo 6 caracteres)</label>
+            <input type="password" id="newUserPassword" value={newUserPassword} onChange={(e) => setNewUserPassword(e.target.value)} required className={inputStyle}/>
           </div>
           <div>
-            <label htmlFor="newUserRole" className="block text-sm font-medium text-gray-700">Nível de Acesso (Role)*</label>
-            <select id="newUserRole" value={newUserRole} onChange={(e) => setNewUserRole(e.target.value)} required className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+            <label htmlFor="newUserRole" className={labelStyle}>Nível de Acesso (Role)*</label>
+            <select id="newUserRole" value={newUserRole} onChange={(e) => setNewUserRole(e.target.value)} required className={inputStyle}>
               {ROLES_DISPONIVEIS.map(roleOption => (
                 <option key={roleOption} value={roleOption}>
                   {roleOption.charAt(0).toUpperCase() + roleOption.slice(1)}
@@ -266,13 +254,13 @@ export default function PaginaAdminUsuarios() {
           </div>
           {newUserRole !== 'master' && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hotéis Permitidos</label>
-              {loadingHoteis ? <p>A carregar hotéis...</p> : hoteis.length === 0 ? <p>Nenhum hotel cadastrado.</p> : (
+              <label className={`${labelStyle} mb-1`}>Clientes Permitidos</label>
+              {loadingClientes ? <p>A carregar clientes...</p> : clientesList.length === 0 ? <p>Nenhum cliente cadastrado.</p> : (
                 <div className="mt-2 max-h-40 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-1">
-                  {hoteis.map(hotel => (
-                    <label key={`create-${hotel.id}`} htmlFor={`create-hotel-${hotel.id}`} className="flex items-center cursor-pointer p-1 hover:bg-gray-50 rounded">
-                      <input type="checkbox" id={`create-hotel-${hotel.id}`} value={hotel.id} checked={newUserHoteisPermitidos.includes(hotel.id)} onChange={() => handleHotelPermissionChange(hotel.id, 'create')} className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"/>
-                      <span className="ml-2 text-sm text-gray-700">{hotel.nome}</span>
+                  {clientesList.map(cliente => (
+                    <label key={`create-cliente-${cliente.id}`} htmlFor={`create-cliente-cb-${cliente.id}`} className="flex items-center cursor-pointer p-1 hover:bg-gray-50 rounded">
+                      <input type="checkbox" id={`create-cliente-cb-${cliente.id}`} value={cliente.id} checked={newUserClientesPermitidos.includes(cliente.id)} onChange={() => handleClientePermissionChange(cliente.id, 'create')} className={`${checkboxStyle} mr-2`}/>
+                      <span className="ml-2 text-sm text-gray-700">{cliente.nome}</span>
                     </label>
                   ))}
                 </div>
@@ -280,77 +268,60 @@ export default function PaginaAdminUsuarios() {
             </div>
           )}
           <div className="flex justify-end space-x-3 pt-2">
-            <button type="button" onClick={resetCreateForm} className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">
-                Limpar Formulário
+            <button type="button" onClick={resetCreateForm} 
+                    className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                Limpar
             </button>
-            <button type="submit" className="px-4 py-2 bg-green-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-green-700" disabled={creatingUser}>
+            <button type="submit" 
+                    className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50" 
+                    disabled={creatingUser}>
                 {creatingUser ? 'A Criar...' : 'Criar Utilizador'}
             </button>
           </div>
         </form>
       )}
 
-
-      {/* Formulário de Edição (aparece quando editingUser está definido) */}
-      {editingUser && !showCreateForm && ( // Só mostra se não estiver a criar
+      {/* Formulário de Edição */}
+      {editingUser && !showCreateForm && ( 
         <form onSubmit={handleUpdateUser} className="bg-white p-6 rounded-lg shadow space-y-4 mb-8 border border-indigo-300">
           <h2 className="text-xl font-semibold text-gray-700 mb-1">
             A Editar Utilizador: <span className="font-normal">{editingUser.email || editingUser.nome || editingUser.id}</span>
           </h2>
-          
-          <div className="mb-4">
-            <label htmlFor="role" className="block text-sm font-medium text-gray-700">Nível de Acesso (Role)*</label>
-            <select
-              id="role"
-              value={selectedRole}
-              onChange={(e) => setSelectedRole(e.target.value)}
-              required
-              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-              disabled={editingUser.id === masterCurrentUser?.uid && editingUser.role === 'master'}
-            >
-              <option value="">Selecione um nível</option>
-              {ROLES_DISPONIVEIS.map(roleOption => (
-                <option key={roleOption} value={roleOption}>
-                  {roleOption.charAt(0).toUpperCase() + roleOption.slice(1)}
-                </option>
-              ))}
-            </select>
-            {editingUser.id === masterCurrentUser?.uid && editingUser.role === 'master' && (
-                <p className="text-xs text-gray-500 mt-1">O nível "master" não pode ser alterado para o próprio utilizador master.</p>
-            )}
+          <div>
+            <label htmlFor="editUserName" className={labelStyle}>Nome (não editável aqui, apenas informativo)</label>
+            <input type="text" id="editUserName" value={editingUser.nome || ''} readOnly className={`${inputStyle} bg-gray-100`} />
           </div>
-
+          <div>
+            <label htmlFor="role" className={labelStyle}>Nível de Acesso (Role)*</label>
+            <select id="role" value={selectedRole} onChange={(e) => setSelectedRole(e.target.value)} required className={inputStyle} disabled={editingUser.id === masterCurrentUser?.uid && editingUser.role === 'master'}>
+              <option value="">Selecione um nível</option>
+              {ROLES_DISPONIVEIS.map(roleOption => ( <option key={roleOption} value={roleOption}> {roleOption.charAt(0).toUpperCase() + roleOption.slice(1)} </option> ))}
+            </select>
+            {editingUser.id === masterCurrentUser?.uid && editingUser.role === 'master' && ( <p className="text-xs text-gray-500 mt-1">O nível "master" não pode ser alterado.</p> )}
+          </div>
           {selectedRole !== 'master' && (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Hotéis Permitidos</label>
-              {loadingHoteis ? <p>A carregar hotéis...</p> : hoteis.length === 0 ? <p>Nenhum hotel cadastrado para seleção.</p> : (
+            <div>
+              <label className={`${labelStyle} mb-1`}>Clientes Permitidos</label>
+              {loadingClientes ? <p>A carregar clientes...</p> : clientesList.length === 0 ? <p>Nenhum cliente cadastrado para seleção.</p> : (
                 <div className="mt-2 max-h-60 overflow-y-auto border border-gray-300 rounded-md p-2 space-y-1">
-                  {hoteis.map(hotel => (
-                    <label key={hotel.id} htmlFor={`edit-hotel-${hotel.id}`} className="flex items-center cursor-pointer p-1 hover:bg-gray-50 rounded">
-                      <input
-                        type="checkbox"
-                        id={`edit-hotel-${hotel.id}`} // ID único para checkboxes de edição
-                        value={hotel.id}
-                        checked={selectedHoteisPermitidos.includes(hotel.id)}
-                        onChange={() => handleHotelPermissionChange(hotel.id, 'edit')}
-                        className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                      />
-                      <span className="ml-2 text-sm text-gray-700">{hotel.nome} ({hotel.cidade || 'N/A'})</span>
+                  {clientesList.map(cliente => (
+                    <label key={cliente.id} htmlFor={`edit-cliente-cb-${cliente.id}`} className="flex items-center cursor-pointer p-1 hover:bg-gray-50 rounded">
+                      <input type="checkbox" id={`edit-cliente-cb-${cliente.id}`} value={cliente.id} checked={selectedClientesPermitidos.includes(cliente.id)} onChange={() => handleClientePermissionChange(cliente.id, 'edit')} className={`${checkboxStyle} mr-2`}/>
+                      <span className="ml-2 text-sm text-gray-700">{cliente.nome} ({cliente.cidade || 'N/A'})</span>
                     </label>
                   ))}
                 </div>
               )}
             </div>
           )}
-          {selectedRole === 'master' && (
-            <p className="text-sm text-gray-600">Utilizadores "master" têm acesso a todos os hotéis por defeito.</p>
-          )}
-
+          {selectedRole === 'master' && ( <p className="text-sm text-gray-600">Utilizadores "master" têm acesso a todos os clientes por defeito.</p> )}
           <div className="flex justify-end space-x-3 pt-2">
-            <button type="button" onClick={resetEditForm} className="px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">
+            <button type="button" onClick={resetEditForm} 
+                    className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                 Cancelar
             </button>
-            <button type="submit" className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700">
+            <button type="submit" 
+                    className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50">
                 Salvar Alterações
             </button>
           </div>
@@ -358,46 +329,44 @@ export default function PaginaAdminUsuarios() {
       )}
 
       {/* Lista de Utilizadores */}
-      <div className="bg-white p-6 rounded-lg shadow">
-        {/* ... (JSX da tabela de utilizadores inalterado) ... */}
+      <div className="bg-white p-6 rounded-xl shadow-lg mt-8">
         <h2 className="text-xl font-semibold text-gray-700 mb-3">Utilizadores Registados</h2>
-        {loadingUsers ? (
-          <p>A carregar utilizadores...</p>
-        ) : users.length === 0 ? (
-          <p>Nenhum utilizador encontrado.</p>
+        {loadingUsers ? ( <p>A carregar utilizadores...</p>
+        ) : users.length === 0 ? ( <p>Nenhum utilizador encontrado.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-gray-200 table-auto">
+              <thead>
                 <tr>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email / Nome</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nível (Role)</th>
-                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Hotéis Permitidos</th>
-                  <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
+                  <th className="th-table uppercase tracking-wider">Email / Nome</th>
+                  <th className="th-table uppercase tracking-wider">Nível (Role)</th>
+                  <th className="th-table uppercase tracking-wider">Clientes Permitidos</th>
+                  <th className="th-table text-center normal-case tracking-normal">Ações</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {users.map((user) => (
                   <tr key={user.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.email || user.nome || user.id}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.role}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="td-table font-medium text-gray-900">{user.email || user.nome || user.id}</td>
+                    <td className="td-table">{user.role}</td>
+                    <td className="td-table break-words">
                       {user.role === 'master' 
                         ? 'Todos' 
-                        : (user.hoteisPermitidos && user.hoteisPermitidos.length > 0 
-                            ? user.hoteisPermitidos.map(hotelId => hoteis.find(h => h.id === hotelId)?.nome || hotelId).join(', ')
+                        : (user.clientesPermitidos && user.clientesPermitidos.length > 0 
+                            ? user.clientesPermitidos.map(clienteId => clientesList.find(c => c.id === clienteId)?.nome || clienteId.substring(0,6)+'...').join(', ')
                             : 'Nenhum'
                           )
                       }
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button 
-                        onClick={() => handleEditUser(user)} 
-                        className="text-indigo-600 hover:text-indigo-900 disabled:text-gray-400 disabled:cursor-not-allowed"
-                        disabled={user.id === masterCurrentUser?.uid && user.role === 'master'} 
-                      >
-                        Editar
-                      </button>
+                    <td className="td-table text-center px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex justify-center items-center space-x-2">
+                        <button onClick={() => handleEditUser(user)} 
+                                className="text-indigo-600 hover:text-indigo-700 text-sm font-medium hover:underline disabled:text-gray-400 disabled:cursor-not-allowed disabled:no-underline"
+                                disabled={user.id === masterCurrentUser?.uid && user.role === 'master'}>
+                            Editar
+                        </button>
+                        {/* O botão de excluir utilizador não foi implementado aqui, pois requer exclusão no Auth também */}
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -409,3 +378,4 @@ export default function PaginaAdminUsuarios() {
     </div>
   );
 }
+

@@ -1,62 +1,105 @@
 // src/components/WasteRecordsList.jsx
 
 import React from 'react';
-import { exportToCsv } from '../utils/csvExport'; // Importa a função de exportação CSV
-import MessageBox from './MessageBox'; // Importa o componente MessageBox
+import { exportToCsv } from '../utils/csvExport';
 
 /**
  * Componente para exibir a lista de registros de resíduos.
  *
- * @param {object} props - As propriedades do componente.
- * @param {Array} props.records - Um array de objetos de registro de resíduos.
- * @param {boolean} props.loading - True se os registros estiverem sendo carregados.
- * @param {function} props.onDelete - Função de callback para excluir um registro.
- * @param {function} props.showMessage - Função para exibir mensagens na UI (sucesso/erro).
+ * @param {object} props
+ * @param {Array} props.records
+ * @param {boolean} props.loading - Loading principal da lista
+ * @param {function} props.onDelete
+ * @param {string | null} props.userRole
+ * @param {function} [props.showMessage]
+ * @param {boolean} props.hasMoreRecords - NOVO: Se há mais registos para carregar
+ * @param {function} props.onLoadMore - NOVO: Função para carregar mais registos
+ * @param {boolean} props.loadingMore - NOVO: Estado de loading do botão "Carregar Mais"
  */
-function WasteRecordsList({ records, loading, onDelete, showMessage }) {
+function WasteRecordsList({ 
+    records, 
+    loading, 
+    onDelete, 
+    userRole, 
+    showMessage,
+    hasMoreRecords, 
+    onLoadMore,     
+    loadingMore     
+}) {
 
-    /**
-     * Lida com o clique no botão de exportar para CSV.
-     */
-    const handleExportClick = () => {
-        // Chama a função utilitária de exportação, passando os registros e a função showMessage.
-        exportToCsv(records, showMessage);
-    };
+  const handleExportClick = () => {
+    if (records && records.length > 0) {
+      exportToCsv(records, showMessage || alert); 
+    } else {
+      if (showMessage) { showMessage("Não há registos para exportar.", true); } 
+      else { alert("Não há registos para exportar."); }
+    }
+  };
 
-    return (
-        <>
-            {/* Botão para exportar dados para CSV */}
-            <button onClick={handleExportClick} className="btn-export w-full mb-4">
-                Exportar para CSV
-            </button>
+  // Estilos Tailwind diretos para os botões
+  const btnExportStyle = "w-full mb-4 px-4 py-2 bg-green-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500";
+  const btnDeleteStyle = "px-3 py-1 bg-red-500 text-white text-xs font-medium rounded-md shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500";
+  const btnLoadMoreStyle = "w-full mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50";
 
-            {/* Indicador de carregamento */}
-            {loading ? (
-                <div className="text-center text-gray-500 mb-4">Carregando registros...</div>
-            ) : records.length === 0 ? (
-                // Mensagem se não houver registros
-                <p className="text-center text-gray-500">Nenhum registro encontrado.</p>
-            ) : (
-                // Lista de registros
-                <div className="space-y-4">
-                    {records.map((record) => (
-                        <div key={record.id} className="record-item">
-                            <p><strong>Área:</strong> {record.area}</p>
-                            <p><strong>Tipo:</strong> {record.wasteType}</p>
-                            <p><strong>Peso:</strong> {record.weight} kg</p>
-                            <p><span>Data: {new Date(record.timestamp).toLocaleString('pt-BR')}</span></p>
-                            <button
-                                onClick={() => onDelete(record.id)} // Chama a função onDelete passada como prop
-                                className="delete-btn"
-                            >
-                                Excluir
-                            </button>
-                        </div>
-                    ))}
-                </div>
+  // Mostra "Carregando registos..." apenas se for o carregamento inicial E não houver registos
+  if (loading && records.length === 0) { 
+    return <div className="text-center text-gray-500 py-4">Carregando registos...</div>;
+  }
+
+  // Mostra "Nenhum registo..." se não estiver a carregar E não houver registos
+  if (!loading && records.length === 0) {
+    return <p className="text-center text-gray-500 py-4">Nenhum registo encontrado para a seleção atual.</p>;
+  }
+
+  return (
+    <>
+      {records && records.length > 0 && (
+        <button 
+          onClick={handleExportClick} 
+          className={btnExportStyle}
+        >
+          Exportar para CSV
+        </button>
+      )}
+
+      <div className="space-y-3">
+        {records.map((record) => (
+          <div 
+            key={record.id} 
+            className="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-center"
+          >
+            <div className="flex-grow mb-2 sm:mb-0">
+              {record.areaLancamento && <p><strong className="text-gray-700">Área:</strong> {record.areaLancamento}</p>}
+              {record.wasteType && <p><strong className="text-gray-700">Tipo:</strong> {record.wasteType}</p>}
+              {record.peso && <p><strong className="text-gray-700">Peso:</strong> {record.peso} kg</p>}
+              {record.timestamp && <p className="text-xs text-gray-500">Data: {new Date(record.timestamp).toLocaleString('pt-BR')}</p>}
+            </div>
+            {userRole === 'master' && (
+              <button
+                onClick={() => onDelete(record.id)}
+                className={btnDeleteStyle}
+              >
+                Excluir
+              </button>
             )}
-        </>
-    );
+          </div>
+        ))}
+      </div>
+
+      {/* Botão "Carregar Mais Registos" */}
+      {hasMoreRecords && (
+        <div className="mt-6 text-center">
+          <button
+            onClick={onLoadMore}
+            disabled={loadingMore || loading} // Desabilita também se o loading principal estiver ativo
+            className={btnLoadMoreStyle}
+          >
+            {loadingMore ? 'A Carregar...' : 'Carregar Mais Registos'}
+          </button>
+        </div>
+      )}
+    </>
+  );
 }
 
 export default WasteRecordsList;

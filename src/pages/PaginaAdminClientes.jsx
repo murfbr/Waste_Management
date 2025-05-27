@@ -8,13 +8,12 @@ import ClienteForm from '../components/ClienteForm';
 import Papa from 'papaparse';
 
 export default function PaginaAdminClientes() {
-  const { db, appId, userProfile: masterProfile, currentUser: masterCurrentUser } = useContext(AuthContext); // Adicionado appId
+  const { db, appId, userProfile: masterProfile, currentUser: masterCurrentUser } = useContext(AuthContext);
 
   const [clientes, setClientes] = useState([]);
   const [loadingClientes, setLoadingClientes] = useState(true);
   
   const [empresasColetaDisponiveis, setEmpresasColetaDisponiveis] = useState([]);
-  // const [loadingEmpresas, setLoadingEmpresas] = useState(true); // Já coberto por ClienteForm
   
   const [showForm, setShowForm] = useState(false); 
   const [editingClienteData, setEditingClienteData] = useState(null); 
@@ -28,245 +27,104 @@ export default function PaginaAdminClientes() {
   const [clienteParaImportar, setClienteParaImportar] = useState(null);
 
   const showMessage = (msg, error = false, duration = 6000) => {
-    setMessage(msg);
-    setIsError(error);
+    setMessage(msg); setIsError(error);
     setTimeout(() => setMessage(''), duration);
   };
 
-  // Carregar clientes
-  useEffect(() => {
-    if (!db) return;
-    setLoadingClientes(true);
+  useEffect(() => { /* Carregar Clientes */
+    if (!db) return; setLoadingClientes(true);
     const q = query(collection(db, "clientes"), orderBy("nome"));
-    const unsubscribe = onSnapshot(q, (querySnapshot) => {
-      setClientes(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      setLoadingClientes(false);
-    }, (error) => {
-      console.error("Erro ao carregar clientes: ", error);
-      showMessage("Erro ao carregar clientes.", true);
-      setLoadingClientes(false);
-    });
-    return () => unsubscribe();
+    const unsub = onSnapshot(q, (qs) => {
+      setClientes(qs.docs.map(d => ({ id: d.id, ...d.data() }))); setLoadingClientes(false);
+    }, (err) => { console.error("Erro clientes:", err); showMessage("Erro clientes.", true); setLoadingClientes(false); });
+    return () => unsub();
   }, [db]);
 
-  // Carregar empresas de coleta
-  useEffect(() => {
+  useEffect(() => { /* Carregar Empresas */
     if (!db) return;
-    // setLoadingEmpresas(true);
-    const qEmpresas = query(collection(db, "empresasColeta"), orderBy("nomeFantasia"));
-    const unsubscribeEmpresas = onSnapshot(qEmpresas, (querySnapshot) => {
-      setEmpresasColetaDisponiveis(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
-      // setLoadingEmpresas(false);
-    }, (error) => {
-      console.error("Erro ao carregar empresas de coleta: ", error);
-      // setLoadingEmpresas(false);
-    });
-    return () => unsubscribeEmpresas();
+    const qE = query(collection(db, "empresasColeta"), orderBy("nomeFantasia"));
+    const unsubE = onSnapshot(qE, (qs) => {
+      setEmpresasColetaDisponiveis(qs.docs.map(d => ({ id: d.id, ...d.data() })));
+    }, (err) => console.error("Erro empresas:", err));
+    return () => unsubE();
   }, [db]);
 
-  const handleOpenCreateForm = () => {
-    setEditingClienteId(null);
-    setEditingClienteData(null); 
-    setShowForm(true);
-    setClienteParaImportar(null); 
-  };
-
-  const handleEditCliente = (cliente) => {
-    setEditingClienteId(cliente.id);
-    setEditingClienteData(cliente); 
-    setShowForm(true);
-    setClienteParaImportar(null); 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  const handleOpenCreateForm = () => { setEditingClienteId(null); setEditingClienteData(null); setShowForm(true); setClienteParaImportar(null); };
+  const handleEditCliente = (cliente) => { setEditingClienteId(cliente.id); setEditingClienteData(cliente); setShowForm(true); setClienteParaImportar(null); window.scrollTo({ top: 0, behavior: 'smooth' }); };
+  const handleCancelForm = () => { setShowForm(false); setEditingClienteId(null); setEditingClienteData(null);};
   
   const handleDeleteCliente = async (clienteId) => {
     if (!db || !masterProfile || masterProfile.role !== 'master') return showMessage("Ação não permitida.", true);
     if (window.confirm("Tem certeza que deseja excluir este cliente?")) {
-        try {
-            await deleteDoc(doc(db, "clientes", clienteId));
-            showMessage("Cliente excluído com sucesso!");
-            if (editingClienteId === clienteId) { 
-                handleCancelForm();
-            }
-        } catch (error) {
-            console.error("Erro ao excluir cliente: ", error);
-            showMessage("Erro ao excluir cliente.", true);
-        }
+        try { await deleteDoc(doc(db, "clientes", clienteId)); showMessage("Cliente excluído!"); if (editingClienteId === clienteId) handleCancelForm();
+        } catch (e) { console.error("Erro excluir cliente:", e); showMessage("Erro excluir.", true); }
     }
   };
 
   const handleFormSubmit = async (formData) => {
-    if (!db || !masterCurrentUser || !masterProfile || masterProfile.role !== 'master') {
-        showMessage("Ação não permitida.", true);
-        return;
-    }
-    const clienteDataToSave = {
-        ...formData, 
-        ultimaModificacao: serverTimestamp(),
-        modificadoPor: masterCurrentUser.uid,
-    };
+    if (!db || !masterCurrentUser || !masterProfile || masterProfile.role !== 'master') return showMessage("Ação não permitida.", true);
+    const clienteDataToSave = { ...formData, ultimaModificacao: serverTimestamp(), modificadoPor: masterCurrentUser.uid };
     try {
       if (editingClienteId) { 
-        await updateDoc(doc(db, "clientes", editingClienteId), clienteDataToSave);
-        showMessage("Cliente atualizado com sucesso!");
+        await updateDoc(doc(db, "clientes", editingClienteId), clienteDataToSave); showMessage("Cliente atualizado!");
       } else { 
-        clienteDataToSave.criadoPor = masterCurrentUser.uid;
-        clienteDataToSave.dataCriacao = serverTimestamp();
-        await addDoc(collection(db, "clientes"), clienteDataToSave);
-        showMessage("Cliente adicionado com sucesso!");
+        clienteDataToSave.criadoPor = masterCurrentUser.uid; clienteDataToSave.dataCriacao = serverTimestamp();
+        await addDoc(collection(db, "clientes"), clienteDataToSave); showMessage("Cliente adicionado!");
       }
       handleCancelForm(); 
-    } catch (error) {
-      console.error("Erro ao salvar cliente: ", error);
-      showMessage("Erro ao salvar cliente.", true);
-    }
-  };
-
-  const handleCancelForm = () => {
-    setShowForm(false);
-    setEditingClienteId(null);
-    setEditingClienteData(null);
-  };
-
-  // Funções para importação de CSV
-  const handleFileChange = (event) => {
-    setImportFile(event.target.files[0]);
-  };
-
-  const handleOpenImportModal = (cliente) => {
-    console.log("ADMIN_CLIENTES: Abrindo modal de importação para cliente:", cliente?.nome);
-    setClienteParaImportar(cliente);
-    setImportFile(null); 
-    setShowForm(false); // AJUSTE: Garante que o formulário de edição/criação seja fechado
-    setEditingClienteId(null); // Limpa o estado de edição
-    setEditingClienteData(null);
+    } catch (e) { console.error("Erro salvar cliente:", e); showMessage("Erro ao salvar.", true); }
   };
   
-  const handleCancelImport = () => {
-    console.log("ADMIN_CLIENTES: Cancelando importação.");
-    setClienteParaImportar(null);
-    setImportFile(null);
-  }
-
-  const processAndImportCSV = async () => {
-    if (!importFile || !clienteParaImportar || !db || !masterCurrentUser) {
-      showMessage("Selecione um cliente e um ficheiro CSV para importar.", true);
-      return;
+  const handleFileChange = (event) => setImportFile(event.target.files[0]);
+  const handleOpenImportModal = (cliente) => { setClienteParaImportar(cliente); setImportFile(null); setShowForm(false); setEditingClienteId(null); setEditingClienteData(null); };
+  const handleCancelImport = () => { setClienteParaImportar(null); setImportFile(null); };
+  const processAndImportCSV = async () => { 
+    if (!importFile || !clienteParaImportar || !db || !masterCurrentUser || masterProfile?.role !== 'master') { 
+      showMessage("Selecione cliente e ficheiro, ou permissão negada.", true); return; 
     }
-    if (masterProfile?.role !== 'master') {
-        showMessage("Apenas administradores master podem importar dados.", true);
-        return;
-    }
-
     setIsImporting(true);
     Papa.parse(importFile, {
-      header: true,
-      skipEmptyLines: true,
+      header: true, skipEmptyLines: true,
       complete: async (results) => {
         const { data, errors: parseErrors } = results;
-        let importErrors = [];
-        let validRecords = [];
-
-        if (parseErrors.length > 0) {
-          parseErrors.forEach(err => importErrors.push(`Erro de parsing na linha ${err.row}: ${err.message}`));
-        }
-
-        console.log("ADMIN_CLIENTES: Dados do CSV para importar:", data);
-
+        let importErrors = []; let validRecords = [];
+        if (parseErrors.length > 0) { parseErrors.forEach(err => importErrors.push(`Erro CSV linha ${err.row}: ${err.message}`));}
         data.forEach((row, index) => {
           const { Data, Area, TipoResiduo, Peso } = row;
-          if (!Data || !Area || !TipoResiduo || !Peso) {
-            importErrors.push(`Linha ${index + 2}: Faltam dados obrigatórios (Data, Area, TipoResiduo, Peso).`);
-            return;
-          }
+          if (!Data || !Area || !TipoResiduo || !Peso) { importErrors.push(`Linha ${index + 2}: Dados obrigatórios em falta.`); return; }
           const pesoNum = parseFloat(String(Peso).replace(',', '.'));
-          if (isNaN(pesoNum) || pesoNum <= 0) {
-            importErrors.push(`Linha ${index + 2}: Peso inválido "${Peso}".`);
-            return;
-          }
+          if (isNaN(pesoNum) || pesoNum <= 0) { importErrors.push(`Linha ${index + 2}: Peso inválido.`); return; }
           let timestamp;
-          if (String(Data).includes('/')) {
-            const parts = String(Data).split('/');
-            if (parts.length === 3) timestamp = new Date(parts[2], parts[1] - 1, parts[0]).getTime();
-          } else if (String(Data).includes('-')) {
-            timestamp = new Date(Data).getTime();
-          }
-          if (isNaN(timestamp)) {
-            importErrors.push(`Linha ${index + 2}: Data inválida "${Data}". Use DD/MM/YYYY ou YYYY-MM-DD.`);
-            return;
-          }
-          if (clienteParaImportar.areasPersonalizadas && !clienteParaImportar.areasPersonalizadas.includes(Area)) {
-            importErrors.push(`Linha ${index + 2}: Área "${Area}" não é válida para este cliente (${clienteParaImportar.nome}). Áreas válidas: ${clienteParaImportar.areasPersonalizadas.join(', ')}`);
-            return;
-          }
-          let validWasteType = false;
-          const allClientWasteTypes = [...(clienteParaImportar.categoriasPrincipaisResiduo || [])];
-          if (clienteParaImportar.fazSeparacaoReciclaveisCompleta && clienteParaImportar.tiposReciclaveisPersonalizados) {
-            allClientWasteTypes.push(...clienteParaImportar.tiposReciclaveisPersonalizados);
-          }
-          if (allClientWasteTypes.includes(TipoResiduo)) {
-            validWasteType = true;
-          }
-          if (!validWasteType) {
-            importErrors.push(`Linha ${index + 2}: Tipo de Resíduo "${TipoResiduo}" não é válido para este cliente (${clienteParaImportar.nome}). Tipos válidos: ${allClientWasteTypes.join(', ')}`);
-            return;
-          }
+          if (String(Data).includes('/')) { const p = String(Data).split('/'); if (p.length === 3) timestamp = new Date(parseInt(p[2]), parseInt(p[1]) - 1, parseInt(p[0])).getTime();
+          } else if (String(Data).includes('-')) { timestamp = new Date(Data).getTime(); }
+          if (isNaN(timestamp)) { importErrors.push(`Linha ${index + 2}: Data inválida.`); return; }
+          if (clienteParaImportar.areasPersonalizadas && !clienteParaImportar.areasPersonalizadas.includes(Area)) { importErrors.push(`Linha ${index + 2}: Área "${Area}" inválida para ${clienteParaImportar.nome}.`); return; }
+          let vWT = false; const aCWT = [...(clienteParaImportar.categoriasPrincipaisResiduo || [])];
+          if (clienteParaImportar.fazSeparacaoReciclaveisCompleta && clienteParaImportar.tiposReciclaveisPersonalizados) { aCWT.push(...clienteParaImportar.tiposReciclaveisPersonalizados); }
+          if (aCWT.includes(TipoResiduo)) vWT = true;
+          if (!vWT) { importErrors.push(`Linha ${index + 2}: TipoResiduo "${TipoResiduo}" inválido para ${clienteParaImportar.nome}.`); return; }
           validRecords.push({
-            clienteId: clienteParaImportar.id,
-            areaLancamento: Area,
-            wasteType: TipoResiduo,
-            peso: pesoNum,
-            timestamp: timestamp,
-            userId: masterCurrentUser.uid,
-            userEmail: masterCurrentUser.email,
-            importadoEm: serverTimestamp()
+            clienteId: clienteParaImportar.id, areaLancamento: Area, wasteType: TipoResiduo, peso: pesoNum, timestamp: timestamp,
+            userId: masterCurrentUser.uid, userEmail: masterCurrentUser.email, importadoEm: serverTimestamp()
           });
         });
-
-        if (importErrors.length > 0) {
-          showMessage(`Erros na importação:\n${importErrors.join('\n')}`, true, 15000);
-          setIsImporting(false);
-          return;
-        }
-        if (validRecords.length === 0) {
-          showMessage("Nenhum registo válido encontrado no ficheiro CSV.", true);
-          setIsImporting(false);
-          return;
-        }
+        if (importErrors.length > 0) { showMessage(`Erros:\n${importErrors.join('\n')}`, true, 15000); setIsImporting(false); return; }
+        if (validRecords.length === 0) { showMessage("Nenhum registo válido no CSV.", true); setIsImporting(false); return; }
         try {
           const batch = writeBatch(db);
-          // Usando o caminho correto para wasteRecords, com o appId do contexto
           const recordsCollection = collection(db, `artifacts/${appId}/public/data/wasteRecords`);
-          
-          validRecords.forEach(record => {
-            const newRecordRef = doc(recordsCollection);
-            batch.set(newRecordRef, record);
-          });
-          
+          validRecords.forEach(record => { const newRecordRef = doc(recordsCollection); batch.set(newRecordRef, record); });
           await batch.commit();
-          showMessage(`${validRecords.length} registos importados com sucesso para o cliente ${clienteParaImportar.nome}!`, false);
-        } catch (error) {
-          console.error("Erro ao salvar registos importados:", error);
-          showMessage("Erro ao salvar registos importados. Verifique o console.", true);
-        }
-        
-        setIsImporting(false);
-        setClienteParaImportar(null);
-        setImportFile(null);
+          showMessage(`${validRecords.length} registos importados para ${clienteParaImportar.nome}!`, false);
+        } catch (error) { console.error("Erro ao salvar importados:", error); showMessage("Erro ao salvar.", true); }
+        setIsImporting(false); setClienteParaImportar(null); setImportFile(null);
       },
-      error: (error) => {
-        console.error("Erro ao fazer parse do CSV:", error);
-        showMessage(`Erro ao ler o ficheiro CSV: ${error.message}`, true);
-        setIsImporting(false);
-      }
+      error: (error) => { console.error("Erro parse CSV:", error); showMessage(`Erro CSV: ${error.message}`, true); setIsImporting(false); }
     });
   };
 
-  if (!masterProfile && masterCurrentUser) return <div className="p-8 text-center">A carregar perfil do administrador...</div>;
+  if (!masterProfile && masterCurrentUser) return <div className="p-8 text-center">A carregar perfil...</div>;
   if (!masterProfile || masterProfile.role !== 'master') return <div className="p-8 text-center text-red-600">Acesso negado.</div>;
-
-  // Adicionado log para depurar a renderização da secção de importação
-  console.log("ADMIN_CLIENTES: Renderizando. showForm:", showForm, "clienteParaImportar:", clienteParaImportar ? clienteParaImportar.nome : null);
 
   return (
     <div className="space-y-8">
@@ -276,7 +134,7 @@ export default function PaginaAdminClientes() {
       {!showForm && !clienteParaImportar && (
         <button
           onClick={handleOpenCreateForm}
-          className="mb-6 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md shadow-sm"
+          className="mb-6 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:opacity-50"
         >
           + Adicionar Novo Cliente
         </button>
@@ -290,6 +148,8 @@ export default function PaginaAdminClientes() {
           onCancel={handleCancelForm}
           empresasColetaDisponiveis={empresasColetaDisponiveis}
           isEditing={!!editingClienteId}
+          // btnPrimaryClass e btnSecondaryClass foram removidas do ClienteForm
+          // O ClienteForm agora estiliza os seus próprios botões com Tailwind direto
         />
       )}
 
@@ -302,7 +162,7 @@ export default function PaginaAdminClientes() {
               <li>O ficheiro deve ser no formato CSV (valores separados por vírgula).</li>
               <li>A primeira linha deve ser o cabeçalho.</li>
               <li>Colunas obrigatórias (com estes nomes exatos no cabeçalho): <strong>Data</strong>, <strong>Area</strong>, <strong>TipoResiduo</strong>, <strong>Peso</strong>.</li>
-              <li>Formato da <strong>Data</strong>: DD/MM/YYYY ou YYYY-MM-DD.</li>
+              <li>Formato da <strong>Data</strong>: DD/MM/YYYY ou liturgi-MM-DD.</li>
               <li><strong>Area</strong>: Deve corresponder a uma das "Áreas Internas" configuradas para este cliente.</li>
               <li><strong>TipoResiduo</strong>: Deve corresponder a uma das "Categorias Principais" ou "Sub-tipos de Recicláveis" configurados para este cliente.</li>
               <li><strong>Peso</strong>: Número (ex: 10.5 ou 10,5).</li>
@@ -318,13 +178,13 @@ export default function PaginaAdminClientes() {
             <button 
               onClick={processAndImportCSV} 
               disabled={!importFile || isImporting}
-              className="btn-primary text-sm py-2 px-3 disabled:opacity-50"
+              className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
             >
               {isImporting ? "A Importar..." : "Importar Ficheiro"}
             </button>
             <button 
               onClick={handleCancelImport}
-              className="btn-secondary text-sm py-2 px-3"
+              className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
               Cancelar
             </button>
@@ -366,11 +226,11 @@ export default function PaginaAdminClientes() {
                     </td>
                     <td className="td-table text-center px-6 py-4 whitespace-nowrap text-sm font-medium">
                       <div className="flex justify-center items-center space-x-2">
-                        <button onClick={() => handleEditCliente(cliente)} className="btn-link-indigo">Editar</button>
-                        <button onClick={() => handleDeleteCliente(cliente.id)} className="btn-link-red">Excluir</button>
+                        <button onClick={() => handleEditCliente(cliente)} className="text-indigo-600 hover:text-indigo-700 text-sm font-medium hover:underline">Editar</button>
+                        <button onClick={() => handleDeleteCliente(cliente.id)} className="text-red-600 hover:text-red-700 text-sm font-medium hover:underline">Excluir</button> 
                         <button 
                           onClick={() => handleOpenImportModal(cliente)} 
-                          className="text-xs px-2 py-1 border border-blue-500 text-blue-500 hover:bg-blue-50 rounded-md"
+                          className="px-2 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                           title="Importar histórico de lançamentos para este cliente"
                         >
                           Importar Hist.

@@ -1,0 +1,67 @@
+/* src/styles/main.css */
+
+/* 1. Definição das Cores Globais (Tokens de Design) como Variáveis CSS */
+/* Use estas variáveis se quiser referenciá-las em CSS Modules específicos no futuro,
+   ou para configurar o seu tailwind.config.js.
+   Para estilização direta com Tailwind no JSX, você usará as classes de cor do Tailwind (ex: bg-blue-500).
+*/
+:root {
+  --color-primary-500: #3b82f6; 
+  --color-primary-600: #2563eb; 
+  --color-primary-700: #1d4ed8;
+
+  --color-danger-500: #ef4444;  
+  --color-danger-600: #dc2626;  
+  --color-danger-700: #b91c1c;  
+  
+  --color-secondary-bg: #ffffff;
+  --color-secondary-text: #374151;   
+  --color-secondary-border: #d1d5db;  
+  --color-secondary-hover-bg: #f9fafb;
+
+  --color-accent-indigo-500: #6366f1; 
+  --color-accent-indigo-600: #4f46e5; 
+  
+  --color-success-text: #065f46;    
+  --color-success-bg: #d1fae5;      
+  --color-error-text: #991b1b;     
+  --color-error-bg: #fee2e2;       
+
+  --color-text-base: #374151;      
+  --color-text-muted: #6b7280;    
+  --color-text-heading: #1f2937;  
+  
+  --color-bg-body: #f3f4f6;       
+  --color-bg-card: #ffffff;       
+  --color-bg-input: #ffffff;      
+  --color-border-input: #d1d5db;  
+
+  --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+}
+
+/* 2. Estilos Globais para o Body (mínimo necessário) */
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-bg-body); /* Tailwind: bg-gray-100 */
+  color: var(--color-text-base);       /* Tailwind: text-gray-700 */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+*, *::before, *::after {
+  box-sizing: inherit;
+}
+
+/* 3. Tailwind CSS Directives (MUITO IMPORTANTE - devem estar no seu ponto de entrada CSS principal) */
+/* Se este NÃO for o seu ficheiro CSS principal onde o Tailwind é inicializado,
+   Mova estas linhas para o ficheiro correto (ex: src/index.css) e deixe este ficheiro SÓ com :root e body. */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* NENHUMA CLASSE PERSONALIZADA COMO .input-form ou .btn-primary SERÁ DEFINIDA AQUI NESTA ABORDAGEM.
+   TODA A ESTILIZAÇÃO DE COMPONENTES SERÁ FEITA COM CLASSES TAILWIND DIRETAMENTE NO JSX.
+   OU, SE DESEJADO, EM FICHEIROS CSS MODULES ESPECÍFICOS POR COMPONENTE. */

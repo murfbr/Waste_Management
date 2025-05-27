@@ -1,45 +1,24 @@
 /* Estilos Base */
 :root {
   /* ... (suas variáveis CSS globais permanecem as mesmas) ... */
-  --color-primary-600: #2563eb; 
-  --color-primary-700: #1d4ed8; 
+  --color-primary-500: #3b82f6; /* Azul para botões primários (Tailwind: blue-500) */
+  --color-primary-600: #2563eb; /* Azul mais escuro para hover/ativo (Tailwind: blue-600) */
   
+  --color-danger-500: #ef4444;  /* Vermelho para botões de perigo (Tailwind: red-500) */
+  --color-danger-600: #dc2626;  /* Vermelho mais escuro para hover/ativo (Tailwind: red-600) */
+
   --color-secondary-bg: #ffffff;
-  --color-secondary-text: #374151;
-  --color-secondary-border: #d1d5db; /* Cinza para bordas de input */
+  --color-secondary-text: #4b5563; /* Cinza para texto (Tailwind: text-gray-600) */
+  --color-secondary-border: #d1d5db;
   --color-secondary-hover-bg: #f3f4f6;
 
-  --color-accent-indigo-500: #4f46e5; /* Cor de foco para anel/borda */
-  --color-accent-indigo-600: #4f46e5; 
-  --color-accent-indigo-700: #4338ca;
-  
-  --color-focus-border: #3b82f6; /* Cor da borda de foco do seu original */
-  --color-focus-ring-tailwind: var(--color-accent-indigo-500); /* Variável para cor do anel de foco Tailwind */
-
-
-  --color-success-bg: #d1fae5;
-  --color-success-text: #065f46;
-  --color-success-border: #a7f3d0;
-
-  --color-danger-bg: #fee2e2;
-  --color-danger-text: #991b1b;
-  --color-danger-border: #fca5a5;
-
-  --color-green-export-500: #10b981;
-  --color-green-export-600: #059669;
-
-  --color-blue-large-btn-500: #2563eb;
-  --color-blue-large-btn-600: #1d4ed8;
-
-  /* Cores de Texto e Fundo Gerais */
+  /* ... (outras variáveis) ... */
   --color-text-base: #374151;
   --color-text-muted: #6b7280;
   --color-text-heading: #1f2937;
   --color-bg-body: #f3f4f6;
   --color-bg-card: #ffffff;
   --color-bg-input-default: #ffffff; 
-
-  /* Fontes */
   --font-sans: 'Inter', sans-serif;
 }
 
@@ -48,15 +27,14 @@ body {
   background-color: var(--color-bg-body);
 }
 
-/* Classes de Componentes de Formulário */
+/* ... (classes de formulário como .form-label, .input-form, .checkbox-form permanecem as mesmas) ... */
 .form-label {
   @apply block mb-1 text-sm font-medium; 
   color: var(--color-text-base); 
 }
-
 .input-form { 
   @apply mt-1 block w-full p-2 text-base border rounded-lg shadow-sm 
-         focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50; /* Usando ring do Tailwind */
+         focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50;
   border-color: var(--color-secondary-border);
   background-color: var(--color-bg-input-default); 
   color: var(--color-text-base);
@@ -66,7 +44,6 @@ body {
   outline: none;
   border-color: var(--color-focus-border); 
 }
-
 .input-form-sm { 
   @apply mt-1 block w-full p-1.5 text-sm border rounded-md shadow-sm
          focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50;
@@ -79,78 +56,109 @@ body {
   outline: none;
   border-color: var(--color-focus-border);
 }
-
 .checkbox-form {
   @apply h-4 w-4 border-gray-300 rounded text-indigo-600 focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500;
 }
-
 .checkbox-form-sm {
   @apply h-3.5 w-3.5 border-gray-300 rounded text-indigo-600 focus:ring-2 focus:ring-offset-0 focus:ring-indigo-500;
 }
 
-/* Classes de Botões */
+
+/* Classes de Botões APRIMORADAS */
 .btn { 
-  @apply font-semibold rounded-md shadow-sm cursor-pointer
-         transition-all duration-150 ease-in-out
-         focus:outline-none focus:ring-2 focus:ring-offset-2;
+  @apply inline-flex items-center justify-center px-4 py-2 border border-transparent 
+         text-sm font-medium rounded-md shadow-sm 
+         focus:outline-none focus:ring-2 focus:ring-offset-2 
+         transition-colors duration-150 ease-in-out;
+  /* Removido font-semibold daqui para ser mais específico por tipo de botão se necessário */
 }
 
 .btn-primary {
-  @apply btn px-4 py-2 text-white focus:ring-blue-500; 
-  background-color: var(--color-primary-600);
+  @apply btn font-semibold text-white;
+  background-color: var(--color-primary-500); /* Azul padrão */
+  border-color: var(--color-primary-500);
+  /* focus:ring-color deve ser definido com utilitários Tailwind ou via variável no config */
 }
 .btn-primary:hover {
-  background-color: var(--color-primary-700);
-  @apply transform hover:-translate-y-px;
+  background-color: var(--color-primary-600);
+  border-color: var(--color-primary-600);
 }
-.btn-primary:active {
-  @apply transform translate-y-0;
+.btn-primary:focus {
+  @apply ring-blue-500; /* Exemplo, pode usar var(--color-primary-500) se configurado no Tailwind */
+}
+.btn-primary:disabled {
+  @apply bg-gray-300 cursor-not-allowed;
 }
 
-.btn-secondary {
-  @apply btn px-4 py-2 border text-sm focus:ring-indigo-500;
-  background-color: var(--color-secondary-bg);
-  color: var(--color-secondary-text);
-  border-color: var(--color-secondary-border);
+
+.btn-secondary { /* Botão com fundo branco e borda cinza */
+  @apply btn font-medium text-gray-700 bg-white border-gray-300;
 }
 .btn-secondary:hover {
-  background-color: var(--color-secondary-hover-bg);
+  @apply bg-gray-50;
+}
+.btn-secondary:focus {
+  @apply ring-indigo-500; /* Mantendo o foco índigo para secundário */
+}
+.btn-secondary:disabled {
+  @apply bg-gray-100 text-gray-400 cursor-not-allowed;
 }
 
-.btn-export {
-  @apply btn px-6 py-3 text-white focus:ring-green-500;
-  background-color: var(--color-green-export-500);
+/* NOVO: Botão de Perigo/Exclusão */
+.btn-danger {
+  @apply btn font-semibold text-white;
+  background-color: var(--color-danger-500); /* Vermelho padrão */
+  border-color: var(--color-danger-500);
 }
-.btn-export:hover {
-  background-color: var(--color-green-export-600);
-  @apply transform hover:-translate-y-px;
+.btn-danger:hover {
+  background-color: var(--color-danger-600);
+  border-color: var(--color-danger-600);
 }
-.btn-export:active {
-  @apply transform translate-y-0;
+.btn-danger:focus {
+  @apply ring-red-500;
+}
+.btn-danger:disabled {
+  @apply bg-gray-300 cursor-not-allowed;
 }
 
+
+/* Botões de Link (sem fundo, apenas texto) */
 .btn-link-indigo {
-  @apply font-medium;
+  @apply text-sm font-medium; /* Ajustado para text-sm para consistência com outros botões */
   color: var(--color-accent-indigo-600);
 }
 .btn-link-indigo:hover {
   color: var(--color-accent-indigo-700);
+  @apply underline;
 }
 
 .btn-link-red {
-  @apply font-medium;
-  color: var(--color-danger-text); 
+  @apply text-sm font-medium;
+  color: var(--color-danger-500); /* Usando a cor de perigo */
 }
 .btn-link-red:hover {
-  @apply text-red-700; 
+  color: var(--color-danger-600);
+  @apply underline;
 }
 
-/* Botões Específicos do WasteForm */
+/* Botão de Exportar (pode ser um tipo de btn-primary com cor diferente) */
+.btn-export {
+  @apply btn font-semibold px-4 py-2 text-white; /* Ajustado padding */
+  background-color: var(--color-green-export-500);
+}
+.btn-export:hover {
+  background-color: var(--color-green-export-600);
+}
+.btn-export:focus {
+  @apply ring-green-500;
+}
+
+
+/* Botões Específicos do WasteForm (já estavam bons e grandes) */
 .waste-type-btn {
   @apply btn flex items-center justify-center w-full p-3 border-2 rounded-xl 
-         text-base focus:ring-offset-2 focus:ring-indigo-500;
+         text-base focus:ring-offset-2 focus:ring-indigo-500; /* Removido font-semibold pois .btn já tem */
 }
-
 .waste-type-btn-default {
   background-color: var(--color-secondary-bg);
   color: var(--color-text-base);
@@ -160,7 +168,6 @@ body {
   background-color: var(--color-secondary-hover-bg);
   border-color: #a5b4fc; 
 }
-
 .waste-type-btn-selected {
   background-color: var(--color-accent-indigo-600);
   color: white;
@@ -176,7 +183,7 @@ body {
   background-color: var(--color-blue-large-btn-600);
 }
 
-/* Componentes de UI */
+/* ... (restante do CSS como message-box, record-item, tabela, status-badge permanece como estava) ... */
 .message-box {
   @apply p-4 mb-4 rounded-md font-medium border;
 }
@@ -207,17 +214,16 @@ body {
   color: var(--color-text-muted); 
 }
 
-.record-item .delete-btn { 
-  @apply self-end py-1 px-3 text-xs rounded-md text-white;
-  background-color: var(--color-danger-text); 
+.record-item .delete-btn { /* Esta classe pode ser substituída por .btn .btn-danger .btn-xs ou similar */
+  @apply self-end py-1 px-2 text-xs rounded-md text-white; /* Ajustado padding */
+  background-color: var(--color-danger-500); 
 }
 .record-item .delete-btn:hover {
-  @apply bg-red-700; 
+  background-color: var(--color-danger-600); 
 }
 
 /* Estilos de Tabela */
 .th-table {
-  /* AJUSTADO: text-sm para corresponder aos td, removido uppercase e tracking-wider por padrão */
   @apply px-6 py-3 text-left text-sm font-medium; 
   color: var(--color-text-muted);
   background-color: var(--color-bg-input-default); 
@@ -229,7 +235,7 @@ body {
 }
 
 .td-table-actions { 
-    @apply px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-2;
+    @apply px-6 py-4 whitespace-nowrap text-sm font-medium; /* Removido text-right e space-x-2 daqui */
 }
 
 /* Badges de Status */
@@ -244,4 +250,3 @@ body {
   background-color: var(--color-danger-bg); 
   color: var(--color-danger-text); 
 }
-
