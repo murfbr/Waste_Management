@@ -3,9 +3,7 @@
 import React, { useContext } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import AuthContext from '../context/AuthContext';
-// AJUSTADO: Assumindo que o seu ficheiro se chama ProtectedRoutes.jsx (plural, CamelCase)
-// Se o nome do seu ficheiro for diferente (ex: protectedroutes.jsx), ajuste aqui.
-import ProtectedRoute from './ProtectedRoutes'; 
+import ProtectedRoute from './ProtectedRoute'; 
 
 // Layouts
 import MainLayout from '../layouts/MainLayout';
@@ -20,11 +18,14 @@ import PaginaAdminEmpresasColeta from '../pages/PaginaAdminEmpresasColeta';
 import PaginaNotFound from '../pages/PaginaNotFound';
 import PaginaAcessoNegado from '../pages/PaginaAcessoNegado';
 
+// IMPORTA O NOVO PROVEDOR DE CONTEXTO DOS FILTROS
+import { DashboardFiltersProvider } from '../context/DashboardFiltersContext';
+
 /**
  * Componente para agrupar rotas que exigem autenticação e usam o MainLayout.
  */
 const PrivateRoutesLayout = () => {
-  const { currentUser, loadingAuth, isAuthReady } = useContext(AuthContext);
+  const { currentUser, loadingAuth, isAuthReady } = useContext(AuthContext); 
 
   if (!isAuthReady) { 
     return <div className="flex justify-center items-center min-h-screen">A carregar aplicação...</div>;
@@ -59,11 +60,15 @@ export default function AppRoutes() {
           } 
         />
         
+        {/* Dashboard: master, gerente */}
         <Route 
           path="dashboard" 
           element={
             <ProtectedRoute allowedRoles={['master', 'gerente']}>
-              <PaginaDashboard />
+              {/* Envolve a PaginaDashboard com o DashboardFiltersProvider */}
+              <DashboardFiltersProvider>
+                <PaginaDashboard />
+              </DashboardFiltersProvider>
             </ProtectedRoute>
           } 
         />

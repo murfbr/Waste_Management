@@ -4,27 +4,21 @@ import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../context/AuthContext';
 import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import MessageBox from '../components/MessageBox';
-
-const CATEGORIAS_RESIDUO_PADRAO = ["Reciclável", "Não Reciclável", "Rejeito"];
+import EmpresaColetaForm from '../components/EmpresaColetaForm'; // IMPORTA O NOVO COMPONENTE
 
 export default function PaginaAdminEmpresasColeta() {
   const { db, userProfile, currentUser } = useContext(AuthContext);
 
-  const [nomeFantasia, setNomeFantasia] = useState('');
-  const [cnpj, setCnpj] = useState('');
-  const [contatoNome, setContatoNome] = useState('');
-  const [contatoTelefone, setContatoTelefone] = useState('');
-  const [contatoEmail, setContatoEmail] = useState('');
-  const [tiposResiduoSelecionados, setTiposResiduoSelecionados] = useState([]); 
-  const [ativo, setAtivo] = useState(true);
-
+  // Estados para a lista e controle de formulário
   const [empresas, setEmpresas] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
-  const [editingEmpresaId, setEditingEmpresaId] = useState(null); 
+  
+  const [showForm, setShowForm] = useState(false); // Controla visibilidade do formulário
+  const [editingEmpresaData, setEditingEmpresaData] = useState(null); // Dados para edição
+  const [editingEmpresaId, setEditingEmpresaId] = useState(null); // ID para saber se é edição
 
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false); 
 
   const showMessage = (msg, error = false) => {
     setMessage(msg);
@@ -32,6 +26,7 @@ export default function PaginaAdminEmpresasColeta() {
     setTimeout(() => setMessage(''), 5000);
   };
 
+  // Carregar empresas
   useEffect(() => {
     if (!db) { 
       setLoadingEmpresas(false);
@@ -54,31 +49,20 @@ export default function PaginaAdminEmpresasColeta() {
     return () => unsubscribe();
   }, [db]);
 
-  const resetForm = () => {
-    setNomeFantasia('');
-    setCnpj('');
-    setContatoNome('');
-    setContatoTelefone('');
-    setContatoEmail('');
-    setTiposResiduoSelecionados([]);
-    setAtivo(true);
+  const handleOpenCreateForm = () => {
     setEditingEmpresaId(null);
-    setIsSubmitting(false);
+    setEditingEmpresaData(null); 
+    setShowForm(true);
   };
 
-  const handleEdit = (empresa) => {
+  const handleEditEmpresa = (empresa) => {
     setEditingEmpresaId(empresa.id);
-    setNomeFantasia(empresa.nomeFantasia || '');
-    setCnpj(empresa.cnpj || '');
-    setContatoNome(empresa.contatoNome || '');
-    setContatoTelefone(empresa.contatoTelefone || '');
-    setContatoEmail(empresa.contatoEmail || '');
-    setTiposResiduoSelecionados(empresa.tiposResiduo && Array.isArray(empresa.tiposResiduo) ? empresa.tiposResiduo : []); 
-    setAtivo(empresa.ativo !== undefined ? empresa.ativo : true);
+    setEditingEmpresaData(empresa); 
+    setShowForm(true);
     window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
   
-  const handleDelete = async (empresaId) => {
+  const handleDeleteEmpresa = async (empresaId) => {
     if (!db || !userProfile || userProfile.role !== 'master') {
         showMessage("Apenas administradores master podem excluir empresas.", true);
         return;
@@ -87,6 +71,9 @@ export default function PaginaAdminEmpresasColeta() {
         try {
             await deleteDoc(doc(db, "empresasColeta", empresaId));
             showMessage("Empresa de coleta excluída com sucesso!");
+            if (editingEmpresaId === empresaId) { 
+                handleCancelForm();
+            }
         } catch (error) {
             console.error("Erro ao excluir empresa de coleta: ", error);
             showMessage("Erro ao excluir empresa. Tente novamente.", true);
@@ -94,47 +81,14 @@ export default function PaginaAdminEmpresasColeta() {
     }
   };
 
-  const handleTipoResiduoChange = (tipo) => {
-    setTiposResiduoSelecionados(prevSelecionados => 
-      prevSelecionados.includes(tipo)
-        ? prevSelecionados.filter(t => t !== tipo)
-        : [...prevSelecionados, tipo]
-    );
-  };
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setIsSubmitting(true); 
+  const handleFormSubmit = async (formDataFromChild) => {
     if (!db || !currentUser || !userProfile || userProfile.role !== 'master') {
       showMessage("Apenas administradores master podem adicionar/editar empresas.", true);
-      setIsSubmitting(false);
-      return;
+      return; 
     }
 
-    if (!nomeFantasia.trim()) {
-      showMessage("O nome fantasia é obrigatório.", true);
-      setIsSubmitting(false);
-      return;
-    }
-    if (!cnpj.trim()) {
-      showMessage("O CNPJ é obrigatório.", true);
-      setIsSubmitting(false);
-      return;
-    }
-    if (tiposResiduoSelecionados.length === 0) {
-      showMessage("Selecione pelo menos um tipo de resíduo que a empresa coleta.", true);
-      setIsSubmitting(false);
-      return;
-    }
-
-    const empresaData = {
-      nomeFantasia: nomeFantasia.trim(),
-      cnpj: cnpj.trim(),
-      contatoNome: contatoNome.trim(),
-      contatoTelefone: contatoTelefone.trim(),
-      contatoEmail: contatoEmail.trim(),
-      tiposResiduo: tiposResiduoSelecionados, 
-      ativo,
+    const empresaDataToSave = {
+      ...formDataFromChild, 
       ultimaModificacao: serverTimestamp(),
       modificadoPor: currentUser.uid,
     };
@@ -142,22 +96,27 @@ export default function PaginaAdminEmpresasColeta() {
     try {
       if (editingEmpresaId) {
         const empresaRef = doc(db, "empresasColeta", editingEmpresaId);
-        await updateDoc(empresaRef, empresaData);
+        await updateDoc(empresaRef, empresaDataToSave);
         showMessage("Empresa atualizada com sucesso!");
       } else {
-        empresaData.criadoPor = currentUser.uid;
-        empresaData.dataCadastro = serverTimestamp(); 
-        await addDoc(collection(db, "empresasColeta"), empresaData);
+        empresaDataToSave.criadoPor = currentUser.uid;
+        empresaDataToSave.dataCadastro = serverTimestamp(); 
+        await addDoc(collection(db, "empresasColeta"), empresaDataToSave);
         showMessage("Empresa de coleta adicionada com sucesso!");
       }
-      resetForm();
+      handleCancelForm(); 
     } catch (error) {
       console.error("Erro ao salvar empresa de coleta: ", error);
       showMessage("Erro ao salvar empresa. Tente novamente.", true);
-    } finally {
-      setIsSubmitting(false);
     }
   };
+
+  const handleCancelForm = () => {
+    setShowForm(false);
+    setEditingEmpresaId(null);
+    setEditingEmpresaData(null);
+  };
+
 
   if (!userProfile && currentUser) { 
     return <div className="p-8 text-center">A carregar perfil do utilizador...</div>;
@@ -166,91 +125,31 @@ export default function PaginaAdminEmpresasColeta() {
     return <div className="p-8 text-center text-red-600">Acesso negado. Apenas administradores master podem aceder a esta página.</div>;
   }
 
-  // Estilos Tailwind para inputs e labels (como você já tinha e gostou)
-  const inputStyle = "mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
-  const labelStyle = "block text-sm font-medium text-gray-700";
-  const checkboxStyle = "h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500";
-
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">Gerir Empresas de Coleta</h1>
       <MessageBox message={message} isError={isError} />
 
-      <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow space-y-4">
-        <h2 className="text-xl font-semibold text-gray-700 mb-3">{editingEmpresaId ? "Editar Empresa" : "Adicionar Nova Empresa"}</h2>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label htmlFor="nomeFantasiaEmpresa" className={labelStyle}>Nome Fantasia*</label>
-            <input type="text" id="nomeFantasiaEmpresa" value={nomeFantasia} onChange={(e) => setNomeFantasia(e.target.value)} required className={inputStyle} />
-          </div>
-          <div>
-            <label htmlFor="cnpjEmpresa" className={labelStyle}>CNPJ*</label>
-            <input type="text" id="cnpjEmpresa" value={cnpj} onChange={(e) => setCnpj(e.target.value)} required className={inputStyle} />
-          </div>
-          <div>
-            <label htmlFor="contatoNomeEmpresa" className={labelStyle}>Nome do Contato</label>
-            <input type="text" id="contatoNomeEmpresa" value={contatoNome} onChange={(e) => setContatoNome(e.target.value)} className={inputStyle} />
-          </div>
-          <div>
-            <label htmlFor="contatoTelefoneEmpresa" className={labelStyle}>Telefone do Contato</label>
-            <input type="tel" id="contatoTelefoneEmpresa" value={contatoTelefone} onChange={(e) => setContatoTelefone(e.target.value)} className={inputStyle} />
-          </div>
-          <div className="md:col-span-2">
-            <label htmlFor="contatoEmailEmpresa" className={labelStyle}>Email do Contato</label>
-            <input type="email" id="contatoEmailEmpresa" value={contatoEmail} onChange={(e) => setContatoEmail(e.target.value)} className={inputStyle} />
-          </div>
+      {!showForm && (
+        <button
+          onClick={handleOpenCreateForm}
+          className="mb-6 px-4 py-2 bg-green-600 hover:bg-green-700 text-white font-semibold rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        >
+          + Adicionar Nova Empresa
+        </button>
+      )}
 
-          <div className="md:col-span-2">
-            <label className={`${labelStyle} mb-1`}>Tipos de Resíduo Coletados pela Empresa*</label>
-            <div className="mt-2 space-y-2 sm:space-y-0 sm:flex sm:space-x-4 sm:flex-wrap">
-              {CATEGORIAS_RESIDUO_PADRAO.map((tipo) => (
-                <label key={tipo} htmlFor={`tipoEmpresa-${tipo}`} className="flex items-center">
-                  <input
-                    type="checkbox"
-                    id={`tipoEmpresa-${tipo}`}
-                    name="tiposResiduo"
-                    value={tipo}
-                    checked={tiposResiduoSelecionados.includes(tipo)}
-                    onChange={() => handleTipoResiduoChange(tipo)}
-                    className={`${checkboxStyle} mr-2`}
-                  />
-                  <span className="ml-2 text-sm text-gray-700">{tipo}</span>
-                </label>
-              ))}
-            </div>
-          </div>
-          
-          <div>
-            <label htmlFor="ativoEmpresa" className="flex items-center text-sm font-medium text-gray-700">
-              <input type="checkbox" id="ativoEmpresa" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} className={`${checkboxStyle} mr-2`} />
-              Empresa Ativa
-            </label>
-          </div>
-        </div>
-        <div className="flex justify-end space-x-3 pt-3">
-            {editingEmpresaId && (
-                 <button 
-                    type="button" 
-                    onClick={resetForm} 
-                    // Estilo Tailwind direto para botão secundário
-                    className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    Cancelar Edição
-                </button>
-            )}
-            <button 
-                type="submit" 
-                // Estilo Tailwind direto para botão primário
-                className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
-                disabled={isSubmitting}
-            >
-                {isSubmitting ? (editingEmpresaId ? "A Atualizar..." : "A Adicionar...") : (editingEmpresaId ? "Atualizar Empresa" : "Adicionar Empresa")}
-            </button>
-        </div>
-      </form>
+      {showForm && (
+        <EmpresaColetaForm
+          key={editingEmpresaId || 'new-empresa'} 
+          initialData={editingEmpresaData}
+          onSubmit={handleFormSubmit}
+          onCancel={handleCancelForm}
+          isEditing={!!editingEmpresaId}
+        />
+      )}
 
-      <div className="bg-white p-6 rounded-lg shadow">
+      <div className="bg-white p-6 rounded-lg shadow mt-8">
         <h2 className="text-xl font-semibold text-gray-700 mb-3">Empresas Cadastradas</h2>
         {loadingEmpresas ? (
           <p>A carregar empresas...</p>
@@ -258,22 +157,31 @@ export default function PaginaAdminEmpresasColeta() {
           <p>Nenhuma empresa de coleta cadastrada.</p>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            {/* Adicionado table-fixed */}
+            <table className="min-w-full divide-y divide-gray-200 table-fixed">
+              <colgroup>
+                <col className="w-1/4" /> {/* Nome Fantasia */}
+                <col className="w-1/4" /> {/* CNPJ */}
+                <col className="w-1/4" /> {/* Tipos de Resíduo */}
+                <col className="w-1/12" /> {/* Status - menor */}
+                <col className="w-auto" />  {/* Ações - restante do espaço, ou uma largura específica como w-1/6 */}
+              </colgroup>
               <thead>
                 <tr>
-                  <th className="th-table uppercase tracking-wider">Nome Fantasia</th>
-                  <th className="th-table uppercase tracking-wider">CNPJ</th>
-                  <th className="th-table uppercase tracking-wider">Tipos de Resíduo</th>
-                  <th className="th-table uppercase tracking-wider">Status</th>
-                  <th className="th-table text-right normal-case tracking-normal">Ações</th> {/* Mantido normal-case para 'Ações' para melhor alinhamento visual */}
+                  <th className="th-table text-left uppercase tracking-wider">Nome Fantasia</th>
+                  <th className="th-table text-left uppercase tracking-wider">CNPJ</th>
+                  <th className="th-table text-left uppercase tracking-wider">Tipos de Resíduo</th>
+                  <th className="th-table text-left uppercase tracking-wider">Status</th>
+                  {/* Ajustado para text-center e normal-case para melhor alinhamento visual */}
+                  <th className="th-table text-center normal-case tracking-normal">Ações</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {empresas.map((empresa) => (
                   <tr key={empresa.id}>
-                    <td className="td-table font-medium text-gray-900">{empresa.nomeFantasia}</td>
-                    <td className="td-table">{empresa.cnpj || '-'}</td>
-                    <td className="td-table">
+                    <td className="td-table font-medium text-gray-900 break-words">{empresa.nomeFantasia}</td>
+                    <td className="td-table break-words">{empresa.cnpj || '-'}</td>
+                    <td className="td-table break-words"> {/* Adicionado break-words aqui também */}
                         {empresa.tiposResiduo && Array.isArray(empresa.tiposResiduo) && empresa.tiposResiduo.length > 0 
                           ? empresa.tiposResiduo.join(', ') 
                           : empresa.tiposResiduo && typeof empresa.tiposResiduo === 'string' 
@@ -285,12 +193,12 @@ export default function PaginaAdminEmpresasColeta() {
                         {empresa.ativo ? 'Ativa' : 'Inativa'}
                       </span>
                     </td>
-                    <td className="td-table-actions text-right"> {/* td-table-actions do seu main.css deve ter text-right */}
-                      <div className="flex justify-end items-center space-x-2">
-                        <button onClick={() => handleEdit(empresa)} className="text-indigo-600 hover:text-indigo-700 text-sm font-medium hover:underline">Editar</button>
+                    {/* Ajustado para text-center na célula e justify-center no div dos botões */}
+                    <td className="td-table text-center px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex justify-center items-center space-x-2">
+                        <button onClick={() => handleEditEmpresa(empresa)} className="btn-link-indigo">Editar</button>
                         <button 
-                            onClick={() => handleDelete(empresa.id)} 
-                            // Estilo Tailwind direto para botão de perigo pequeno
+                            onClick={() => handleDeleteEmpresa(empresa.id)} 
                             className="px-3 py-1 bg-red-500 text-white text-xs font-medium rounded-md shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                         >
                             Excluir
