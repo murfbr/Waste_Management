@@ -6,17 +6,27 @@ const CATEGORIAS_RESIDUO_SUGERIDAS_CONTRATO = ["Reciclável", "Não Reciclável"
 const CATEGORIAS_PRINCIPAIS_PADRAO = ["Reciclável", "Orgânico", "Rejeito"];
 const SUBTIPOS_RECICLAVEIS_COMUNS = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
 
+// Valor especial para indicar a seleção de "Nova Categoria" no dropdown
+const NOVA_CATEGORIA_VALUE = "__NOVA__";
+
+// Lista inicial de categorias de cliente.
+const CATEGORIAS_CLIENTE_INICIAIS = ["Hotel", "Escola", "Condomínio", "Aeroporto"];
+
 export default function ClienteForm({ 
     initialData, 
     onSubmit, 
     onCancel, 
     empresasColetaDisponiveis, 
-    isEditing
-    // Removidas props btnPrimaryClass e btnSecondaryClass
+    isEditing,
+    // CORREÇÃO: Alterado o valor padrão para uma referência estável
+    availableCategorias = CATEGORIAS_CLIENTE_INICIAIS, 
+    onNewCategoriaAdded 
 }) {
   const [nome, setNome] = useState('');
   const [rede, setRede] = useState('');
-  const [categoriaCliente, setCategoriaCliente] = useState('');
+  const [selectedCategoriaCliente, setSelectedCategoriaCliente] = useState(''); 
+  const [novaCategoriaInput, setNovaCategoriaInput] = useState('');
+  
   const [logoUrl, setLogoUrl] = useState('');
   const [cnpj, setCnpj] = useState('');
   const [endereco, setEndereco] = useState('');
@@ -36,10 +46,21 @@ export default function ClienteForm({
   const arrayFromString = (str) => str.split(',').map(item => item.trim()).filter(item => item.length > 0);
 
   useEffect(() => {
+    // Cria uma lista combinada e única de categorias para o dropdown
+    const categoriasParaDropdown = Array.from(new Set([...CATEGORIAS_CLIENTE_INICIAIS, ...availableCategorias]));
+
     if (isEditing && initialData) {
       setNome(initialData.nome || '');
       setRede(initialData.rede || '');
-      setCategoriaCliente(initialData.categoriaCliente || '');
+      
+      if (initialData.categoriaCliente && !categoriasParaDropdown.includes(initialData.categoriaCliente) && initialData.categoriaCliente) {
+        setSelectedCategoriaCliente(NOVA_CATEGORIA_VALUE);
+        setNovaCategoriaInput(initialData.categoriaCliente);
+      } else {
+        setSelectedCategoriaCliente(initialData.categoriaCliente || '');
+        setNovaCategoriaInput('');
+      }
+
       setLogoUrl(initialData.logoUrl || '');
       setCnpj(initialData.cnpj || '');
       setEndereco(initialData.endereco || '');
@@ -74,8 +95,11 @@ export default function ClienteForm({
               tiposResiduoColetados: Array.isArray(c.tiposResiduoColetados) ? c.tiposResiduoColetados : [] 
             }))
           : [{ empresaColetaId: '', tiposResiduoColetados: [] }]);
-    } else { // Reset para formulário de criação ou se initialData for null
-        setNome(''); setRede(''); setCategoriaCliente(''); setLogoUrl(''); setCnpj('');
+    } else { 
+        setNome(''); setRede(''); 
+        setSelectedCategoriaCliente(''); 
+        setNovaCategoriaInput(''); 
+        setLogoUrl(''); setCnpj('');
         setEndereco(''); setCidade(''); setEstado(''); setAtivo(true);
         setAreasPersonalizadasInput(''); 
         setCategoriasPrincipaisSelecionadas([...CATEGORIAS_PRINCIPAIS_PADRAO]);
@@ -86,7 +110,7 @@ export default function ClienteForm({
         setOutrosSubtiposReciclaveisInput(''); 
         setContratosColetaForm([{ empresaColetaId: '', tiposResiduoColetados: [] }]);
     }
-  }, [initialData, isEditing]);
+  }, [initialData, isEditing, availableCategorias]); // availableCategorias aqui é a prop
 
 
   const handleLocalSubmit = async (e) => {
@@ -133,10 +157,25 @@ export default function ClienteForm({
         }
     }
 
+    let categoriaFinalCliente = '';
+    if (selectedCategoriaCliente === NOVA_CATEGORIA_VALUE) {
+        if (!novaCategoriaInput.trim()) {
+            alert("Por favor, insira o nome da nova categoria.");
+            setIsSubmitting(false);
+            return;
+        }
+        categoriaFinalCliente = novaCategoriaInput.trim();
+        if (onNewCategoriaAdded && typeof onNewCategoriaAdded === 'function') {
+            onNewCategoriaAdded(categoriaFinalCliente);
+        }
+    } else {
+        categoriaFinalCliente = selectedCategoriaCliente;
+    }
+
     const clienteData = {
       nome: nome.trim(),
       rede: rede.trim(),
-      categoriaCliente: categoriaCliente.trim(),
+      categoriaCliente: categoriaFinalCliente, 
       logoUrl: logoUrl.trim(),
       cnpj: cnpj.trim(),
       endereco: endereco.trim(),
@@ -152,8 +191,6 @@ export default function ClienteForm({
 
     await onSubmit(clienteData); 
     setIsSubmitting(false);
-    // O reset do formulário do ClienteForm é tratado pelo useEffect ao mudar initialData/isEditing
-    // ou a PaginaAdminClientes pode chamar onCancel que leva ao reset.
   };
 
   const handleContratoChange = (index, field, value) => { 
@@ -191,12 +228,13 @@ export default function ClienteForm({
   };
   const opcoesResiduoContrato = getOpcoesTipoResiduoContrato();
 
-  // Classes Tailwind para estilização direta, como na PaginaAdminEmpresasColeta
   const inputStyle = "mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
   const labelStyle = "block text-sm font-medium text-gray-700";
   const checkboxStyle = "h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500";
-  const selectSmStyle = `${inputStyle} text-sm p-1.5`; // Usado para selects menores nos contratos
-  const checkboxSmStyle = `${checkboxStyle} h-3.5 w-3.5`; // Usado para checkboxes menores nos contratos
+
+  // Usa a prop availableCategorias (que agora tem um default estável) para popular o dropdown
+  const dropdownCategorias = Array.from(new Set([...availableCategorias]));
+
 
   return (
     <form onSubmit={handleLocalSubmit} className="bg-white p-6 rounded-xl shadow-lg space-y-6">
@@ -208,7 +246,44 @@ export default function ClienteForm({
             <div><label htmlFor="form-cliente-nome" className={labelStyle}>Nome do Cliente*</label><input type="text" id="form-cliente-nome" value={nome} onChange={(e) => setNome(e.target.value)} required className={inputStyle} /></div>
             <div><label htmlFor="form-cliente-cnpj" className={labelStyle}>CNPJ</label><input type="text" id="form-cliente-cnpj" value={cnpj} onChange={(e) => setCnpj(e.target.value)} className={inputStyle} /></div>
             <div><label htmlFor="form-cliente-rede" className={labelStyle}>Rede / Grupo</label><input type="text" id="form-cliente-rede" value={rede} onChange={(e) => setRede(e.target.value)} className={inputStyle} /></div>
-            <div><label htmlFor="form-cliente-categoriaCliente" className={labelStyle}>Categoria do Cliente</label><input type="text" id="form-cliente-categoriaCliente" value={categoriaCliente} onChange={(e) => setCategoriaCliente(e.target.value)} className={inputStyle} /></div>
+            
+            <div>
+              <label htmlFor="form-cliente-categoriaCliente" className={labelStyle}>Categoria do Cliente</label>
+              <select
+                id="form-cliente-categoriaCliente"
+                value={selectedCategoriaCliente}
+                onChange={(e) => {
+                  const { value } = e.target;
+                  setSelectedCategoriaCliente(value);
+                  if (value !== NOVA_CATEGORIA_VALUE) {
+                    setNovaCategoriaInput(''); 
+                  }
+                }}
+                className={inputStyle}
+              >
+                <option value="">Selecione uma categoria</option>
+                {dropdownCategorias.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+                <option value={NOVA_CATEGORIA_VALUE}>Nova Categoria...</option>
+              </select>
+            </div>
+
+            {selectedCategoriaCliente === NOVA_CATEGORIA_VALUE && (
+              <div> 
+                <label htmlFor="form-cliente-novaCategoria" className={labelStyle}>Nome da Nova Categoria*</label>
+                <input
+                  type="text"
+                  id="form-cliente-novaCategoria"
+                  value={novaCategoriaInput}
+                  onChange={(e) => setNovaCategoriaInput(e.target.value)}
+                  placeholder="Digite o nome da nova categoria"
+                  className={inputStyle}
+                  required
+                />
+              </div>
+            )}
+
             <div className="md:col-span-2"><label htmlFor="form-cliente-endereco" className={labelStyle}>Endereço</label><input type="text" id="form-cliente-endereco" value={endereco} onChange={(e) => setEndereco(e.target.value)} className={inputStyle} /></div>
             <div><label htmlFor="form-cliente-cidade" className={labelStyle}>Cidade</label><input type="text" id="form-cliente-cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} className={inputStyle} /></div>
             <div><label htmlFor="form-cliente-estado" className={labelStyle}>Estado (UF)</label><input type="text" id="form-cliente-estado" value={estado} onChange={(e) => setEstado(e.target.value)} maxLength="2" className={inputStyle} /></div>
@@ -226,7 +301,7 @@ export default function ClienteForm({
                 <div className="mt-2 space-y-2 sm:flex sm:space-x-4 sm:flex-wrap items-center">
                     {CATEGORIAS_PRINCIPAIS_PADRAO.map(categoria => (<label key={categoria} htmlFor={`form-cliente-cat-${categoria}`} className="flex items-center"><input type="checkbox" id={`form-cliente-cat-${categoria}`} value={categoria} checked={categoriasPrincipaisSelecionadas.includes(categoria)} onChange={() => handleCategoriaPrincipalChange(categoria)} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{categoria}</span></label>))}
                     <label htmlFor="form-cliente-cat-outro" className="flex items-center"><input type="checkbox" id="form-cliente-cat-outro" checked={outroCategoriaSelecionada} onChange={(e) => { setOutroCategoriaSelecionada(e.target.checked); if (!e.target.checked) setOutroCategoriaInput(''); }} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700 mr-2">Outro:</span></label>
-                    {outroCategoriaSelecionada && (<input type="text" value={outroCategoriaInput} onChange={(e) => setOutroCategoriaInput(e.target.value)} placeholder="Nome da outra categoria" className={`${inputStyle} sm:w-auto flex-grow`}/>)}
+                    {outroCategoriaSelecionada && (<input type="text" value={outroCategoriaInput} onChange={(e) => setOutroCategoriaInput(e.target.value)} placeholder="Nome da nova categoria" className={`${inputStyle} sm:w-auto flex-grow`}/>)}
                 </div>
             </div>
             <div className="mt-2"><label htmlFor="form-cliente-fazSeparacaoReciclaveisCompletaForm" className="flex items-center text-sm font-medium text-gray-700"><input type="checkbox" id="form-cliente-fazSeparacaoReciclaveisCompletaForm" checked={fazSeparacaoReciclaveisCompleta} onChange={(e) => setFazSeparacaoReciclaveisCompleta(e.target.checked)} className={`${checkboxStyle} mr-2`} />Cliente detalha os tipos de recicláveis?</label></div>
@@ -248,8 +323,8 @@ export default function ClienteForm({
                 {contratosColetaForm.map((contrato, index) => (
                     <div key={index} className="border p-4 rounded-md bg-gray-50 space-y-3 relative">
                         <div className="flex justify-between items-center mb-2"><p className="text-base font-semibold text-gray-700">Contrato de Coleta #{index + 1}</p>{ (contratosColetaForm.length > 1 || (contratosColetaForm.length === 1 && contrato.empresaColetaId)) && (<button type="button" onClick={() => removeContratoForm(index)} className="text-red-600 hover:text-red-800 text-xs font-medium">Remover</button>)}</div>
-                        <div><label htmlFor={`form-cliente-empresaColeta-${index}`} className={`${labelStyle} text-xs`}>Empresa de Coleta*</label><select id={`form-cliente-empresaColeta-${index}`} value={contrato.empresaColetaId} onChange={(e) => handleContratoChange(index, 'empresaColetaId', e.target.value)} className={selectSmStyle}><option value="">Selecione...</option>{empresasColetaDisponiveis.map(emp => (<option key={emp.id} value={emp.id}>{emp.nomeFantasia}</option>))}</select></div>
-                        <div><label className={`${labelStyle} text-xs mb-1`}>Tipos de Resíduo Coletados (para este contrato)*</label><div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 pt-1">{opcoesResiduoContrato.map(tipo => ( <label key={tipo} htmlFor={`form-cliente-contrato-${index}-tipo-${tipo}`} className="flex items-center text-sm"><input type="checkbox" id={`form-cliente-contrato-${index}-tipo-${tipo}`} checked={(contrato.tiposResiduoColetados || []).includes(tipo)} onChange={() => handleContratoTipoResiduoChange(index, tipo)} className={`${checkboxSmStyle} mr-1.5`} /><span className="text-gray-700">{tipo}</span></label> ))}</div></div>
+                        <div><label htmlFor={`form-cliente-empresaColeta-${index}`} className={`${labelStyle} text-xs`}>Empresa de Coleta*</label><select id={`form-cliente-empresaColeta-${index}`} value={contrato.empresaColetaId} onChange={(e) => handleContratoChange(index, 'empresaColetaId', e.target.value)} className={`${inputStyle} text-sm p-1.5`}><option value="">Selecione...</option>{empresasColetaDisponiveis.map(emp => (<option key={emp.id} value={emp.id}>{emp.nomeFantasia}</option>))}</select></div>
+                        <div><label className={`${labelStyle} text-xs mb-1`}>Tipos de Resíduo Coletados (para este contrato)*</label><div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 pt-1">{opcoesResiduoContrato.map(tipo => ( <label key={tipo} htmlFor={`form-cliente-contrato-${index}-tipo-${tipo}`} className="flex items-center text-sm"><input type="checkbox" id={`form-cliente-contrato-${index}-tipo-${tipo}`} checked={(contrato.tiposResiduoColetados || []).includes(tipo)} onChange={() => handleContratoTipoResiduoChange(index, tipo)} className={`${checkboxStyle} h-3.5 w-3.5 mr-1.5`} /><span className="text-gray-700">{tipo}</span></label> ))}</div></div>
                     </div>
                 ))}
                 <button type="button" onClick={addContratoForm} 
