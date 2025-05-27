@@ -2,20 +2,19 @@
 
 import React, { useContext, useEffect, useState, useMemo } from 'react';
 import AuthContext from '../context/AuthContext';
-// IMPORTA O CONTEXTO DOS FILTROS
-import DashboardFiltersContext from '../context/DashboardFiltersContext'; 
+// DashboardFiltersContext NÃO é mais importado
 import { 
     PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
     BarChart, Bar, XAxis, YAxis, CartesianGrid,
     LineChart, Line, ReferenceLine 
 } from 'recharts';
-import { collection, onSnapshot, query, where, getDocs, documentId, orderBy } from 'firebase/firestore'; // Removido Timestamp não utilizado diretamente aqui
+import { collection, onSnapshot, query, where, getDocs, documentId, orderBy } from 'firebase/firestore';
 import DashboardFilters from '../components/DashboardFilters'; 
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#3D9140', '#FF5733', '#8333FF'];
 const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-// Funções de processamento de dados (assumindo que estão corretas e não precisam de alteração imediata)
+// Funções de processamento de dados (inalteradas)
 const processDataForPieChartByWeight = (records, groupByField) => {
   if (!Array.isArray(records) || records.length === 0) return { pieData: [], totalWeight: 0 };
   let totalWeight = 0;
@@ -30,7 +29,6 @@ const processDataForPieChartByWeight = (records, groupByField) => {
   const pieData = Object.entries(counts).map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }));
   return { pieData, totalWeight: parseFloat(totalWeight.toFixed(2)) };
 };
-
 const processDataForDailyVolumeBarChart = (records) => {
     if (!Array.isArray(records) || records.length === 0) return [];
     const dailyVolumes = records.reduce((acc, record) => {
@@ -49,14 +47,13 @@ const processDataForDailyVolumeBarChart = (records) => {
             return new Date(`2000/${monthA}/${dayA}`) - new Date(`2000/${monthB}/${dayB}`);
         });
 };
-
 const processDataForLixoZeroChart = (records, rejectCategoryName = "Rejeito") => {
     if (!Array.isArray(records) || records.length === 0) return [];
     const dailyDataAggregated = records.reduce((acc, record) => {
         if (!record || !record.timestamp) return acc;
         const dateKey = new Date(record.timestamp).toISOString().split('T')[0]; 
         const weight = parseFloat(record.peso || 0);
-        acc[dateKey] = acc[dateKey] || { total: 0, rejeito: 0 }; // Removido count não utilizado
+        acc[dateKey] = acc[dateKey] || { total: 0, rejeito: 0 };
         acc[dateKey].total += weight;
         if (record.wasteType === rejectCategoryName) {
             acc[dateKey].rejeito += weight;
@@ -82,30 +79,40 @@ const processDataForLixoZeroChart = (records, rejectCategoryName = "Rejeito") =>
     });
 };
 
-
 export default function PaginaDashboard() {
-  // Obtém dados de autenticação e clientes permitidos do AuthContext
-  const { userProfile, db, appId, currentUser, userAllowedClientes } = useContext(AuthContext); 
+  // Obtém dados de autenticação e userAllowedClientes do AuthContext
+  const { userProfile, db, appId, currentUser, userAllowedClientes, loadingAllowedClientes } = useContext(AuthContext); 
   
-  // Obtém estados e funções de manipulação de filtros do DashboardFiltersContext
-  const filtersContext = useContext(DashboardFiltersContext);
-  // Garante valores padrão se o contexto ainda não estiver totalmente pronto ou se algum valor for undefined
-  const selectedClienteIds = filtersContext?.selectedClienteIds || [];
-  const selectedYear = filtersContext?.selectedYear || new Date().getFullYear();
-  const selectedMonths = filtersContext?.selectedMonths || [new Date().getMonth()]; // Array de índices (0-11)
-  const allMonthsSelected = filtersContext?.allMonthsSelected || false;
-  const setAvailableAreas = filtersContext?.setAvailableAreas || (() => {}); 
-  const selectedAreaLixoZero = filtersContext?.selectedAreaLixoZero || 'ALL';
-  const loadingUserClientesFromFilters = filtersContext?.loadingUserClientes === undefined ? true : filtersContext.loadingUserClientes;
+  // Estados dos filtros agora são locais para PaginaDashboard
+  const [selectedClienteIds, setSelectedClienteIds] = useState([]); 
+  const [selectAllClientesToggle, setSelectAllClientesToggle] = useState(false);
+  
+  const currentYear = new Date().getFullYear();
+  const currentMonthIndex = new Date().getMonth();
+  const [selectedYear, setSelectedYear] = useState(currentYear);
+  const [selectedMonths, setSelectedMonths] = useState([currentMonthIndex]);
+  const [allMonthsSelected, setAllMonthsSelected] = useState(false); 
 
-  // Estados locais para os dados dos gráficos
+  const [availableAreas, setAvailableAreas] = useState([]); 
+  const [selectedAreaLixoZero, setSelectedAreaLixoZero] = useState('ALL');
+
   const [allWasteRecords, setAllWasteRecords] = useState([]);
   const [filteredWasteRecords, setFilteredWasteRecords] = useState([]); 
-  const [loadingRecords, setLoadingRecords] = useState(true);
-  
-  const currentYear = new Date().getFullYear(); // Usado para o fallback de availableYears
+  const [loadingRecords, setLoadingRecords] = useState(true); // Para o carregamento dos wasteRecords
 
-  // Calcula os anos disponíveis para o filtro, baseado nos registos carregados
+  // Efeito para inicializar selectedClienteIds quando userAllowedClientes (do AuthContext) é carregado
+  useEffect(() => {
+    if (userAllowedClientes && userAllowedClientes.length > 0) {
+        const initialSelectedIds = userAllowedClientes.map(c => c.id);
+        setSelectedClienteIds(initialSelectedIds);
+        setSelectAllClientesToggle(true);
+    } else {
+        setSelectedClienteIds([]);
+        setSelectAllClientesToggle(false);
+    }
+  }, [userAllowedClientes]);
+
+
   const availableYears = useMemo(() => {
     const years = new Set();
     if (Array.isArray(allWasteRecords)) {
@@ -117,13 +124,11 @@ export default function PaginaDashboard() {
     return Array.from(years).sort((a,b) => b - a);
   }, [allWasteRecords, currentYear]);
 
-  // Efeito para buscar TODOS os registos de resíduos para os clientes selecionados (do contexto de filtros)
+  // useEffect para buscar allWasteRecords
   useEffect(() => {
-    // Aguarda o carregamento dos clientes do contexto de filtros
-    if (!db || !currentUser || loadingUserClientesFromFilters || !selectedClienteIds || selectedClienteIds.length === 0) {
-      setAllWasteRecords([]); 
-      setLoadingRecords(false); 
-      return;
+    // Usa loadingAllowedClientes do AuthContext para aguardar os clientes
+    if (!db || !currentUser || loadingAllowedClientes || !selectedClienteIds || selectedClienteIds.length === 0) {
+      setAllWasteRecords([]); setLoadingRecords(false); return;
     }
     setLoadingRecords(true);
     const q = query(
@@ -134,7 +139,6 @@ export default function PaginaDashboard() {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newRecords = snapshot.docs.map(docSnap => {
         const data = docSnap.data();
-        // Converte Firebase Timestamp para número (milissegundos)
         const timestamp = data.timestamp?.toDate?.().getTime() || data.timestamp || null;
         return { id: docSnap.id, ...data, timestamp };
       });
@@ -144,72 +148,101 @@ export default function PaginaDashboard() {
       setLoadingRecords(false);
     }, (error) => {
       console.error("DASHBOARD: Erro ao buscar todos os registos:", error);
-      setAllWasteRecords([]); 
-      setLoadingRecords(false);
+      setAllWasteRecords([]); setLoadingRecords(false);
     });
     return () => unsubscribe();
-  }, [db, currentUser, appId, JSON.stringify(selectedClienteIds), loadingUserClientesFromFilters]); // Depende de selectedClienteIds do contexto
+  }, [db, currentUser, appId, JSON.stringify(selectedClienteIds), loadingAllowedClientes]);
 
-  // Efeito para filtrar registos por período (ano/mês) e popular áreas disponíveis
+  // useEffect para filtrar registos e popular áreas
   useEffect(() => {
     if (!Array.isArray(allWasteRecords) || allWasteRecords.length === 0) {
-      setFilteredWasteRecords([]); // Limpa se não houver registos
-      setAvailableAreas([]);    // Limpa se não houver registos
+      setFilteredWasteRecords([]); 
+      setAvailableAreas([]);    
       return;
     }
-
     const recordsInPeriod = allWasteRecords.filter(record => {
       if (!record || typeof record.timestamp !== 'number') return false;
       const recordDate = new Date(record.timestamp); 
-      if (isNaN(recordDate.getTime())) return false; // Validação de data
+      if (isNaN(recordDate.getTime())) return false;
       const recordYearValue = recordDate.getFullYear();
-      const recordMonthValue = recordDate.getMonth(); // 0-11
-      // Garante que selectedMonths é um array antes de usar .includes()
+      const recordMonthValue = recordDate.getMonth();
       return recordYearValue === selectedYear && Array.isArray(selectedMonths) && selectedMonths.includes(recordMonthValue);
     });
-
     setFilteredWasteRecords(currentFiltered => 
         JSON.stringify(currentFiltered || []) !== JSON.stringify(recordsInPeriod) ? recordsInPeriod : (currentFiltered || [])
     );
-    
     const areasInMonth = new Set();
     recordsInPeriod.forEach(record => { if(record && record.areaLancamento) areasInMonth.add(record.areaLancamento); });
     const newAvailableAreas = Array.from(areasInMonth).sort();
-    // Chama a função do contexto para atualizar as áreas disponíveis globalmente para os filtros
     setAvailableAreas(currentAreas => 
         JSON.stringify(currentAreas || []) !== JSON.stringify(newAvailableAreas) ? newAvailableAreas : (currentAreas || [])
     );
-  }, [JSON.stringify(allWasteRecords), selectedYear, JSON.stringify(selectedMonths), setAvailableAreas]); 
+  }, [JSON.stringify(allWasteRecords), selectedYear, JSON.stringify(selectedMonths)]); 
 
-
-  const lixoZeroChartRecords = useMemo(() => {
+  const lixoZeroChartRecords = useMemo(() => { /* ... (inalterado) ... */
     if (!Array.isArray(filteredWasteRecords)) return [];
     if (selectedAreaLixoZero === 'ALL') return filteredWasteRecords;
     return filteredWasteRecords.filter(record => record && record.areaLancamento === selectedAreaLixoZero);
-  }, [filteredWasteRecords, selectedAreaLixoZero]); // selectedAreaLixoZero vem do contexto
+  }, [filteredWasteRecords, selectedAreaLixoZero]);
 
-  // Dados processados para os gráficos
+  // Handlers para os filtros (agora locais para PaginaDashboard)
+  const handleClienteSelectionChange = (clienteId) => { 
+    setSelectedClienteIds(prev => {
+      const newSelection = prev.includes(clienteId) ? prev.filter(id => id !== clienteId) : [...prev, clienteId];
+      if (userAllowedClientes) {
+        setSelectAllClientesToggle(newSelection.length === userAllowedClientes.length && userAllowedClientes.length > 0);
+      }
+      return newSelection;
+    });
+  };
+  const handleSelectAllClientesToggleChange = () => { 
+    setSelectAllClientesToggle(prev => {
+      const newToggleState = !prev;
+      if (newToggleState && userAllowedClientes) {
+        setSelectedClienteIds(userAllowedClientes.map(c => c.id));
+      } else {
+        setSelectedClienteIds([]);
+      }
+      return newToggleState;
+    });
+  };
+  const handleMonthToggle = (monthIndex) => {
+    setSelectedMonths(prev => {
+        const newSelection = prev.includes(monthIndex) ? prev.filter(m => m !== monthIndex) : [...prev, monthIndex];
+        setAllMonthsSelected(newSelection.length === MESES_COMPLETOS.length);
+        return newSelection;
+    });
+  };
+  const handleSelectAllMonthsToggle = () => {
+    setAllMonthsSelected(prev => {
+      const newToggleState = !prev;
+      if (newToggleState) setSelectedMonths(MESES_COMPLETOS.map((_, index) => index));
+      else setSelectedMonths([]);
+      return newToggleState;
+    });
+  };
+
   const { pieData: wasteTypeData, totalWeight: totalWasteWeight } = processDataForPieChartByWeight(allWasteRecords, 'wasteType');
   const { pieData: areaData } = processDataForPieChartByWeight(allWasteRecords, 'areaLancamento');
   const dailyVolumeData = processDataForDailyVolumeBarChart(filteredWasteRecords);
   const lixoZeroData = processDataForLixoZeroChart(lixoZeroChartRecords);
 
   // Lógica de renderização de loading e permissões
-  if (loadingUserClientesFromFilters) return <div className="text-center text-gray-600 p-8">A carregar filtros...</div>;
+  if (loadingAllowedClientes) return <div className="text-center text-gray-600 p-8">A carregar dados de clientes...</div>; // Usa loading do AuthContext
   if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">A carregar perfil...</div>;
   if (!userProfile || (userProfile.role !== 'master' && userProfile.role !== 'gerente')) {
     return <div className="text-center text-red-500 p-8">Acesso Negado.</div>;
   }
   
   const currentAllowedClientesFromAuth = userAllowedClientes || []; 
-  if (userProfile.role === 'gerente' && currentAllowedClientesFromAuth.length === 0 && !loadingUserClientesFromFilters) {
+  if (userProfile.role === 'gerente' && currentAllowedClientesFromAuth.length === 0 && !loadingAllowedClientes) {
     return <div className="text-center text-orange-600 p-8">Sem acesso a clientes.</div>;
   }
-   if (userProfile.role === 'master' && currentAllowedClientesFromAuth.length === 0 && !loadingUserClientesFromFilters) {
+   if (userProfile.role === 'master' && currentAllowedClientesFromAuth.length === 0 && !loadingAllowedClientes) {
     return <div className="text-center text-orange-600 p-8">Nenhum cliente ativo cadastrado.</div>;
   }
 
-  // Constrói o título do contexto do cliente para os gráficos
+  // ... (lógica de dashboardTitleContext e periodTitle inalterada) ...
   let dashboardTitleContext = ""; 
   if (Array.isArray(selectedClienteIds) && selectedClienteIds.length === 1 && currentAllowedClientesFromAuth.length > 0) {
     const cliente = currentAllowedClientesFromAuth.find(c => c.id === selectedClienteIds[0]);
@@ -219,14 +252,11 @@ export default function PaginaDashboard() {
   } else if (Array.isArray(selectedClienteIds) && currentAllowedClientesFromAuth.length > 0 && selectedClienteIds.length === currentAllowedClientesFromAuth.length) {
      dashboardTitleContext = userProfile.role === 'master' ? " (Todos os Clientes Ativos)" : " (Todos os Seus Clientes Permitidos)";
   }
-  
-  // Constrói o título do período para os gráficos de barras e linha
   let periodTitle = "";
-  const currentSelectedMonths = selectedMonths || []; // Garante que é um array
-  if (allMonthsSelected || currentSelectedMonths.length === MESES_COMPLETOS.length) {
+  if (allMonthsSelected || (Array.isArray(selectedMonths) && selectedMonths.length === MESES_COMPLETOS.length)) {
     periodTitle = `${selectedYear}`;
-  } else if (currentSelectedMonths.length > 0) {
-    periodTitle = currentSelectedMonths.map(mIndex => MESES_COMPLETOS[mIndex] ? MESES_COMPLETOS[mIndex].substring(0,3) : '').join(', ') + `/${selectedYear}`;
+  } else if (Array.isArray(selectedMonths) && selectedMonths.length > 0) {
+    periodTitle = selectedMonths.map(mIndex => MESES_COMPLETOS[mIndex] ? MESES_COMPLETOS[mIndex].substring(0,3) : '').join(', ') + `/${selectedYear}`;
   } else {
     periodTitle = `Nenhum mês selecionado/${selectedYear}`;
   }
@@ -237,26 +267,34 @@ export default function PaginaDashboard() {
         <h1 className="text-3xl font-bold text-gray-800">Dashboards</h1>
       </div>
 
-      {/* DashboardFilters agora obtém a maioria dos seus dados e funções do DashboardFiltersContext */}
-      {/* Passamos apenas as props que o DashboardFilters realmente precisa do AuthContext ou que são calculadas aqui */}
       <DashboardFilters 
-        userProfile={userProfile} // Para a lógica de "Selecionar Todos..."
-        userAllowedClientes={userAllowedClientes || []} // Para popular a lista de clientes nos filtros
-        availableYears={availableYears || []} // Calculado aqui e passado para o filtro de ano
+        userProfile={userProfile} 
+        userAllowedClientes={userAllowedClientes || []} // Vem do AuthContext
+        selectedClienteIds={selectedClienteIds} // Estado local desta página
+        onClienteSelectionChange={handleClienteSelectionChange} // Handler local
+        selectAllToggle={selectAllClientesToggle} // Estado local
+        onSelectAllToggleChange={handleSelectAllClientesToggleChange} // Handler local
+        availableYears={availableYears || []}
+        selectedYear={selectedYear} // Estado local
+        onYearChange={setSelectedYear} // Handler local (direto o setState)
+        selectedMonths={selectedMonths || []} // Estado local
+        onMonthToggle={handleMonthToggle} // Handler local
+        allMonthsSelected={allMonthsSelected} // Estado local
+        onSelectAllMonthsToggle={handleSelectAllMonthsToggle} // Handler local
+        availableAreas={availableAreas || []} // Estado local
+        selectedAreaLixoZero={selectedAreaLixoZero} // Estado local
+        onAreaLixoZeroChange={setSelectedAreaLixoZero} // Handler local (direto o setState)
+        loadingUserClientes={loadingAllowedClientes} // Vem do AuthContext
       /> 
       
-      {/* Secção de Gráficos */}
-      {loadingRecords && Array.isArray(selectedClienteIds) && selectedClienteIds.length > 0 ? ( 
-          <div className="text-center text-gray-600 p-8">A carregar dados dos gráficos...</div>
-      ) : !Array.isArray(selectedClienteIds) || selectedClienteIds.length === 0 ? ( 
-          <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Selecione pelo menos um cliente para visualizar os dados.</p></div>
+      {/* ... (Restante do JSX dos gráficos inalterado) ... */}
+      {loadingRecords && Array.isArray(selectedClienteIds) && selectedClienteIds.length > 0 ? ( <div className="text-center text-gray-600 p-8">A carregar dados dos gráficos...</div>
+      ) : !Array.isArray(selectedClienteIds) || selectedClienteIds.length === 0 ? ( <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Selecione pelo menos um cliente para visualizar os dados.</p></div>
       ) : (filteredWasteRecords.length === 0 && lixoZeroChartRecords.length === 0 && allWasteRecords.length > 0) && (!selectedMonths || selectedMonths.length === 0) ? ( 
         <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Selecione um ou mais meses para ver os gráficos de período.</p></div>
-      ) : (allWasteRecords.length === 0 && filteredWasteRecords.length === 0 && selectedClienteIds.length > 0) ? ( 
-          <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Não há dados de resíduos registados para a seleção atual.</p></div>
+      ) : (allWasteRecords.length === 0 && filteredWasteRecords.length === 0 && selectedClienteIds.length > 0) ? ( <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Não há dados de resíduos registados para a seleção atual.</p></div>
       ) : (
         <>
-          {/* Gráfico de Barras: Volume Diário */}
           <div className="bg-white p-6 rounded-lg shadow">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">Volume Diário de Resíduos ({periodTitle}){dashboardTitleContext}</h2>
             {dailyVolumeData.length > 0 ? (
@@ -273,7 +311,6 @@ export default function PaginaDashboard() {
             ) : <p className="text-center text-gray-500">Sem dados para o gráfico de volume diário neste período.</p>}
           </div>
 
-          {/* Gráfico de Linha: Meta Lixo Zero */}
           <div className="bg-white p-6 rounded-lg shadow mt-8">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">
               Meta Lixo Zero: Percentual de Rejeito ({periodTitle})
@@ -300,7 +337,6 @@ export default function PaginaDashboard() {
             ) : <p className="text-center text-gray-500">Sem dados para o gráfico Meta Lixo Zero neste período/área.</p>}
           </div>
 
-          {/* Gráficos de Pizza */}
           <div className="bg-white p-6 rounded-lg shadow mt-8">
             <h2 className="text-xl font-semibold text-gray-700 mb-4">Composição Geral dos Resíduos (Total: {totalWasteWeight.toFixed(2)} kg){dashboardTitleContext}</h2>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">

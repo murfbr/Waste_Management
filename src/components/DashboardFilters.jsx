@@ -1,47 +1,38 @@
 // src/components/DashboardFilters.jsx
-import React, { useContext } from 'react'; 
-import DashboardFiltersContext from '../context/DashboardFiltersContext';
-import AuthContext from '../context/AuthContext'; // Para obter userProfile
+import React from 'react'; // useContext não é mais necessário aqui se todas as props vierem de PaginaDashboard
 
-// MESES_FILTRO pode ser movido para um ficheiro de constantes se usado em mais locais,
-// ou mantido aqui se específico para este componente.
 const MESES_FILTRO = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 export default function DashboardFilters({
-  // A prop availableYears ainda vem da PaginaDashboard, pois é calculada lá
+  // Props recebidas de PaginaDashboard
   availableYears,
+  userProfile,
+  userAllowedClientes,
+  selectedClienteIds = [],
+  onClienteSelectionChange = () => {},
+  selectAllToggle = false,
+  onSelectAllToggleChange = () => {},
+  selectedYear,
+  onYearChange = () => {}, // Anteriormente setSelectedYear em PaginaDashboard, nomeado como handler
+  selectedMonths = [],
+  onMonthToggle = () => {},
+  allMonthsSelected = false,
+  onSelectAllMonthsToggle = () => {},
+  availableAreas = [],
+  selectedAreaLixoZero,
+  onAreaLixoZeroChange = () => {}, // Anteriormente setSelectedAreaLixoZero, nomeado como handler
+  loadingUserClientes
 }) {
-  
-  // Consome os valores e funções do DashboardFiltersContext
-  const {
-    userAllowedClientes = [], // Valor padrão
-    loadingUserClientes = true,
-    selectedClienteIds = [],
-    selectAllToggle = false, // Nome da prop no contexto é selectAllToggle
-    handleClienteSelectionChange = () => {},
-    handleSelectAllClientesToggleChange = () => {}, // Nome da função no contexto
-    
-    selectedYear,
-    setSelectedYear = () => {},
-    
-    selectedMonths = [], 
-    allMonthsSelected = false,
-    onMonthToggle = () => {}, // Nome da função no contexto
-    onSelectAllMonthsToggle = () => {}, // Nome da função no contexto
-    
-    availableAreas = [],      
-    selectedAreaLixoZero,
-    setSelectedAreaLixoZero = () => {}
-  } = useContext(DashboardFiltersContext) || {}; // Fallback para o contexto se for null/undefined
 
-  // userProfile é necessário para a lógica de exibição do checkbox "Selecionar Todos..."
-  const { userProfile } = useContext(AuthContext);
+  // Mensagem de console para depuração, pode ser mantida ou removida
+  // console.log("DASHBOARD_FILTERS (Render): loadingUserClientes:", loadingUserClientes, "userAllowedClientes length:", userAllowedClientes?.length);
 
-
-  if (loadingUserClientes && userAllowedClientes.length === 0) {
+  // Condição de loading para a secção de clientes
+  // Se loadingUserClientes for true E (userAllowedClientes não existir OU estiver vazio)
+  if (loadingUserClientes && (!userAllowedClientes || userAllowedClientes.length === 0)) {
     return (
       <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <p className="text-sm text-gray-500">A carregar filtros de cliente...</p>
+        <p className="text-sm text-gray-500">A carregar lista de clientes para filtro...</p>
       </div>
     );
   }
@@ -49,7 +40,8 @@ export default function DashboardFilters({
   return (
     <>
       {/* Seleção de Clientes com Checkboxes */}
-      {userAllowedClientes.length > 0 && (
+      {/* Renderiza se userAllowedClientes (das props) tiver itens */}
+      {userAllowedClientes && userAllowedClientes.length > 0 ? (
         <div className="bg-white p-4 rounded-lg shadow mb-6">
           <h3 className="text-lg font-medium text-gray-700 mb-3">Selecionar Cliente(s)</h3>
           <div className="mb-3">
@@ -57,10 +49,9 @@ export default function DashboardFilters({
               <input
                 type="checkbox"
                 id="selectAllClientesFilterToggle"
-                checked={selectAllToggle}
-                onChange={handleSelectAllClientesToggleChange} 
+                checked={selectAllToggle} // Controlado pelas props de PaginaDashboard
+                onChange={onSelectAllToggleChange} // Função das props de PaginaDashboard
                 className="h-5 w-5 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                disabled={loadingUserClientes}
               />
               <span className="ml-2 text-sm font-medium text-gray-700">
                 {userProfile && userProfile.role === 'master' ? 'Selecionar Todos os Clientes Ativos' : 'Selecionar Todos os Meus Clientes'}
@@ -68,21 +59,27 @@ export default function DashboardFilters({
             </label>
           </div>
           <div className="max-h-40 overflow-y-auto space-y-2 border p-3 rounded-md">
+            {/* Mapeia sobre userAllowedClientes das props */}
             {userAllowedClientes.map(cliente => (
               <label key={cliente.id} htmlFor={`filter-cliente-cb-${cliente.id}`} className="flex items-center cursor-pointer p-1 hover:bg-gray-100 rounded">
                 <input
                   type="checkbox"
                   id={`filter-cliente-cb-${cliente.id}`}
                   value={cliente.id}
-                  checked={selectedClienteIds.includes(cliente.id)}
-                  onChange={() => handleClienteSelectionChange(cliente.id)} 
+                  checked={selectedClienteIds.includes(cliente.id)} // Controlado pelas props
+                  onChange={() => onClienteSelectionChange(cliente.id)} // Função das props
                   className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
-                  disabled={loadingUserClientes}
                 />
                 <span className="ml-2 text-sm text-gray-700">{cliente.nome} ({cliente.cidade || 'N/A'})</span>
               </label>
             ))}
           </div>
+        </div>
+      ) : (
+         // Exibe esta mensagem se não estiver carregando e não houver clientes permitidos
+         !loadingUserClientes && userAllowedClientes && userAllowedClientes.length === 0 &&
+         <div className="bg-white p-4 rounded-lg shadow mb-6">
+            <p className="text-sm text-gray-500">Nenhum cliente disponível para seleção.</p>
         </div>
       )}
       
@@ -95,7 +92,7 @@ export default function DashboardFilters({
             <select 
               id="yearFilterSelect" 
               value={selectedYear || new Date().getFullYear()} 
-              onChange={(e) => setSelectedYear(parseInt(e.target.value))} 
+              onChange={(e) => onYearChange(parseInt(e.target.value))} // Handler das props
               className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
               disabled={!availableYears || availableYears.length === 0}
             >
@@ -108,9 +105,9 @@ export default function DashboardFilters({
             <select 
               id="areaLixoZeroFilterSelect" 
               value={selectedAreaLixoZero || 'ALL'} 
-              onChange={(e) => setSelectedAreaLixoZero(e.target.value)} 
+              onChange={(e) => onAreaLixoZeroChange(e.target.value)} // Handler das props
               className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
-              disabled={availableAreas.length === 0 && (selectedAreaLixoZero || 'ALL') === 'ALL'}
+              disabled={(!availableAreas || availableAreas.length === 0) && (selectedAreaLixoZero || 'ALL') === 'ALL'}
             >
               <option value="ALL">Todas as Áreas</option>
               {Array.isArray(availableAreas) && availableAreas.map(area => <option key={area} value={area}>{area}</option>)}
@@ -124,8 +121,8 @@ export default function DashboardFilters({
                     <input
                         type="checkbox"
                         id="selectAllMonthsFilterToggle"
-                        checked={allMonthsSelected}
-                        onChange={onSelectAllMonthsToggle} 
+                        checked={allMonthsSelected} // Controlado pelas props
+                        onChange={onSelectAllMonthsToggle} // Handler das props
                         className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                     />
                     <span className="ml-2 text-sm text-gray-700">Ano Inteiro (Todos os Meses)</span>
@@ -138,8 +135,8 @@ export default function DashboardFilters({
                     type="checkbox"
                     id={`filter-month-cb-${index}`}
                     value={index}
-                    checked={Array.isArray(selectedMonths) && selectedMonths.includes(index)}
-                    onChange={() => onMonthToggle(index)} 
+                    checked={Array.isArray(selectedMonths) && selectedMonths.includes(index)} // Controlado pelas props
+                    onChange={() => onMonthToggle(index)} // Handler das props
                     className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
                   />
                   <span className="ml-2 text-sm text-gray-700">{month}</span>

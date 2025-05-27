@@ -18,8 +18,7 @@ import PaginaAdminEmpresasColeta from '../pages/PaginaAdminEmpresasColeta';
 import PaginaNotFound from '../pages/PaginaNotFound';
 import PaginaAcessoNegado from '../pages/PaginaAcessoNegado';
 
-// IMPORTA O NOVO PROVEDOR DE CONTEXTO DOS FILTROS
-import { DashboardFiltersProvider } from '../context/DashboardFiltersContext';
+// DashboardFiltersProvider NÃO é mais importado aqui
 
 /**
  * Componente para agrupar rotas que exigem autenticação e usam o MainLayout.
@@ -65,10 +64,8 @@ export default function AppRoutes() {
           path="dashboard" 
           element={
             <ProtectedRoute allowedRoles={['master', 'gerente']}>
-              {/* Envolve a PaginaDashboard com o DashboardFiltersProvider */}
-              <DashboardFiltersProvider>
-                <PaginaDashboard />
-              </DashboardFiltersProvider>
+              {/* DashboardFiltersProvider foi removido daqui */}
+              <PaginaDashboard />
             </ProtectedRoute>
           } 
         />

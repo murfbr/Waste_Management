@@ -4,7 +4,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../context/AuthContext';
 import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import MessageBox from '../components/MessageBox';
-import EmpresaColetaForm from '../components/EmpresaColetaForm'; // IMPORTA O NOVO COMPONENTE
+import EmpresaColetaForm from '../components/EmpresaColetaForm';
 
 export default function PaginaAdminEmpresasColeta() {
   const { db, userProfile, currentUser } = useContext(AuthContext);
@@ -36,8 +36,8 @@ export default function PaginaAdminEmpresasColeta() {
     const q = query(collection(db, "empresasColeta"), orderBy("nomeFantasia")); 
     const unsubscribe = onSnapshot(q, (querySnapshot) => {
       const empresasData = [];
-      querySnapshot.forEach((doc) => {
-        empresasData.push({ id: doc.id, ...doc.data() });
+      querySnapshot.forEach((docSnap) => { // Renomeado para docSnap para evitar conflito com doc de firestore
+        empresasData.push({ id: docSnap.id, ...docSnap.data() });
       });
       setEmpresas(empresasData);
       setLoadingEmpresas(false);
@@ -67,7 +67,11 @@ export default function PaginaAdminEmpresasColeta() {
         showMessage("Apenas administradores master podem excluir empresas.", true);
         return;
     }
-    if (window.confirm("Tem certeza que deseja excluir esta empresa de coleta? Esta ação não pode ser desfeita.")) {
+    // Substituindo window.confirm por uma lógica de UI mais robusta se necessário no futuro,
+    // mas para este exemplo, mantendo a simplicidade.
+    // Em um app real, um modal customizado seria melhor.
+    const confirmDelete = window.confirm("Tem certeza que deseja excluir esta empresa de coleta? Esta ação não pode ser desfeita.");
+    if (confirmDelete) {
         try {
             await deleteDoc(doc(db, "empresasColeta", empresaId));
             showMessage("Empresa de coleta excluída com sucesso!");
@@ -128,7 +132,7 @@ export default function PaginaAdminEmpresasColeta() {
   return (
     <div className="space-y-6">
       <h1 className="text-3xl font-bold text-gray-800">Gerir Empresas de Coleta</h1>
-      <MessageBox message={message} isError={isError} />
+      <MessageBox message={message} isError={isError} onClose={() => setMessage('')} />
 
       {!showForm && (
         <button
@@ -152,54 +156,53 @@ export default function PaginaAdminEmpresasColeta() {
       <div className="bg-white p-6 rounded-lg shadow mt-8">
         <h2 className="text-xl font-semibold text-gray-700 mb-3">Empresas Cadastradas</h2>
         {loadingEmpresas ? (
-          <p>A carregar empresas...</p>
+          <p className="text-gray-600">A carregar empresas...</p>
         ) : empresas.length === 0 ? (
-          <p>Nenhuma empresa de coleta cadastrada.</p>
+          <p className="text-gray-600">Nenhuma empresa de coleta cadastrada.</p>
         ) : (
           <div className="overflow-x-auto">
-            {/* Adicionado table-fixed */}
             <table className="min-w-full divide-y divide-gray-200 table-fixed">
-              <colgroup>
-                <col className="w-1/4" /> {/* Nome Fantasia */}
-                <col className="w-1/4" /> {/* CNPJ */}
-                <col className="w-1/4" /> {/* Tipos de Resíduo */}
-                <col className="w-1/12" /> {/* Status - menor */}
-                <col className="w-auto" />  {/* Ações - restante do espaço, ou uma largura específica como w-1/6 */}
-              </colgroup>
+              {/* CORREÇÃO: Removido whitespace entre as tags <col> e dentro de <colgroup> */}
+              <colgroup><col className="w-1/4" /><col className="w-1/4" /><col className="w-1/4" /><col className="w-1/12" /><col className="w-auto" /></colgroup>
               <thead>
                 <tr>
-                  <th className="th-table text-left uppercase tracking-wider">Nome Fantasia</th>
-                  <th className="th-table text-left uppercase tracking-wider">CNPJ</th>
-                  <th className="th-table text-left uppercase tracking-wider">Tipos de Resíduo</th>
-                  <th className="th-table text-left uppercase tracking-wider">Status</th>
-                  {/* Ajustado para text-center e normal-case para melhor alinhamento visual */}
-                  <th className="th-table text-center normal-case tracking-normal">Ações</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nome Fantasia</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CNPJ</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipos de Resíduo</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Ações</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {empresas.map((empresa) => (
-                  <tr key={empresa.id}>
-                    <td className="td-table font-medium text-gray-900 break-words">{empresa.nomeFantasia}</td>
-                    <td className="td-table break-words">{empresa.cnpj || '-'}</td>
-                    <td className="td-table break-words"> {/* Adicionado break-words aqui também */}
+                  <tr key={empresa.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-normal break-words text-sm font-medium text-gray-900">{empresa.nomeFantasia}</td>
+                    <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-500">{empresa.cnpj || '-'}</td>
+                    <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-500">
                         {empresa.tiposResiduo && Array.isArray(empresa.tiposResiduo) && empresa.tiposResiduo.length > 0 
                           ? empresa.tiposResiduo.join(', ') 
                           : empresa.tiposResiduo && typeof empresa.tiposResiduo === 'string' 
                             ? empresa.tiposResiduo 
                             : '-'} 
                     </td>
-                    <td className="td-table">
-                      <span className={`status-badge ${empresa.ativo ? 'status-active' : 'status-inactive'}`}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${empresa.ativo ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
                         {empresa.ativo ? 'Ativa' : 'Inativa'}
                       </span>
                     </td>
-                    {/* Ajustado para text-center na célula e justify-center no div dos botões */}
-                    <td className="td-table text-center px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                       <div className="flex justify-center items-center space-x-2">
-                        <button onClick={() => handleEditEmpresa(empresa)} className="btn-link-indigo">Editar</button>
+                        <button 
+                            onClick={() => handleEditEmpresa(empresa)} 
+                            className="text-indigo-600 hover:text-indigo-900 transition-colors duration-150"
+                            aria-label={`Editar ${empresa.nomeFantasia}`}
+                        >
+                            Editar
+                        </button>
                         <button 
                             onClick={() => handleDeleteEmpresa(empresa.id)} 
-                            className="px-3 py-1 bg-red-500 text-white text-xs font-medium rounded-md shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                            className="text-red-600 hover:text-red-900 transition-colors duration-150"
+                            aria-label={`Excluir ${empresa.nomeFantasia}`}
                         >
                             Excluir
                         </button>
