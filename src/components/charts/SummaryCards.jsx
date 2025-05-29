@@ -50,10 +50,8 @@ export default function SummaryCards({
   }
 
   return (
-    <div className="mb-8">
-      <h2 className="text-xl font-semibold text-gray-700 mb-4 text-center bg-green-200 py-2 rounded-md">
-        VISÃO GERAL{titleContext}
-      </h2>
+    <div className="mb-8 mt-8">
+     
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
         {/* Card Total */}
         <div className="md:col-span-1">
