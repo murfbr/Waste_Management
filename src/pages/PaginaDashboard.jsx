@@ -1,19 +1,23 @@
 // src/pages/PaginaDashboard.jsx
-
-import React, { useContext, useEffect, useState, useMemo, useRef } from 'react'; // Adicionado useRef
+import React, { useContext, useEffect, useState, useMemo } from 'react';
 import AuthContext from '../context/AuthContext';
-import { 
-    PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
-    BarChart, Bar, XAxis, YAxis, CartesianGrid,
-    LineChart, Line, ReferenceLine 
+import {
+    Tooltip, Legend, ResponsiveContainer,
+    XAxis, YAxis, CartesianGrid
 } from 'recharts';
-import { collection, onSnapshot, query, where, getDocs, documentId, orderBy } from 'firebase/firestore';
-import DashboardFilters from '../components/DashboardFilters'; 
+import DashboardFilters from '../components/DashboardFilters';
+import ClienteSelectorDropdown from '../components/ClienteSelectorDropdown';
+import useWasteData from '../hooks/useWasteData';
+import MonthlyComparison from '../components/charts/MonthlyComparison';
+import DesvioDeAterro from '../components/charts/DesvioDeAterro';
+import WasteTypePieChart from '../components/charts/WasteTypePieChart';
+import AreaPieChart from '../components/charts/AreaPieChart';
+import SummaryCards from '../components/charts/SummaryCards';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#3D9140', '#FF5733', '#8333FF'];
 const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
-// Funções de processamento de dados (inalteradas)
+// --- Funções de Processamento de Dados ---
 const processDataForPieChartByWeight = (records, groupByField) => {
   if (!Array.isArray(records) || records.length === 0) return { pieData: [], totalWeight: 0 };
   let totalWeight = 0;
@@ -21,6 +25,7 @@ const processDataForPieChartByWeight = (records, groupByField) => {
     if (!record) return acc;
     const key = record[groupByField] || 'Não especificado';
     const weight = parseFloat(record.peso || 0);
+    if (isNaN(weight)) return acc;
     acc[key] = (acc[key] || 0) + weight;
     totalWeight += weight;
     return acc;
@@ -28,34 +33,16 @@ const processDataForPieChartByWeight = (records, groupByField) => {
   const pieData = Object.entries(counts).map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }));
   return { pieData, totalWeight: parseFloat(totalWeight.toFixed(2)) };
 };
-const processDataForDailyVolumeBarChart = (records) => {
-    if (!Array.isArray(records) || records.length === 0) return [];
-    const dailyVolumes = records.reduce((acc, record) => {
-        if (!record || !record.timestamp) return acc;
-        const recordTimestamp = typeof record.timestamp === 'number' ? record.timestamp : record.timestamp?.toDate?.().getTime();
-        if (!recordTimestamp) return acc;
-        const date = new Date(recordTimestamp).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
-        const weight = parseFloat(record.peso || 0);
-        acc[date] = (acc[date] || 0) + weight;
-        return acc;
-    }, {});
-    return Object.entries(dailyVolumes)
-        .map(([name, volume]) => ({ name, volume: parseFloat(volume.toFixed(2)) }))
-        .sort((a,b) => {
-            const [dayA, monthA] = a.name.split('/');
-            const [dayB, monthB] = b.name.split('/');
-            if (!monthA || !monthB || !dayA || !dayB) return 0;
-            return new Date(`2000/${monthA}/${dayA}`) - new Date(`2000/${monthB}/${dayB}`);
-        });
-};
-const processDataForLixoZeroChart = (records, rejectCategoryName = "Rejeito") => {
+
+const processDataForDesvioDeAterro = (records, rejectCategoryName = "Rejeito") => {
     if (!Array.isArray(records) || records.length === 0) return [];
     const dailyDataAggregated = records.reduce((acc, record) => {
         if (!record || !record.timestamp) return acc;
         const recordTimestamp = typeof record.timestamp === 'number' ? record.timestamp : record.timestamp?.toDate?.().getTime();
         if (!recordTimestamp) return acc;
-        const dateKey = new Date(recordTimestamp).toISOString().split('T')[0]; 
+        const dateKey = new Date(recordTimestamp).toISOString().split('T')[0];
         const weight = parseFloat(record.peso || 0);
+        if (isNaN(weight)) return acc;
         acc[dateKey] = acc[dateKey] || { total: 0, rejeito: 0 };
         acc[dateKey].total += weight;
         if (record.wasteType === rejectCategoryName) {
@@ -65,13 +52,13 @@ const processDataForLixoZeroChart = (records, rejectCategoryName = "Rejeito") =>
     }, {});
     const sortedDailyData = Object.entries(dailyDataAggregated)
         .map(([dateKey, data]) => ({
-            dateKey, 
+            dateKey,
             name: new Date(dateKey + 'T00:00:00Z').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
             total: data.total,
             rejeito: data.rejeito,
             percentualRejeito: data.total > 0 ? parseFloat(((data.rejeito / data.total) * 100).toFixed(2)) : 0
         }))
-        .sort((a, b) => new Date(a.dateKey) - new Date(b.dateKey)); 
+        .sort((a, b) => new Date(a.dateKey) - new Date(b.dateKey));
     let acumuladoSomaPercentual = 0;
     return sortedDailyData.map((dataPoint, index) => {
         acumuladoSomaPercentual += dataPoint.percentualRejeito;
@@ -79,52 +66,109 @@ const processDataForLixoZeroChart = (records, rejectCategoryName = "Rejeito") =>
     });
 };
 
-export default function PaginaDashboard() {
-  const { userProfile, db, appId, currentUser, userAllowedClientes, loadingAllowedClientes } = useContext(AuthContext); 
-  
-  const [selectedClienteIds, setSelectedClienteIds] = useState([]); 
-  const [selectAllClientesToggle, setSelectAllClientesToggle] = useState(false);
-  const [isClienteDropdownOpen, setIsClienteDropdownOpen] = useState(false); // Novo estado
-  const clienteDropdownRef = useRef(null); // Novo ref
-
-  const currentYear = new Date().getFullYear();
-  const currentMonthIndex = new Date().getMonth();
-  const [selectedYear, setSelectedYear] = useState(currentYear);
-  const [selectedMonths, setSelectedMonths] = useState([currentMonthIndex]);
-  const [allMonthsSelected, setAllMonthsSelected] = useState(false); 
-
-  const [availableAreas, setAvailableAreas] = useState([]); 
-  const [selectedAreas, setSelectedAreas] = useState([]); 
-
-  const [allWasteRecords, setAllWasteRecords] = useState([]);
-  const [filteredWasteRecords, setFilteredWasteRecords] = useState([]); 
-  const [loadingRecords, setLoadingRecords] = useState(true);
-
-  // Efeito para fechar dropdown de cliente ao clicar fora
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (clienteDropdownRef.current && !clienteDropdownRef.current.contains(event.target)) {
-        setIsClienteDropdownOpen(false);
-      }
+const processDataForMonthlyYearlyComparison = (records, year1, year2) => {
+  if (!Array.isArray(records)) return { data: [], years: [] };
+  const monthlyData = {};
+  records.forEach(record => {
+    if (!record || !record.timestamp || typeof record.peso !== 'number') return;
+    const recordDate = new Date(record.timestamp);
+    const recordYear = recordDate.getFullYear();
+    const recordMonth = recordDate.getMonth();
+    const weight = parseFloat(record.peso || 0);
+    if (isNaN(weight)) return;
+    if (recordYear === year1 || recordYear === year2) {
+      if (!monthlyData[recordMonth]) monthlyData[recordMonth] = {};
+      if (!monthlyData[recordMonth][recordYear]) monthlyData[recordMonth][recordYear] = 0;
+      monthlyData[recordMonth][recordYear] += weight;
     }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
-  }, [clienteDropdownRef]);
+  });
+  const chartData = MESES_COMPLETOS.map((monthName, index) => {
+    const dataPoint = { month: monthName };
+    if (monthlyData[index]) {
+      if (monthlyData[index][year1] !== undefined) dataPoint[year1.toString()] = parseFloat(monthlyData[index][year1].toFixed(2));
+      if (year1 !== year2 && monthlyData[index][year2] !== undefined) dataPoint[year2.toString()] = parseFloat(monthlyData[index][year2].toFixed(2));
+    }
+    return dataPoint;
+  });
+  const actualYearsInData = [];
+  if (chartData.some(d => d[year1.toString()] !== undefined)) actualYearsInData.push(year1.toString());
+  if (year1 !== year2 && chartData.some(d => d[year2.toString()] !== undefined)) actualYearsInData.push(year2.toString());
+  return { data: chartData, years: actualYearsInData };
+};
+
+const processDataForSummaryCards = (records) => {
+  let totalGeralKg = 0;
+  let totalCompostavelKg = 0;
+  let totalReciclavelKg = 0;
+  let totalNaoReciclavelKg = 0;
+  const CLASSIFICATION_COMPOSTAVEL = 'Compostável';
+  const CLASSIFICATION_RECICLAVEL = 'Reciclável';
+  const CLASSIFICATION_NAO_RECICLAVEL = 'Não Reciclável';
+
+  records.forEach(record => {
+    const weight = parseFloat(record.peso || 0);
+    if (isNaN(weight)) return;
+    totalGeralKg += weight;
+    const type = record.wasteType ? record.wasteType.toLowerCase() : '';
+    if (type.includes('orgânico') || type.includes('compostavel')) {
+        totalCompostavelKg += weight;
+    } else if (type.includes('papel') || type.includes('plastico') || type.includes('metal') || type.includes('vidro') || type.includes('reciclavel')) {
+        totalReciclavelKg += weight;
+    } else {
+        totalNaoReciclavelKg += weight;
+    }
+  });
+  const percentCompostavel = totalGeralKg > 0 ? (totalCompostavelKg / totalGeralKg) * 100 : 0;
+  const percentReciclavel = totalGeralKg > 0 ? (totalReciclavelKg / totalGeralKg) * 100 : 0;
+  const percentNaoReciclavel = totalGeralKg > 0 ? (totalNaoReciclavelKg / totalGeralKg) * 100 : 0;
+  return {
+    totalGeralKg: parseFloat(totalGeralKg.toFixed(2)),
+    compostavel: { kg: parseFloat(totalCompostavelKg.toFixed(2)), percent: parseFloat(percentCompostavel.toFixed(2)) },
+    reciclavel: { kg: parseFloat(totalReciclavelKg.toFixed(2)), percent: parseFloat(percentReciclavel.toFixed(2)) },
+    naoReciclavel: { kg: parseFloat(totalNaoReciclavelKg.toFixed(2)), percent: parseFloat(percentNaoReciclavel.toFixed(2)) },
+  };
+};
+
+// Helper para formatar números
+const formatNumberBR = (number, decimalPlaces = 2) => {
+  if (typeof number !== 'number' || isNaN(number)) return '0,00';
+  return number.toLocaleString('pt-BR', { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces });
+};
+
+// Componente auxiliar para títulos de seção
+const SectionTitle = ({ title }) => (
+  <div className="bg-green-500 text-white py-2 px-4 rounded-t-lg text-center mb-0"> {/* mb-0 para colar no card abaixo */}
+    <h2 className="text-xl font-semibold">{title}</h2>
+  </div>
+);
+
+
+export default function PaginaDashboard() {
+  const { userProfile, currentUser, userAllowedClientes, loadingAllowedClientes } = useContext(AuthContext);
+  const [selectedClienteIds, setSelectedClienteIds] = useState([]);
+  const [selectAllClientesToggle, setSelectAllClientesToggle] = useState(false);
+  const currentSystemYear = new Date().getFullYear();
+  const currentMonthIndex = new Date().getMonth();
+  const [selectedYear, setSelectedYear] = useState(currentSystemYear);
+  const [selectedMonths, setSelectedMonths] = useState([currentMonthIndex]);
+  const [allMonthsSelected, setAllMonthsSelected] = useState(false);
+  const [availableAreas, setAvailableAreas] = useState([]);
+  const [selectedAreas, setSelectedAreas] = useState([]);
+  const { allWasteRecords, loadingRecords: loadingAllWasteRecords } = useWasteData(selectedClienteIds);
+  const [filteredWasteRecords, setFilteredWasteRecords] = useState([]);
 
   useEffect(() => {
     if (userAllowedClientes && userAllowedClientes.length > 0) {
         const initialSelectedIds = userAllowedClientes.map(c => c.id);
         setSelectedClienteIds(initialSelectedIds);
-        setSelectAllClientesToggle(true); // Assume que se há clientes permitidos, todos são selecionados inicialmente
+        setSelectAllClientesToggle(true);
     } else {
         setSelectedClienteIds([]);
         setSelectAllClientesToggle(false);
     }
   }, [userAllowedClientes]);
 
-  const availableYears = useMemo(() => { /* ... (inalterado) ... */
+  const availableYears = useMemo(() => {
     const years = new Set();
     if (Array.isArray(allWasteRecords)) {
       allWasteRecords.forEach(record => {
@@ -134,334 +178,219 @@ export default function PaginaDashboard() {
           }
       });
     }
-    if (years.size === 0) years.add(currentYear);
+    if (years.size === 0 && !loadingAllWasteRecords) years.add(currentSystemYear);
     return Array.from(years).sort((a,b) => b - a);
-  }, [allWasteRecords, currentYear]);
+  }, [allWasteRecords, currentSystemYear, loadingAllWasteRecords]);
 
-  useEffect(() => { /* ... (busca de allWasteRecords inalterada) ... */
-    if (!db || !currentUser || loadingAllowedClientes || !selectedClienteIds || selectedClienteIds.length === 0) {
-      setAllWasteRecords([]); setLoadingRecords(false); return;
-    }
-    setLoadingRecords(true);
-    const q = query(
-        collection(db, `artifacts/${appId}/public/data/wasteRecords`), 
-        where("clienteId", "in", selectedClienteIds),
-        orderBy("timestamp", "desc") 
-    );
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const newRecords = snapshot.docs.map(docSnap => {
-        const data = docSnap.data();
-        const timestamp = data.timestamp?.toDate?.().getTime() || data.timestamp || null;
-        return { id: docSnap.id, ...data, timestamp };
-      });
-      setAllWasteRecords(newRecords);
-      setLoadingRecords(false);
-    }, (error) => {
-      console.error("DASHBOARD: Erro ao buscar todos os registos:", error);
-      setAllWasteRecords([]); setLoadingRecords(false);
-    });
-    return () => unsubscribe();
-  }, [db, currentUser, appId, selectedClienteIds, loadingAllowedClientes]);
-
-  useEffect(() => { /* ... (lógica de filteredWasteRecords e availableAreas inalterada, mas revisada a parte de selectedAreas) ... */
+  useEffect(() => {
     if (!Array.isArray(allWasteRecords) || allWasteRecords.length === 0) {
-      setFilteredWasteRecords([]); 
-      setAvailableAreas([]);    
+      setFilteredWasteRecords([]);
+      setAvailableAreas([]);
       return;
     }
     const recordsInPeriod = allWasteRecords.filter(record => {
       if (!record || typeof record.timestamp !== 'number') return false;
-      const recordDate = new Date(record.timestamp); 
+      const recordDate = new Date(record.timestamp);
       if (isNaN(recordDate.getTime())) return false;
       const recordYearValue = recordDate.getFullYear();
       const recordMonthValue = recordDate.getMonth();
       return recordYearValue === selectedYear && Array.isArray(selectedMonths) && selectedMonths.includes(recordMonthValue);
     });
     setFilteredWasteRecords(recordsInPeriod);
-    const areasInMonth = new Set();
-    recordsInPeriod.forEach(record => { if(record && record.areaLancamento) areasInMonth.add(record.areaLancamento); });
-    const newAvailableAreas = Array.from(areasInMonth).sort();
+    const areasInFilteredPeriodRecords = new Set();
+    recordsInPeriod.forEach(record => { if(record && record.areaLancamento) areasInFilteredPeriodRecords.add(record.areaLancamento); });
+    const newAvailableAreas = Array.from(areasInFilteredPeriodRecords).sort();
     setAvailableAreas(newAvailableAreas);
     if (selectedAreas.length > 0) {
-        const stillAvailable = selectedAreas.filter(sa => newAvailableAreas.includes(sa));
-        if (stillAvailable.length !== selectedAreas.length || !selectedAreas.every(sa => stillAvailable.includes(sa))) {
-            setSelectedAreas(stillAvailable); 
+        const stillAvailableAndSelected = selectedAreas.filter(sa => newAvailableAreas.includes(sa));
+        if (stillAvailableAndSelected.length !== selectedAreas.length || !selectedAreas.every(sa => stillAvailableAndSelected.includes(sa))) {
+            setSelectedAreas(stillAvailableAndSelected);
         }
+    } else if (selectedAreas.length !== 0 && newAvailableAreas.length === 0) {
+        setSelectedAreas([]);
     }
   }, [allWasteRecords, selectedYear, selectedMonths]);
 
-  const recordsFilteredByArea = useMemo(() => { /* ... (inalterado) ... */
+  const recordsFullyFiltered = useMemo(() => {
     if (!Array.isArray(filteredWasteRecords)) return [];
-    if (selectedAreas.length === 0) return filteredWasteRecords; 
+    if (selectedAreas.length === 0) return filteredWasteRecords;
     return filteredWasteRecords.filter(record => record && record.areaLancamento && selectedAreas.includes(record.areaLancamento));
   }, [filteredWasteRecords, selectedAreas]);
 
-  // Handlers de cliente (mantidos, pois a lógica de estado é a mesma)
-  const handleClienteSelectionChange = (clienteId) => { 
-    setSelectedClienteIds(prev => {
-      const newSelection = prev.includes(clienteId) ? prev.filter(id => id !== clienteId) : [...prev, clienteId];
-      // Atualiza o selectAllClientesToggle com base na nova seleção
-      if (userAllowedClientes) {
-        setSelectAllClientesToggle(newSelection.length === userAllowedClientes.length && userAllowedClientes.length > 0);
-      }
-      return newSelection;
-    });
-  };
-  const handleSelectAllClientesToggleChange = () => { 
-    setSelectAllClientesToggle(prev => {
-      const newToggleState = !prev;
-      if (newToggleState && userAllowedClientes) {
-        setSelectedClienteIds(userAllowedClientes.map(c => c.id));
-      } else {
-        setSelectedClienteIds([]);
-      }
-      return newToggleState;
-    });
-    // Fecha o dropdown se o toggle "todos" for usado
-    setIsClienteDropdownOpen(false); 
-  };
-  
-  // Handlers de mês e área (inalterados)
-  const handleMonthToggle = (monthIndex) => { /* ... */ 
-    setSelectedMonths(prev => {
-        const newSelection = prev.includes(monthIndex) ? prev.filter(m => m !== monthIndex) : [...prev, monthIndex];
-        setAllMonthsSelected(newSelection.length === MESES_COMPLETOS.length);
-        return newSelection;
-    });
-  };
-  const handleSelectAllMonthsToggle = () => { /* ... */ 
-    setAllMonthsSelected(prev => {
-      const newToggleState = !prev;
-      if (newToggleState) setSelectedMonths(MESES_COMPLETOS.map((_, index) => index));
-      else setSelectedMonths([]);
-      return newToggleState;
-    });
-  };
-  const handleSelectedAreasChange = (newAreas) => { /* ... */ 
-    setSelectedAreas(Array.isArray(newAreas) ? newAreas : []);
-  };
+  const recordsForMonthlyComparison = useMemo(() => {
+    if (!Array.isArray(allWasteRecords)) return [];
+    if (selectedAreas.length === 0) return allWasteRecords;
+    return allWasteRecords.filter(record => record && record.areaLancamento && selectedAreas.includes(record.areaLancamento));
+  }, [allWasteRecords, selectedAreas]);
 
-  // Função para determinar o texto do botão de seleção de clientes
-  const getClienteDisplayValue = () => {
-    if (!userAllowedClientes || userAllowedClientes.length === 0) return "Nenhum cliente";
-    if (selectAllClientesToggle || selectedClienteIds.length === userAllowedClientes.length) {
-      return userProfile?.role === 'master' ? "Todos Clientes Ativos" : "Todos Seus Clientes";
-    }
-    if (selectedClienteIds.length === 1) {
-      const cliente = userAllowedClientes.find(c => c.id === selectedClienteIds[0]);
-      return cliente ? cliente.nome : "1 cliente selecionado";
-    }
-    if (selectedClienteIds.length > 1) {
-      return `${selectedClienteIds.length} clientes selecionados`;
-    }
-    return "Selecionar cliente(s)";
-  };
+  const year1ToCompareForMonthlyChart = currentSystemYear;
+  const year2ToCompareForMonthlyChart = currentSystemYear - 1;
+  const { data: monthlyComparisonChartData, years: actualYearsInComparisonData } = useMemo(() =>
+    processDataForMonthlyYearlyComparison(
+      recordsForMonthlyComparison, year1ToCompareForMonthlyChart, year2ToCompareForMonthlyChart
+    ), [recordsForMonthlyComparison, year1ToCompareForMonthlyChart, year2ToCompareForMonthlyChart]
+  );
 
-  const { pieData: wasteTypeData, totalWeight: totalWasteWeight } = processDataForPieChartByWeight(allWasteRecords, 'wasteType');
-  const { pieData: areaData } = processDataForPieChartByWeight(allWasteRecords, 'areaLancamento');
-  const dailyVolumeData = processDataForDailyVolumeBarChart(recordsFilteredByArea);
-  const lixoZeroData = processDataForLixoZeroChart(recordsFilteredByArea);
+  const handleClienteSelectionChange = (clienteId) => { setSelectedClienteIds(prev => { const newSelection = prev.includes(clienteId) ? prev.filter(id => id !== clienteId) : [...prev, clienteId]; if (userAllowedClientes) { setSelectAllClientesToggle(newSelection.length === userAllowedClientes.length && userAllowedClientes.length > 0); } return newSelection; }); };
+  const handleSelectAllClientesToggleChange = () => { setSelectAllClientesToggle(prev => { const newToggleState = !prev; if (newToggleState && userAllowedClientes) { setSelectedClienteIds(userAllowedClientes.map(c => c.id)); } else { setSelectedClienteIds([]); } return newToggleState; });};
+  const handleMonthToggle = (monthIndex) => { setSelectedMonths(prev => { const newSelection = prev.includes(monthIndex) ? prev.filter(m => m !== monthIndex) : [...prev, monthIndex]; setAllMonthsSelected(newSelection.length === MESES_COMPLETOS.length); return newSelection; }); };
+  const handleSelectAllMonthsToggle = () => { setAllMonthsSelected(prev => { const newToggleState = !prev; if (newToggleState) setSelectedMonths(MESES_COMPLETOS.map((_, index) => index)); else setSelectedMonths([]); return newToggleState; }); };
+  const handleSelectedAreasChange = (newAreas) => { setSelectedAreas(Array.isArray(newAreas) ? newAreas : []);};
 
-  // Lógica de mensagens de loading e permissão (adaptada)
-  if (loadingAllowedClientes && !userProfile) return <div className="text-center text-gray-600 p-8">A carregar dados...</div>;
-  if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">A carregar perfil...</div>;
+  const summaryData = useMemo(() => processDataForSummaryCards(recordsFullyFiltered), [recordsFullyFiltered]);
+  const { pieData: wasteTypePieData } = processDataForPieChartByWeight(recordsFullyFiltered, 'wasteType');
+  const { pieData: areaPieData } = processDataForPieChartByWeight(recordsFullyFiltered, 'areaLancamento');
+  const desvioDeAterroData = processDataForDesvioDeAterro(recordsFullyFiltered);
+
+  if (loadingAllowedClientes && !userProfile) return <div className="text-center text-gray-600 p-8">A carregar dados de autenticação...</div>;
+  if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">A carregar perfil do utilizador...</div>;
   if (!userProfile || (userProfile.role !== 'master' && userProfile.role !== 'gerente')) {
-    return <div className="text-center text-red-500 p-8">Acesso Negado.</div>;
+    return <div className="text-center text-red-500 p-8">Acesso Negado. Contacte o administrador.</div>;
   }
-  // Adicionado loadingAllowedClientes na condição para evitar piscar de mensagens
-  const currentAllowedClientesFromAuth = userAllowedClientes || []; 
+  const currentAllowedClientesFromAuth = userAllowedClientes || [];
   if (userProfile.role === 'gerente' && currentAllowedClientesFromAuth.length === 0 && !loadingAllowedClientes) {
-    return <div className="text-center text-orange-600 p-8">Sem acesso a clientes.</div>;
+    return <div className="text-center text-orange-600 p-8">Nenhum cliente associado ao seu perfil. Contacte o administrador.</div>;
   }
    if (userProfile.role === 'master' && currentAllowedClientesFromAuth.length === 0 && !loadingAllowedClientes) {
-    return <div className="text-center text-orange-600 p-8">Nenhum cliente ativo cadastrado.</div>;
+    return <div className="text-center text-orange-600 p-8">Nenhum cliente ativo cadastrado no sistema.</div>;
   }
 
-  // Lógica de dashboardTitleContext e periodTitle (adaptada)
-  let dashboardTitleContext = ""; 
-  if (selectAllClientesToggle || (Array.isArray(selectedClienteIds) && currentAllowedClientesFromAuth.length > 0 && selectedClienteIds.length === currentAllowedClientesFromAuth.length)) {
-    dashboardTitleContext = userProfile.role === 'master' ? " (Todos os Clientes Ativos)" : " (Todos os Seus Clientes Permitidos)";
-  } else if (Array.isArray(selectedClienteIds) && selectedClienteIds.length === 1 && currentAllowedClientesFromAuth.length > 0) {
-    const cliente = currentAllowedClientesFromAuth.find(c => c.id === selectedClienteIds[0]);
-    dashboardTitleContext = cliente ? ` de: ${cliente.nome}` : "";
-  } else if (Array.isArray(selectedClienteIds) && selectedClienteIds.length > 1) {
-    dashboardTitleContext = ` de ${selectedClienteIds.length} clientes selecionados`;
-  }
-  
-  let periodTitle = ""; /* ... (inalterado) ... */
-  if (allMonthsSelected || (Array.isArray(selectedMonths) && selectedMonths.length === MESES_COMPLETOS.length)) {
-    periodTitle = `${selectedYear}`;
-  } else if (Array.isArray(selectedMonths) && selectedMonths.length > 0) {
-    periodTitle = selectedMonths.map(mIndex => MESES_COMPLETOS[mIndex] ? MESES_COMPLETOS[mIndex].substring(0,3) : '').join(', ') + `/${selectedYear}`;
-  } else {
-    periodTitle = `Nenhum mês selecionado/${selectedYear}`;
-  }
-  let areaTitleSegment = ' - Todas as Áreas'; /* ... (inalterado) ... */
-  if (selectedAreas.length === 1) { areaTitleSegment = ` - Área: ${selectedAreas[0]}`; } 
-  else if (selectedAreas.length > 1) { areaTitleSegment = ` - Áreas Selecionadas (${selectedAreas.length})`;}
+  const dashboardTitleContext = useMemo(() => { if (selectAllClientesToggle || (Array.isArray(selectedClienteIds) && currentAllowedClientesFromAuth.length > 0 && selectedClienteIds.length === currentAllowedClientesFromAuth.length)) { return userProfile.role === 'master' ? " (Todos os Clientes Ativos)" : " (Todos os Seus Clientes)"; } else if (Array.isArray(selectedClienteIds) && selectedClienteIds.length === 1 && currentAllowedClientesFromAuth.length > 0) { const cliente = currentAllowedClientesFromAuth.find(c => c.id === selectedClienteIds[0]); return cliente ? ` de: ${cliente.nome}` : ""; } else if (Array.isArray(selectedClienteIds) && selectedClienteIds.length > 1) { return ` de ${selectedClienteIds.length} clientes`; } return ""; }, [selectedClienteIds, selectAllClientesToggle, currentAllowedClientesFromAuth, userProfile]);
+  const periodTitleForFilteredCharts = useMemo(() => { if (allMonthsSelected || (Array.isArray(selectedMonths) && selectedMonths.length === MESES_COMPLETOS.length)) { return `${selectedYear}`; } else if (Array.isArray(selectedMonths) && selectedMonths.length > 0) { return selectedMonths.map(mIndex => MESES_COMPLETOS[mIndex] ? MESES_COMPLETOS[mIndex].substring(0,3) : '').join(', ') + `/${selectedYear}`; } return `Nenhum mês selecionado/${selectedYear}`; }, [selectedMonths, selectedYear, allMonthsSelected]);
+  const areaTitleSegmentForFilteredCharts = useMemo(() => { if (selectedAreas.length === 1) return ` - Área: ${selectedAreas[0]}`; if (selectedAreas.length > 1) return ` - Áreas Selecionadas (${selectedAreas.length})`; return selectedAreas.length === 0 && availableAreas.length > 0 ? ' - Todas as Áreas Disponíveis' : ''; }, [selectedAreas, availableAreas]);
+
+  const fullyFilteredTitleParts = { periodTitleForOtherCharts: periodTitleForFilteredCharts, areaTitleSegmentForOtherCharts: areaTitleSegmentForFilteredCharts, dashboardTitleContext };
+  const pieChartsTitleContext = ` (${periodTitleForFilteredCharts})${areaTitleSegmentForFilteredCharts}${dashboardTitleContext}`;
+  const summaryCardsTitleContext = ` (${periodTitleForFilteredCharts})${areaTitleSegmentForFilteredCharts}${dashboardTitleContext}`;
+
+  const isLoadingPeriodAreaFilteredData = loadingAllWasteRecords && recordsFullyFiltered.length === 0 && allWasteRecords.length > 0;
+
+  // Define se os gráficos que dependem de filtros de período devem ser mostrados
+  const showPeriodFilteredVisualizations = (selectedMonths && selectedMonths.length > 0) || allMonthsSelected;
 
   return (
-    <div className="space-y-8">
-      {/* MODIFICADO: Cabeçalho com título e dropdown de cliente */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800 mb-4 sm:mb-0">Dashboards</h1>
-        
-        {/* Novo Dropdown Multi-Select de Cliente */}
-        {(!loadingAllowedClientes && userAllowedClientes && userAllowedClientes.length > 0) && (
-          <div className="relative w-full sm:w-auto sm:min-w-[250px]" ref={clienteDropdownRef}>
-            <button
-              type="button"
-              onClick={() => setIsClienteDropdownOpen(!isClienteDropdownOpen)}
-              className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-              aria-haspopup="listbox"
-              aria-expanded={isClienteDropdownOpen}
-            >
-              <span className="block truncate">{getClienteDisplayValue()}</span>
-              <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-                <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path fillRule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-              </span>
-            </button>
-
-            {isClienteDropdownOpen && (
-              <div className="absolute z-20 mt-1 w-full sm:w-72 bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
-                <label className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mr-2"
-                    checked={selectAllClientesToggle}
-                    onChange={handleSelectAllClientesToggleChange}
-                  />
-                  {userProfile?.role === 'master' ? "Todos Clientes Ativos" : "Todos Seus Clientes"}
-                </label>
-                {userAllowedClientes.map(cliente => (
-                  <label key={cliente.id} className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mr-2"
-                      value={cliente.id}
-                      checked={selectedClienteIds.includes(cliente.id)}
-                      onChange={() => handleClienteSelectionChange(cliente.id)}
-                      disabled={selectAllClientesToggle} // Desabilita individual se "todos" estiver marcado
-                    />
-                    {cliente.nome}
-                  </label>
-                ))}
-              </div>
-            )}
-          </div>
-        )}
-        {loadingAllowedClientes && <div className="text-sm text-gray-500 mt-1 sm:ml-4">Carregando clientes...</div>}
+    <div className="bg-gray-100 min-h-screen p-4 md:p-6"> {/* Fundo da página */}
+      {/* Barra de Título Principal */}
+      <div className="bg-slate-700 text-white py-3 px-6 rounded-md mb-6 shadow-lg">
+        <h1 className="text-2xl md:text-3xl font-bold text-center">DASHBOARD</h1>
       </div>
 
-      {/* DashboardFilters agora não lida mais com seleção de clientes */}
-      <DashboardFilters 
-        userProfile={userProfile} 
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 px-1">
+        {/* O título "Dashboards" que estava aqui foi movido para a barra principal */}
+        <div></div> {/* Espaço para alinhar o seletor de cliente à direita se necessário */}
+        <ClienteSelectorDropdown
+            userAllowedClientes={userAllowedClientes}
+            selectedClienteIds={selectedClienteIds}
+            onClienteSelectionChange={handleClienteSelectionChange}
+            selectAllClientesToggle={selectAllClientesToggle}
+            onSelectAllClientesToggleChange={handleSelectAllClientesToggleChange}
+            loadingAllowedClientes={loadingAllowedClientes}
+            userProfile={userProfile}
+        />
+      </div>
+
+      {/* Filtros */}
+      {/* O DashboardFilters já tem seu próprio título interno "Filtrar Período e Área" e estilo de card */}
+      <DashboardFilters
+        userProfile={userProfile}
         availableYears={availableYears || []}
-        selectedYear={selectedYear} 
-        onYearChange={setSelectedYear} 
-        selectedMonths={selectedMonths || []} 
-        onMonthToggle={handleMonthToggle} 
-        allMonthsSelected={allMonthsSelected} 
-        onSelectAllMonthsToggle={handleSelectAllMonthsToggle} 
-        availableAreas={availableAreas || []} 
-        selectedAreas={selectedAreas}                 
-        onSelectedAreasChange={handleSelectedAreasChange} 
-        // Removidas props de cliente: userAllowedClientes, selectedClienteIds, onClienteSelectionChange, selectAllToggle, onSelectAllToggleChange, loadingUserClientes
-      /> 
-      
-      {/* Seção de Gráficos (sem alterações na lógica, mas o contexto do título foi adaptado) */}
-      {loadingRecords && Array.isArray(selectedClienteIds) && selectedClienteIds.length > 0 ? ( <div className="text-center text-gray-600 p-8">A carregar dados dos gráficos...</div>
-      ) : !Array.isArray(selectedClienteIds) || selectedClienteIds.length === 0 ? ( <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Selecione pelo menos um cliente para visualizar os dados.</p></div>
-      ) : (filteredWasteRecords.length === 0 && allWasteRecords.length > 0) && (!selectedMonths || selectedMonths.length === 0) ? ( 
-        <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Selecione um ou mais meses para ver os gráficos de período.</p></div>
-      ) : (allWasteRecords.length === 0 && selectedClienteIds.length > 0) ? ( <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Não há dados de resíduos registados para a seleção atual.</p></div>
-      ) : (
-        <>
-          {/* ... (Gráficos JSX inalterados) ... */}
-          <div className="bg-white p-6 rounded-lg shadow">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              Volume Diário de Resíduos ({periodTitle})
-              {areaTitleSegment}
-              {dashboardTitleContext}
-            </h2>
-            {dailyVolumeData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={400}>
-                <BarChart data={dailyVolumeData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis label={{ value: 'Peso (kg)', angle: -90, position: 'insideLeft' }} />
-                  <Tooltip formatter={(value) => `${value.toFixed(2)} kg`} />
-                  <Legend />
-                  <Bar dataKey="volume" fill="#8884d8" name="Volume Total (kg)" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : <p className="text-center text-gray-500">Sem dados para o gráfico de volume diário neste período{selectedAreas.length > 0 ? ` e área(s) selecionada(s)` : ''}.</p>}
-          </div>
+        selectedYear={selectedYear}
+        onYearChange={setSelectedYear}
+        selectedMonths={selectedMonths || []}
+        onMonthToggle={handleMonthToggle}
+        allMonthsSelected={allMonthsSelected}
+        onSelectAllMonthsToggle={handleSelectAllMonthsToggle}
+        availableAreas={availableAreas || []}
+        selectedAreas={selectedAreas}
+        onSelectedAreasChange={handleSelectedAreasChange}
+      />
 
-          <div className="bg-white p-6 rounded-lg shadow mt-8">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">
-              Meta Lixo Zero: Percentual de Rejeito ({periodTitle})
-              {areaTitleSegment}
-              {dashboardTitleContext}
-            </h2>
-            {lixoZeroData.length > 0 ? (
-              <ResponsiveContainer width="100%" height={400}>
-                <LineChart data={lixoZeroData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis label={{ value: '% Rejeito', angle: -90, position: 'insideLeft' }} domain={[0, 'dataMax + 10']} allowDataOverflow />
-                  <Tooltip formatter={(value, name) => {
-                      if (name === '% Rejeito') return [`${value.toFixed(2)}%`, name];
-                      if (name === 'Média % Rejeito') return [`${value.toFixed(2)}%`, name];
-                      return [value, name];
-                  }} />
-                  <Legend />
-                  <Line type="monotone" dataKey="percentualRejeito" stroke="#FF8042" name="% Rejeito" activeDot={{ r: 6 }} />
-                  <Line type="monotone" dataKey="mediaPercentualRejeito" stroke="#82ca9d" name="Média % Rejeito" strokeDasharray="5 5" dot={false} />
-                  <ReferenceLine y={10} label={{ value: "Meta 10%", position: "insideTopRight", fill: "#FF8042", dy: -5 }} stroke="#FF8042" strokeDasharray="3 3" />
-                </LineChart>
-              </ResponsiveContainer>
-            ) : <p className="text-center text-gray-500">Sem dados para o gráfico Meta Lixo Zero neste período{selectedAreas.length > 0 ? ` e área(s) selecionada(s)` : ''}.</p>}
-          </div>
+      {/* Conteúdo Principal dos Gráficos e Indicadores */}
+      <div className="mt-8 space-y-8">
+        {loadingAllWasteRecords && Array.isArray(selectedClienteIds) && selectedClienteIds.length > 0 && allWasteRecords.length === 0 ? (
+          <div className="text-center text-gray-600 p-8">A carregar dados...</div>
+        ) : !Array.isArray(selectedClienteIds) || selectedClienteIds.length === 0 ? (
+          <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Selecione pelo menos um cliente para visualizar os dados.</p></div>
+        ) : (allWasteRecords.length === 0 && selectedClienteIds.length > 0 && !loadingAllWasteRecords) ? (
+          <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Não há dados de resíduos registados para a seleção atual de clientes.</p></div>
+        ) : (
+          <>
+            {/* Seção: VISÃO GERAL */}
+            <section>
+              <SectionTitle title="VISÃO GERAL" />
+              {showPeriodFilteredVisualizations ? (
+                <SummaryCards
+                  summaryData={summaryData}
+                  isLoading={isLoadingPeriodAreaFilteredData}
+                  // titleContext={summaryCardsTitleContext} // O título já está na SectionTitle
+                />
+              ) : (
+                <div className="bg-white p-6 rounded-b-lg shadow text-center"><p className="text-gray-600">Selecione um ou mais meses para visualizar os indicadores de Visão Geral.</p></div>
+              )}
+            </section>
 
-          <div className="bg-white p-6 rounded-lg shadow mt-8">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">Composição Geral dos Resíduos (Total: {totalWasteWeight.toFixed(2)} kg){dashboardTitleContext}</h2>
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-6">
-              {wasteTypeData.length > 0 ? (
-                <div className="bg-gray-50 p-4 rounded-lg shadow h-[450px]">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">Por Tipo de Resíduo (Peso)</h3>
-                  <ResponsiveContainer width="100%" height="90%">
-                    <PieChart>
-                      <Pie data={wasteTypeData} cx="50%" cy="50%" labelLine={false} label={({ name, value, percent }) => `${name}: ${value.toFixed(2)} kg (${(percent * 100).toFixed(0)}%)`} outerRadius={120} fill="#8884d8" dataKey="value">
-                        {wasteTypeData.map((entry, index) => (<Cell key={`cell-type-${index}`} fill={COLORS[index % COLORS.length]} />))}
-                      </Pie>
-                      <Tooltip formatter={(value, name) => [`${value.toFixed(2)} kg`, name]}/>
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
+            {/* Seção: GERAÇÃO POR MÊS */}
+            <section>
+              <SectionTitle title="GERAÇÃO POR MÊS" />
+              {/* MonthlyComparison não tem título interno, então o SectionTitle é suficiente */}
+              <MonthlyComparison
+                chartData={monthlyComparisonChartData}
+                yearsToCompare={actualYearsInComparisonData}
+                // titleContext={dashboardTitleContext} // Título já está na SectionTitle
+                isLoading={loadingAllWasteRecords && monthlyComparisonChartData.length === 0 && allWasteRecords.length === 0}
+              />
+            </section>
+
+            {/* Seção: COMPOSIÇÃO DA GERAÇÃO */}
+            <section>
+              <SectionTitle title="COMPOSIÇÃO DA GERAÇÃO" />
+              {showPeriodFilteredVisualizations ? (
+                (recordsFullyFiltered.length > 0 || isLoadingPeriodAreaFilteredData) ? (
+                  <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <WasteTypePieChart
+                      data={wasteTypePieData}
+                      isLoading={isLoadingPeriodAreaFilteredData}
+                      // titleContext={pieChartsTitleContext} // Títulos internos dos componentes de pizza podem ser ajustados ou removidos
+                    />
+                    <AreaPieChart
+                      data={areaPieData}
+                      isLoading={isLoadingPeriodAreaFilteredData}
+                      // titleContext={pieChartsTitleContext}
+                    />
+                  </div>
+                ) : (
+                  <div className="bg-white p-6 rounded-b-lg shadow text-center"><p className="text-gray-500 py-4">Sem dados de composição para os filtros selecionados.</p></div>
+                )
+              ) : (
+                <div className="bg-white p-6 rounded-b-lg shadow text-center"><p className="text-gray-500">Selecione um ou mais meses para visualizar os gráficos de composição.</p></div>
+              )}
+            </section>
+
+            {/* Seção: COMPOSIÇÃO DA DESTINAÇÃO */}
+            <section>
+              <SectionTitle title="COMPOSIÇÃO DA DESTINAÇÃO" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0"> {/* mt-0 para colar na SectionTitle */}
+                {showPeriodFilteredVisualizations ? (
+                  <DesvioDeAterro
+                    data={desvioDeAterroData}
+                    titleParts={fullyFilteredTitleParts} // Correção: Passando titleParts
+                    isLoading={isLoadingPeriodAreaFilteredData}
+                    noDataMessageDetails={(recordsFullyFiltered.length === 0 && showPeriodFilteredVisualizations && !loadingAllWasteRecords) ? " Nenhum registro encontrado para os filtros aplicados." : ""}
+                  />
+                ) : (
+                  <div className="bg-white p-6 rounded-lg shadow text-center lg:col-span-1">
+                    <p className="text-gray-600">Selecione um ou mais meses para visualizar o gráfico "Desvio de Aterro".</p>
+                  </div>
+                )}
+                {/* Placeholder para o segundo gráfico */}
+                <div className="bg-white p-6 rounded-lg shadow h-full flex items-center justify-center min-h-[488px]"> {/* min-h para igualar altura do gráfico de Desvio */}
+                  <p className="text-gray-500 text-xl">Em Desenvolvimento</p>
                 </div>
-              ) : <p className="text-center text-gray-500 lg:col-span-1">Sem dados para o gráfico de tipo de resíduo.</p>}
-
-              {areaData.length > 0 ? (
-                <div className="bg-gray-50 p-4 rounded-lg shadow h-[450px]">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-3 text-center">Por Área do Cliente (Peso)</h3>
-                  <ResponsiveContainer width="100%" height="90%">
-                    <PieChart>
-                      <Pie data={areaData} cx="50%" cy="50%" labelLine={false} label={({ name, value, percent }) => `${name}: ${value.toFixed(2)} kg (${(percent * 100).toFixed(0)}%)`} outerRadius={120} fill="#82ca9d" dataKey="value">
-                        {areaData.map((entry, index) => (<Cell key={`cell-area-${index}`} fill={COLORS[index % COLORS.length]} />))}
-                      </Pie>
-                      <Tooltip formatter={(value, name) => [`${value.toFixed(2)} kg`, name]}/>
-                      <Legend />
-                    </PieChart>
-                  </ResponsiveContainer>
-                </div>
-              ) : <p className="text-center text-gray-500 lg:col-span-1">Sem dados para o gráfico de área do cliente.</p>}
-            </div>
-          </div>
-        </>
-      )}
+              </div>
+            </section>
+          </>
+        )}
+      </div>
     </div>
   );
 }
