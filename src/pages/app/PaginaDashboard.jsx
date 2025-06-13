@@ -1,18 +1,19 @@
-// src/pages/PaginaDashboard.jsx
+// src/pages/app/PaginaDashboard.jsx
 import React, { useContext, useEffect, useState, useMemo } from 'react';
 import AuthContext from '../../context/AuthContext';
 import {
     Tooltip, Legend, ResponsiveContainer,
     XAxis, YAxis, CartesianGrid
 } from 'recharts';
-import DashboardFilters from '../components/DashboardFilters';
-import ClienteSelectorDropdown from '../components/ClienteSelectorDropdown';
+// Caminhos de importação corrigidos
+import DashboardFilters from '../../components/app/DashboardFilters';
+import ClienteSelectorDropdown from '../../components/app/ClienteSelectorDropdown';
 import useWasteData from '../../hooks/useWasteData';
-import MonthlyComparison from '../components/charts/MonthlyComparison';
-import DesvioDeAterro from '../components/charts/DesvioDeAterro';
-import WasteTypePieChart from '../components/charts/WasteTypePieChart';
-import AreaPieChart from '../components/charts/AreaPieChart';
-import SummaryCards from '../components/charts/SummaryCards';
+import MonthlyComparison from '../../components/app/charts/MonthlyComparison';
+import DesvioDeAterro from '../../components/app/charts/DesvioDeAterro';
+import WasteTypePieChart from '../../components/app/charts/WasteTypePieChart';
+import AreaPieChart from '../../components/app/charts/AreaPieChart';
+import SummaryCards from '../../components/app/charts/SummaryCards';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#3D9140', '#FF5733', '#8333FF'];
 const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -101,9 +102,6 @@ const processDataForSummaryCards = (records) => {
   let totalCompostavelKg = 0;
   let totalReciclavelKg = 0;
   let totalNaoReciclavelKg = 0;
-  const CLASSIFICATION_COMPOSTAVEL = 'Compostável';
-  const CLASSIFICATION_RECICLAVEL = 'Reciclável';
-  const CLASSIFICATION_NAO_RECICLAVEL = 'Não Reciclável';
 
   records.forEach(record => {
     const weight = parseFloat(record.peso || 0);
@@ -129,15 +127,13 @@ const processDataForSummaryCards = (records) => {
   };
 };
 
-// Helper para formatar números
 const formatNumberBR = (number, decimalPlaces = 2) => {
   if (typeof number !== 'number' || isNaN(number)) return '0,00';
   return number.toLocaleString('pt-BR', { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces });
 };
 
-// Componente auxiliar para títulos de seção
 const SectionTitle = ({ title }) => (
-  <div className="bg-green-500 text-white py-2 px-4 rounded-t-lg text-center mb-0"> {/* mb-0 para colar no card abaixo */}
+  <div className="bg-green-500 text-white py-2 px-4 rounded-t-lg text-center mb-0">
     <h2 className="text-xl font-semibold">{title}</h2>
   </div>
 );
@@ -264,20 +260,15 @@ export default function PaginaDashboard() {
   const summaryCardsTitleContext = ` (${periodTitleForFilteredCharts})${areaTitleSegmentForFilteredCharts}${dashboardTitleContext}`;
 
   const isLoadingPeriodAreaFilteredData = loadingAllWasteRecords && recordsFullyFiltered.length === 0 && allWasteRecords.length > 0;
-
-  // Define se os gráficos que dependem de filtros de período devem ser mostrados
   const showPeriodFilteredVisualizations = (selectedMonths && selectedMonths.length > 0) || allMonthsSelected;
 
   return (
-    <div className="bg-gray-100 min-h-screen p-4 md:p-6"> {/* Fundo da página */}
-      {/* Barra de Título Principal */}
+    <div className="bg-gray-100 min-h-screen p-4 md:p-6">
       <div className="bg-slate-700 text-white py-3 px-6 rounded-md mb-6 shadow-lg">
         <h1 className="text-2xl md:text-3xl font-bold text-center">DASHBOARD</h1>
       </div>
-
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 px-1">
-        {/* O título "Dashboards" que estava aqui foi movido para a barra principal */}
-        <div></div> {/* Espaço para alinhar o seletor de cliente à direita se necessário */}
+        <div></div>
         <ClienteSelectorDropdown
             userAllowedClientes={userAllowedClientes}
             selectedClienteIds={selectedClienteIds}
@@ -288,9 +279,6 @@ export default function PaginaDashboard() {
             userProfile={userProfile}
         />
       </div>
-
-      {/* Filtros */}
-      {/* O DashboardFilters já tem seu próprio título interno "Filtrar Período e Área" e estilo de card */}
       <DashboardFilters
         userProfile={userProfile}
         availableYears={availableYears || []}
@@ -304,8 +292,6 @@ export default function PaginaDashboard() {
         selectedAreas={selectedAreas}
         onSelectedAreasChange={handleSelectedAreasChange}
       />
-
-      {/* Conteúdo Principal dos Gráficos e Indicadores */}
       <div className="mt-8 space-y-8">
         {loadingAllWasteRecords && Array.isArray(selectedClienteIds) && selectedClienteIds.length > 0 && allWasteRecords.length === 0 ? (
           <div className="text-center text-gray-600 p-8">A carregar dados...</div>
@@ -315,33 +301,25 @@ export default function PaginaDashboard() {
           <div className="bg-white p-6 rounded-lg shadow text-center"><p className="text-gray-600">Não há dados de resíduos registados para a seleção atual de clientes.</p></div>
         ) : (
           <>
-            {/* Seção: VISÃO GERAL */}
             <section>
               <SectionTitle title="VISÃO GERAL" />
               {showPeriodFilteredVisualizations ? (
                 <SummaryCards
                   summaryData={summaryData}
                   isLoading={isLoadingPeriodAreaFilteredData}
-                  // titleContext={summaryCardsTitleContext} // O título já está na SectionTitle
                 />
               ) : (
                 <div className="bg-white p-6 rounded-b-lg shadow text-center"><p className="text-gray-600">Selecione um ou mais meses para visualizar os indicadores de Visão Geral.</p></div>
               )}
             </section>
-
-            {/* Seção: GERAÇÃO POR MÊS */}
             <section>
               <SectionTitle title="GERAÇÃO POR MÊS" />
-              {/* MonthlyComparison não tem título interno, então o SectionTitle é suficiente */}
               <MonthlyComparison
                 chartData={monthlyComparisonChartData}
                 yearsToCompare={actualYearsInComparisonData}
-                // titleContext={dashboardTitleContext} // Título já está na SectionTitle
                 isLoading={loadingAllWasteRecords && monthlyComparisonChartData.length === 0 && allWasteRecords.length === 0}
               />
             </section>
-
-            {/* Seção: COMPOSIÇÃO DA GERAÇÃO */}
             <section>
               <SectionTitle title="COMPOSIÇÃO DA GERAÇÃO" />
               {showPeriodFilteredVisualizations ? (
@@ -350,12 +328,10 @@ export default function PaginaDashboard() {
                     <WasteTypePieChart
                       data={wasteTypePieData}
                       isLoading={isLoadingPeriodAreaFilteredData}
-                      // titleContext={pieChartsTitleContext} // Títulos internos dos componentes de pizza podem ser ajustados ou removidos
                     />
                     <AreaPieChart
                       data={areaPieData}
                       isLoading={isLoadingPeriodAreaFilteredData}
-                      // titleContext={pieChartsTitleContext}
                     />
                   </div>
                 ) : (
@@ -365,15 +341,13 @@ export default function PaginaDashboard() {
                 <div className="bg-white p-6 rounded-b-lg shadow text-center"><p className="text-gray-500">Selecione um ou mais meses para visualizar os gráficos de composição.</p></div>
               )}
             </section>
-
-            {/* Seção: COMPOSIÇÃO DA DESTINAÇÃO */}
             <section>
               <SectionTitle title="COMPOSIÇÃO DA DESTINAÇÃO" />
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0"> {/* mt-0 para colar na SectionTitle */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
                 {showPeriodFilteredVisualizations ? (
                   <DesvioDeAterro
                     data={desvioDeAterroData}
-                    titleParts={fullyFilteredTitleParts} // Correção: Passando titleParts
+                    titleParts={fullyFilteredTitleParts}
                     isLoading={isLoadingPeriodAreaFilteredData}
                     noDataMessageDetails={(recordsFullyFiltered.length === 0 && showPeriodFilteredVisualizations && !loadingAllWasteRecords) ? " Nenhum registro encontrado para os filtros aplicados." : ""}
                   />
@@ -382,8 +356,7 @@ export default function PaginaDashboard() {
                     <p className="text-gray-600">Selecione um ou mais meses para visualizar o gráfico "Desvio de Aterro".</p>
                   </div>
                 )}
-                {/* Placeholder para o segundo gráfico */}
-                <div className="bg-white p-6 rounded-lg shadow h-full flex items-center justify-center min-h-[488px]"> {/* min-h para igualar altura do gráfico de Desvio */}
+                <div className="bg-white p-6 rounded-lg shadow h-full flex items-center justify-center min-h-[488px]">
                   <p className="text-gray-500 text-xl">Em Desenvolvimento</p>
                 </div>
               </div>
