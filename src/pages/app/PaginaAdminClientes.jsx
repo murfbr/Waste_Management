@@ -4,7 +4,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
 import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc, serverTimestamp, orderBy, writeBatch } from 'firebase/firestore';
 import MessageBox from '../../components/app/MessageBox';
-import ClienteForm from '../components/ClienteForm'; 
+import ClienteForm from '../../components/app/ClienteForm'; 
 import Papa from 'papaparse';
 
 // Categorias iniciais - pode ser movido para um arquivo de constantes se usado em mais lugares
