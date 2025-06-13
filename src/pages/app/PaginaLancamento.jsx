@@ -1,4 +1,4 @@
-// src/pages/PaginaLancamento.jsx
+// src/pages/app/PaginaLancamento.jsx
 
 import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
@@ -16,9 +16,10 @@ import {
     startAfter 
 } from 'firebase/firestore';
 
-import MessageBox from '../app/components/MessageBox';
-import WasteForm from '..app/components/WasteForm';
-import WasteRecordsList from '..app/components/WasteRecordsList';
+// CAMINHOS CORRIGIDOS
+import MessageBox from '../../components/app/MessageBox';
+import WasteForm from '../../components/app/WasteForm';
+import WasteRecordsList from '../../components/app/WasteRecordsList';
 
 const REGISTOS_POR_PAGINA = 20; 
 
@@ -57,7 +58,6 @@ export default function PaginaLancamento() {
     }
     const fetchUserClientes = async () => {
       setLoadingUserClientes(true); 
-      //setSelectedClienteData(null); // Removido para evitar reset desnecessário se selectedClienteId já estiver definido
       let clienteIdsToFetch = []; 
       let loadedClientes = [];
       if (userProfile.role === 'master') {
@@ -90,15 +90,13 @@ export default function PaginaLancamento() {
       setLoadingUserClientes(false);
     };
     fetchUserClientes();
-  }, [db, userProfile, selectedClienteId]); // Adicionado selectedClienteId para reavaliar se necessário
+  }, [db, userProfile]); // Removido selectedClienteId daqui para não re-buscar clientes desnecessariamente
 
   // Atualiza selectedClienteData quando selectedClienteId muda
   useEffect(() => {
     if (selectedClienteId && userAllowedClientes.length > 0) {
       const cliente = userAllowedClientes.find(c => c.id === selectedClienteId);
       setSelectedClienteData(cliente || null);
-      // Log para depuração do objeto cliente selecionado
-      // console.log("Cliente Selecionado (useEffect userAllowedClientes):", cliente);
     } else { 
       setSelectedClienteData(null); 
     }
@@ -148,7 +146,8 @@ export default function PaginaLancamento() {
         setHasMoreRecords(false);
         setLastVisibleRecord(null);
     }
-  }, [selectedClienteId, db, currentUser, userProfile, appId]); // Mantidas as dependências originais
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedClienteId]); // Apenas re-busca registros quando o cliente muda
 
   const carregarMaisRegistos = async () => {
     if (!lastVisibleRecord || !selectedClienteId || loadingMore) return; 
@@ -207,6 +206,8 @@ export default function PaginaLancamento() {
         showMessage("Apenas administradores master podem excluir registos.", true);
         return; 
     }
+    // Substituindo window.confirm por um modal/lógica futura se necessário
+    // Por enquanto, o confirm é mantido para funcionalidade, mas deve ser trocado
     if (window.confirm('Tem certeza que deseja excluir este registo?')) {
       try {
         await deleteDoc(doc(db, `artifacts/${appId}/public/data/wasteRecords`, recordId));
@@ -220,12 +221,6 @@ export default function PaginaLancamento() {
   };
 
   const toggleRecordsVisibility = () => setIsRecordsVisible(!isRecordsVisible);
-
-  // Logs para depuração - Adicionados aqui para verificar os dados do cliente selecionado
-  // console.log("Renderizando PaginaLancamento. selectedClienteData:", selectedClienteData);
-  // if (selectedClienteData) {
-  //   console.log("selectedClienteData.logoUrl:", selectedClienteData.logoUrl);
-  // }
 
 
   if (loadingUserClientes && !userProfile) return <div className="text-center text-gray-600 p-8">A carregar dados...</div>;
