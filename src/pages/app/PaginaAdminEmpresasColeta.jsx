@@ -1,7 +1,7 @@
 // src/pages/PaginaAdminEmpresasColeta.jsx
 
 import React, { useState, useEffect, useContext } from 'react';
-import AuthContext from '../context/AuthContext';
+import AuthContext from '../../context/AuthContext';
 import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import MessageBox from '../components/MessageBox';
 import EmpresaColetaForm from '../components/EmpresaColetaForm';

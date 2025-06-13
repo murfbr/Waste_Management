@@ -1,7 +1,7 @@
 // src/components/WasteRecordsList.jsx
 
 import React from 'react';
-import { exportToCsv } from '../utils/csvExport';
+import { exportToCsv } from '../../utils/csvExport';
 
 /**
  * Componente para exibir a lista de registros de resíduos.

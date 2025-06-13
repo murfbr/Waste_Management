@@ -1,7 +1,7 @@
 // src/components/Sidebar.jsx
 import React, { useContext } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import AuthContext from '../context/AuthContext'; // Certifique-se de que este caminho está correto
+import AuthContext from '../../context/AuthContext'; // Certifique-se de que este caminho está correto
 import { signOut } from 'firebase/auth';
 
 const CloseIcon = () => (

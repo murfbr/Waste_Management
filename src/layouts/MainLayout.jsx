@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Outlet } from 'react-router-dom';
-import Sidebar from '../components/Sidebar'; // O seu Sidebar.jsx responsivo
+import Sidebar from '../components/app/Sidebar'; // O seu Sidebar.jsx responsivo
 
 // Ícone Hamburger (pode usar react-icons ou um SVG mais elaborado)
 const HamburgerIcon = () => (

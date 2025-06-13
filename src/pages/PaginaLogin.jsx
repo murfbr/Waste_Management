@@ -4,7 +4,7 @@ import React, { useState, useContext } from 'react';
 import { useNavigate } from 'react-router-dom'; // Importa useNavigate para redirecionamento
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import AuthContext from '../context/AuthContext';
-import MessageBox from './MessageBox';
+import MessageBox from '../components/app/MessageBox';
 
 /**
  * Componente para a tela de login do aplicativo.

@@ -1,13 +1,13 @@
 // src/pages/PaginaDashboard.jsx
 import React, { useContext, useEffect, useState, useMemo } from 'react';
-import AuthContext from '../context/AuthContext';
+import AuthContext from '../../context/AuthContext';
 import {
     Tooltip, Legend, ResponsiveContainer,
     XAxis, YAxis, CartesianGrid
 } from 'recharts';
 import DashboardFilters from '../components/DashboardFilters';
 import ClienteSelectorDropdown from '../components/ClienteSelectorDropdown';
-import useWasteData from '../hooks/useWasteData';
+import useWasteData from '../../hooks/useWasteData';
 import MonthlyComparison from '../components/charts/MonthlyComparison';
 import DesvioDeAterro from '../components/charts/DesvioDeAterro';
 import WasteTypePieChart from '../components/charts/WasteTypePieChart';
