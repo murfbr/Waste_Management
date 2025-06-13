@@ -16,9 +16,9 @@ import {
     startAfter 
 } from 'firebase/firestore';
 
-import MessageBox from '../components/MessageBox';
-import WasteForm from '../components/WasteForm';
-import WasteRecordsList from '../components/WasteRecordsList';
+import MessageBox from '../app/components/MessageBox';
+import WasteForm from '..app/components/WasteForm';
+import WasteRecordsList from '..app/components/WasteRecordsList';
 
 const REGISTOS_POR_PAGINA = 20; 
 
