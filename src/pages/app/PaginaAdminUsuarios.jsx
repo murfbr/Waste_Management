@@ -13,7 +13,7 @@ import {
   serverTimestamp 
 } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import MessageBox from '../components/MessageBox';
+import MessageBox from '../../components/app/MessageBox';
 
 const ROLES_DISPONIVEIS = ["master", "gerente", "operacional"];
 
