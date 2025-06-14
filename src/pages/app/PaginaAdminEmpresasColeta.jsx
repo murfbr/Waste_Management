@@ -4,7 +4,7 @@ import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
 import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc, serverTimestamp, orderBy } from 'firebase/firestore';
 import MessageBox from '../../components/app/MessageBox';
-import EmpresaColetaForm from '../components/EmpresaColetaForm';
+import EmpresaColetaForm from '../../components/app/EmpresaColetaForm';
 
 export default function PaginaAdminEmpresasColeta() {
   const { db, userProfile, currentUser } = useContext(AuthContext);
