@@ -1,4 +1,4 @@
-// Crie este novo arquivo em: src/pages/site/PaginaContato.jsx
+// src/pages/site/PaginaContato.jsx
 
 import React from 'react';
 
@@ -9,45 +9,58 @@ export default function PaginaContato() {
     alert('Funcionalidade de envio em desenvolvimento.');
   };
 
+  // Estilos baseados no ClienteForm.jsx para consistência
+  const labelStyle = "block text-sm font-medium text-gray-700";
+  const inputStyle = "mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
+
   return (
-    <div className="bg-white py-16 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-lg mx-auto">
-        <h2 className="text-2xl font-extrabold text-center text-gray-900 sm:text-3xl">Entre em Contato</h2>
-        <p className="mt-4 text-center text-lg text-gray-500">
-          Tem alguma pergunta ou gostaria de solicitar uma demonstração? Preencha o formulário abaixo e nossa equipe retornará em breve.
-        </p>
+    <div className="bg-gray-100 py-12 sm:py-16">
+      <div className="max-w-2xl mx-auto px-4">
 
-        <form onSubmit={handleSubmit} className="mt-9 grid grid-cols-1 gap-y-6 sm:grid-cols-2 sm:gap-x-8">
-          <div className="sm:col-span-2">
-            <label htmlFor="full-name" className="block text-sm font-medium text-gray-700">Nome Completo</label>
-            <div className="mt-1">
-              <input type="text" name="full-name" id="full-name" autoComplete="name" required className="py-3 px-4 block w-full shadow-sm text-gray-900 focus:ring-green-500 focus:border-green-500 border-gray-300 rounded-md" />
-            </div>
+        {/* Formulário principal com estilo de card */}
+        <form onSubmit={handleSubmit} className="bg-white p-6 sm:p-8 rounded-xl shadow-lg space-y-6">
+          <div className="text-center">
+            <h2 className="text-2xl font-semibold text-gray-800">Fale Conosco</h2>
+            <p className="mt-2 text-base text-gray-600">
+              Gostaria de solicitar uma demonstração ou tirar uma dúvida? Preencha o formulário e nossa equipe retornará em breve.
+            </p>
           </div>
+
+          {/* Fieldset para agrupar os campos de contato */}
+          <fieldset className="border border-gray-300 p-4 rounded-lg">
+            <legend className="text-lg font-semibold text-indigo-700 px-2">Suas Informações</legend>
+            <div className="space-y-4 pt-3">
+              
+              {/* Campo Nome Completo */}
+              <div>
+                <label htmlFor="full-name" className={labelStyle}>Nome Completo*</label>
+                <input type="text" name="full-name" id="full-name" autoComplete="name" required className={inputStyle} placeholder="Seu nome completo" />
+              </div>
+              
+              {/* Campo Email */}
+              <div>
+                <label htmlFor="email" className={labelStyle}>Email*</label>
+                <input id="email" name="email" type="email" autoComplete="email" required className={inputStyle} placeholder="seu.email@exemplo.com" />
+              </div>
+
+              {/* Campo Empresa */}
+              <div>
+                <label htmlFor="company" className={labelStyle}>Empresa</label>
+                <input type="text" name="company" id="company" autoComplete="organization" className={inputStyle} placeholder="Nome da sua empresa" />
+              </div>
+
+              {/* Campo Mensagem */}
+              <div>
+                <label htmlFor="message" className={labelStyle}>Mensagem*</label>
+                <textarea id="message" name="message" rows={4} required className={inputStyle} placeholder="Como podemos ajudar?"></textarea>
+              </div>
+
+            </div>
+          </fieldset>
           
-          <div className="sm:col-span-2">
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700">Email</label>
-            <div className="mt-1">
-              <input id="email" name="email" type="email" autoComplete="email" required className="py-3 px-4 block w-full shadow-sm text-gray-900 focus:ring-green-500 focus:border-green-500 border-gray-300 rounded-md" />
-            </div>
-          </div>
-
-          <div className="sm:col-span-2">
-            <label htmlFor="company" className="block text-sm font-medium text-gray-700">Empresa</label>
-            <div className="mt-1">
-              <input type="text" name="company" id="company" autoComplete="organization" required className="py-3 px-4 block w-full shadow-sm text-gray-900 focus:ring-green-500 focus:border-green-500 border-gray-300 rounded-md" />
-            </div>
-          </div>
-
-          <div className="sm:col-span-2">
-            <label htmlFor="message" className="block text-sm font-medium text-gray-700">Mensagem</label>
-            <div className="mt-1">
-              <textarea id="message" name="message" rows={4} required className="py-3 px-4 block w-full shadow-sm text-gray-900 focus:ring-green-500 focus:border-green-500 border border-gray-300 rounded-md"></textarea>
-            </div>
-          </div>
-          
-          <div className="sm:col-span-2">
-            <button type="submit" className="w-full inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-medium text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">
+          {/* Botão de Envio */}
+          <div className="flex justify-end pt-2">
+            <button type="submit" className="px-6 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
               Enviar Mensagem
             </button>
           </div>

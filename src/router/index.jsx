@@ -13,9 +13,9 @@ import PublicLayout from '../layouts/PublicLayout';
 // Páginas de transição e site (carregadas normalmente)
 import PaginaLogin from '../pages/PaginaLogin';
 import HomePage from '../pages/site/HomePage';
-import PaginaProduto from '../pages/site/PaginaProduto'; // Importação da nova página
-import PaginaSobre from '../pages/site/PaginaSobre';     // Importação da nova página
-import PaginaContato from '../pages/site/PaginaContato'; // Importação da nova página
+import PaginaProduto from '../pages/site/PaginaProduto';
+import PaginaSobre from '../pages/site/PaginaSobre';
+import PaginaContato from '../pages/site/PaginaContato';
 import PaginaNotFound from '../pages/PaginaNotFound';
 import PaginaAcessoNegado from '../pages/PaginaAcessoNegado';
 
@@ -54,10 +54,11 @@ export default function AppRoutes() {
           <Route path="/produto" element={<PaginaProduto />} />
           <Route path="/sobre" element={<PaginaSobre />} />
           <Route path="/contato" element={<PaginaContato />} />
+          {/* Rota de Login agora está dentro do PublicLayout */}
+          <Route path="/login" element={<PaginaLogin />} />
         </Route>
 
-        {/* ROTAS DE TRANSIÇÃO (sem layout principal) */}
-        <Route path="/login" element={<PaginaLogin />} />
+        {/* ROTAS DE TRANSIÇÃO (sem layout principal, como Acesso Negado) */}
         <Route path="/acesso-negado" element={<PaginaAcessoNegado />} />
 
         {/* GRUPO DE ROTAS PRIVADAS (APLICAÇÃO) */}
@@ -72,6 +73,7 @@ export default function AppRoutes() {
           </Route>
         </Route>
 
+        {/* ROTA NOT FOUND (pega tudo o que não foi combinado) */}
         <Route path="*" element={<PaginaNotFound />} />
       </Routes>
     </Suspense>
