@@ -1,8 +1,8 @@
 // src/components/DashboardFilters.jsx
 import React from 'react'; // Removido useState, useEffect, useRef
-import YearSelector from '../filters/YearSelector';
-import MonthSelector from '../filters/MonthSelector';
-import AreaSelector from '../filters/AreaSelector';
+import YearSelector from '../app/filters/YearSelector';
+import MonthSelector from '../app/filters/MonthSelector';
+import AreaSelector from '../app/filters/AreaSelector';
 
 export default function DashboardFilters({
   userProfile, // Pode ser removido se não for usado para alguma lógica de permissão de filtro aqui
