@@ -12,49 +12,46 @@ const HamburgerIcon = () => (
 );
 
 export default function MainLayout() {
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  // Estado para controlar a visibilidade da sidebar no mobile
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  const toggleMobileSidebar = () => {
-    setIsMobileSidebarOpen(!isMobileSidebarOpen);
+  const toggleSidebar = () => {
+    setIsSidebarOpen(!isSidebarOpen);
   };
 
   return (
-    <div className="relative min-h-screen bg-gray-100">
+    // Container principal que organiza o layout com Flexbox
+    <div className="relative flex h-screen bg-gray-100 overflow-hidden">
+      
       {/* Sidebar */}
       <Sidebar 
-        isOpenOnMobile={isMobileSidebarOpen} 
-        toggleMobileSidebar={toggleMobileSidebar} 
+        isOpen={isSidebarOpen} // Passando o estado de visibilidade
+        toggleSidebar={toggleSidebar} // Passando a função para fechar/abrir
       />
 
-      {/* Conteúdo Principal - com margem para compensar o sidebar fixo */}
-      <div className="flex flex-col min-h-screen md:ml-64">
-        {/* Header da Área de Conteúdo (onde o botão hamburger pode ficar) */}
-        <header className="bg-white shadow-md md:hidden"> 
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center justify-between h-16">
-              <div className="flex items-center">
-                <button
-                  onClick={toggleMobileSidebar}
-                  className="p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-indigo-500"
-                  aria-expanded={isMobileSidebarOpen}
-                  aria-controls="mobile-sidebar"
-                  aria-label="Abrir menu principal"
-                >
-                  <HamburgerIcon />
-                </button>
-              </div>
+      {/* Container do Conteúdo Principal (o que fica à direita da sidebar) */}
+      <div className="flex-1 flex flex-col w-full">
+        
+        {/* Header da Área de Conteúdo (visível apenas no mobile para abrir a sidebar) */}
+        <header className="bg-white shadow-md md:hidden flex-shrink-0"> 
+          <div className="flex items-center justify-between h-16 px-4">
+              <button
+                onClick={toggleSidebar}
+                className="p-2 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 focus:outline-none"
+                aria-label="Abrir menu principal"
+              >
+                <HamburgerIcon />
+              </button>
               <div className="text-xl font-semibold text-gray-700">
-                WasteCtrl
+                CtrlWaste
               </div>
-              <div className="w-10"> {/* Espaçador */}
-              </div>
-            </div>
+              <div className="w-8"></div> {/* Espaçador para centralizar o título */}
           </div>
         </header>
 
         {/* Área de Conteúdo Principal com scroll interno */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 overflow-y-auto">
-          <div className="max-w-7xl mx-auto">
+        <main className="flex-1 overflow-y-auto">
+          <div className="container mx-auto px-4 sm:px-6 py-8">
             <Outlet />
           </div>
         </main>
