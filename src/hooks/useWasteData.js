@@ -1,6 +1,5 @@
 // src/hooks/useWasteData.js
 import { useState, useEffect, useContext } from 'react';
-// Revertendo para onSnapshot para manter os dados atualizados em tempo real, que é o comportamento original.
 import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
 import AuthContext from '../context/AuthContext';
 
