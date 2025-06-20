@@ -1,10 +1,17 @@
 // src/hooks/useWasteData.js
 import { useState, useEffect, useContext } from 'react';
+// Revertendo para onSnapshot para manter os dados atualizados em tempo real, que é o comportamento original.
 import { collection, onSnapshot, query, where, orderBy } from 'firebase/firestore';
-import AuthContext from '../context/AuthContext'; // Para pegar db e appId
+import AuthContext from '../context/AuthContext';
 
+/**
+ * Hook robusto para buscar registros de resíduos.
+ * Busca todos os registros dos clientes selecionados e os mantém atualizados.
+ * @param {string[]} selectedClienteIds - Array de IDs dos clientes selecionados.
+ * @returns {{allWasteRecords: object[], loadingRecords: boolean}}
+ */
 export default function useWasteData(selectedClienteIds) {
-  const { db, appId, currentUser } = useContext(AuthContext); // Pegando db e appId do contexto
+  const { db, appId, currentUser } = useContext(AuthContext);
 
   const [allWasteRecords, setAllWasteRecords] = useState([]);
   const [loadingRecords, setLoadingRecords] = useState(true);
@@ -19,10 +26,10 @@ export default function useWasteData(selectedClienteIds) {
     }
 
     setLoadingRecords(true);
-    console.log("HOOK useWasteData: Buscando registros para clientes:", selectedClienteIds);
 
+    const collectionPath = `artifacts/${appId}/public/data/wasteRecords`;
     const q = query(
-      collection(db, `artifacts/${appId}/public/data/wasteRecords`),
+      collection(db, collectionPath),
       where("clienteId", "in", selectedClienteIds),
       orderBy("timestamp", "desc")
     );
@@ -30,25 +37,21 @@ export default function useWasteData(selectedClienteIds) {
     const unsubscribe = onSnapshot(q, (snapshot) => {
       const newRecords = snapshot.docs.map(docSnap => {
         const data = docSnap.data();
-        // Converte o timestamp do Firebase para milissegundos, se necessário
         const timestamp = data.timestamp?.toDate?.().getTime() || data.timestamp || null;
         return { id: docSnap.id, ...data, timestamp };
       });
       setAllWasteRecords(newRecords);
       setLoadingRecords(false);
-      console.log("HOOK useWasteData: Registros carregados:", newRecords.length);
     }, (error) => {
-      console.error("HOOK useWasteData: Erro ao buscar todos os registros:", error);
+      console.error("Erro ao buscar registros de resíduos:", error);
       setAllWasteRecords([]);
       setLoadingRecords(false);
     });
 
     // Função de limpeza para cancelar a inscrição do listener do Firestore
-    return () => {
-      console.log("HOOK useWasteData: Cancelando inscrição do listener.");
-      unsubscribe();
-    };
-  }, [db, appId, currentUser, selectedClienteIds]); // Dependências do useEffect
+    return () => unsubscribe();
+    
+  }, [db, appId, currentUser, selectedClienteIds]);
 
   return { allWasteRecords, loadingRecords };
 }

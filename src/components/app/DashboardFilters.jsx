@@ -1,52 +1,70 @@
-// src/components/DashboardFilters.jsx
-import React from 'react'; // Removido useState, useEffect, useRef
+// src/components/app/DashboardFilters.jsx
+
+import React from 'react';
+
+// Importa os seletores individuais que agora serão usados
 import YearSelector from '../app/filters/YearSelector';
 import MonthSelector from '../app/filters/MonthSelector';
 import AreaSelector from '../app/filters/AreaSelector';
 
+/**
+ * Componente contêiner para os filtros do dashboard.
+ */
 export default function DashboardFilters({
-  userProfile, // Pode ser removido se não for usado para alguma lógica de permissão de filtro aqui
+  // Props para o YearSelector
+  selectedYears,
+  onYearToggle,
   availableYears,
-  selectedYear,
-  onYearChange = () => {},
-  selectedMonths = [],
-  onMonthToggle = () => {},
-  allMonthsSelected = false,
-  onSelectAllMonthsToggle = () => {},
-  availableAreas = [],
-  selectedAreas = [],
-  onSelectedAreasChange = () => {},
+
+  // Props para o MonthSelector
+  selectedMonths,
+  onMonthToggle,
+  allMonthsSelected,
+  onSelectAllMonthsToggle,
+
+  // Props para o AreaSelector
+  selectedAreas,
+  onSelectedAreasChange,
+  availableAreas,
+  
+  // Controle geral
+  isLoading,
 }) {
-  // Toda a lógica de estado e manipulação do dropdown de área foi movida para AreaSelector.jsx
-
   return (
-    <>
-      <div className="bg-white p-4 rounded-lg shadow mb-6">
-        <h3 className="text-lg font-medium text-gray-700 mb-2">Filtrar Período e Área</h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <YearSelector
-            availableYears={availableYears}
-            selectedYear={selectedYear}
-            onYearChange={onYearChange}
-            disabled={!availableYears || availableYears.length === 0}
-          />
+    <div className="p-4 bg-white border border-gray-200 rounded-lg shadow-sm">
+      <h3 className="text-lg font-semibold text-gray-800 mb-4">Filtros</h3>
+      
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
 
+        {/* Coluna 1: Seletor de Ano */}
+        <div className="md:col-span-1">
+          <YearSelector
+            selectedYears={selectedYears}
+            onYearToggle={onYearToggle}
+            availableYears={availableYears}
+            disabled={isLoading || availableYears.length === 0}
+          />
+        </div>
+
+        {/* Coluna 2 e 3: Seletor de Mês */}
+        <div className="md:col-span-1 lg:col-span-2">
+          <MonthSelector
+            selectedMonths={selectedMonths}
+            onMonthToggle={onMonthToggle}
+            allMonthsSelected={allMonthsSelected}
+            onSelectAllMonthsToggle={onSelectAllMonthsToggle}
+          />
+        </div>
+
+        {/* Coluna 4: Seletor de Área */}
+        <div className="md:col-span-1">
           <AreaSelector
-            availableAreas={availableAreas}
             selectedAreas={selectedAreas}
             onSelectedAreasChange={onSelectedAreasChange}
+            availableAreas={availableAreas}
           />
-
-          <div className="md:col-span-2">
-            <MonthSelector
-              selectedMonths={selectedMonths}
-              onMonthToggle={onMonthToggle}
-              allMonthsSelected={allMonthsSelected}
-              onSelectAllMonthsToggle={onSelectAllMonthsToggle}
-            />
-          </div>
         </div>
       </div>
-    </>
+    </div>
   );
 }
