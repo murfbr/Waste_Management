@@ -90,7 +90,7 @@ export default function PaginaLancamento() {
       setLoadingUserClientes(false);
     };
     fetchUserClientes();
-  }, [db, userProfile]); // Removido selectedClienteId daqui para não re-buscar clientes desnecessariamente
+  }, [db, userProfile]);
 
   // Atualiza selectedClienteData quando selectedClienteId muda
   useEffect(() => {
@@ -147,7 +147,7 @@ export default function PaginaLancamento() {
         setLastVisibleRecord(null);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedClienteId]); // Apenas re-busca registros quando o cliente muda
+  }, [selectedClienteId]);
 
   const carregarMaisRegistos = async () => {
     if (!lastVisibleRecord || !selectedClienteId || loadingMore) return; 
@@ -184,6 +184,9 @@ export default function PaginaLancamento() {
         return false; 
     }
     try {
+      // NENHUMA ALTERAÇÃO NECESSÁRIA AQUI.
+      // A sintaxe `...formDataFromWasteForm` garante que todos os campos do objeto
+      // (incluindo o novo `wasteSubType`, quando ele existir) sejam salvos no Firestore.
       await addDoc(collection(db, `artifacts/${appId}/public/data/wasteRecords`), {
         ...formDataFromWasteForm, 
         clienteId: selectedClienteId, 
@@ -206,8 +209,6 @@ export default function PaginaLancamento() {
         showMessage("Apenas administradores master podem excluir registos.", true);
         return; 
     }
-    // Substituindo window.confirm por um modal/lógica futura se necessário
-    // Por enquanto, o confirm é mantido para funcionalidade, mas deve ser trocado
     if (window.confirm('Tem certeza que deseja excluir este registo?')) {
       try {
         await deleteDoc(doc(db, `artifacts/${appId}/public/data/wasteRecords`, recordId));

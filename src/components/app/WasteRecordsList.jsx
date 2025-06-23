@@ -12,9 +12,9 @@ import { exportToCsv } from '../../utils/csvExport';
  * @param {function} props.onDelete
  * @param {string | null} props.userRole
  * @param {function} [props.showMessage]
- * @param {boolean} props.hasMoreRecords - NOVO: Se há mais registos para carregar
- * @param {function} props.onLoadMore - NOVO: Função para carregar mais registos
- * @param {boolean} props.loadingMore - NOVO: Estado de loading do botão "Carregar Mais"
+ * @param {boolean} props.hasMoreRecords
+ * @param {function} props.onLoadMore
+ * @param {boolean} props.loadingMore
  */
 function WasteRecordsList({ 
     records, 
@@ -29,6 +29,7 @@ function WasteRecordsList({
 
   const handleExportClick = () => {
     if (records && records.length > 0) {
+      // Lembrete: A função exportToCsv pode precisar ser atualizada para incluir a nova coluna "wasteSubType"
       exportToCsv(records, showMessage || alert); 
     } else {
       if (showMessage) { showMessage("Não há registos para exportar.", true); } 
@@ -36,17 +37,14 @@ function WasteRecordsList({
     }
   };
 
-  // Estilos Tailwind diretos para os botões
   const btnExportStyle = "w-full mb-4 px-4 py-2 bg-green-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500";
   const btnDeleteStyle = "px-3 py-1 bg-red-500 text-white text-xs font-medium rounded-md shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500";
   const btnLoadMoreStyle = "w-full mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50";
 
-  // Mostra "Carregando registos..." apenas se for o carregamento inicial E não houver registos
   if (loading && records.length === 0) { 
     return <div className="text-center text-gray-500 py-4">Carregando registos...</div>;
   }
 
-  // Mostra "Nenhum registo..." se não estiver a carregar E não houver registos
   if (!loading && records.length === 0) {
     return <p className="text-center text-gray-500 py-4">Nenhum registo encontrado para a seleção atual.</p>;
   }
@@ -70,7 +68,16 @@ function WasteRecordsList({
           >
             <div className="flex-grow mb-2 sm:mb-0">
               {record.areaLancamento && <p><strong className="text-gray-700">Área:</strong> {record.areaLancamento}</p>}
-              {record.wasteType && <p><strong className="text-gray-700">Tipo:</strong> {record.wasteType}</p>}
+              
+              {/* LÓGICA DE EXIBIÇÃO ATUALIZADA */}
+              {record.wasteType && (
+                <p>
+                  <strong className="text-gray-700">Tipo:</strong> {record.wasteType}
+                  {/* Adiciona o subtipo entre parênteses se ele existir no registro */}
+                  {record.wasteSubType && <span className="text-gray-600"> ({record.wasteSubType})</span>}
+                </p>
+              )}
+
               {record.peso && <p><strong className="text-gray-700">Peso:</strong> {record.peso} kg</p>}
               {record.timestamp && <p className="text-xs text-gray-500">Data: {new Date(record.timestamp).toLocaleString('pt-BR')}</p>}
             </div>
@@ -91,7 +98,7 @@ function WasteRecordsList({
         <div className="mt-6 text-center">
           <button
             onClick={onLoadMore}
-            disabled={loadingMore || loading} // Desabilita também se o loading principal estiver ativo
+            disabled={loadingMore || loading}
             className={btnLoadMoreStyle}
           >
             {loadingMore ? 'A Carregar...' : 'Carregar Mais Registos'}

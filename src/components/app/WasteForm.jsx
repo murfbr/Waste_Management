@@ -1,83 +1,115 @@
 // src/components/WasteForm.jsx
 
-import React, { useState, useEffect, useRef } from 'react'; // Adicionado useRef
+import React, { useState, useEffect, useRef } from 'react';
 
 // Lista de fallback para subtipos de recicláveis se o cliente não tiver definido os seus próprios
 const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
 
+// OBJETO DE CONFIGURAÇÃO DE CORES - Fácil de editar
+const wasteTypeColors = {
+    // Cores Principais
+    'Reciclável':   { bg: '#007bff', text: '#FFFFFF' }, // Um azul mais moderno que o padrão
+    'Orgânico':     { bg: '#A52A2A', text: '#FFFFFF' },
+    'Rejeito':      { bg: '#808080', text: '#FFFFFF' },
+    'Não Reciclável': { bg: '#808080', text: '#FFFFFF' }, // Mapeado para cinza também
+    
+    // Sub-tipos Recicláveis
+    'Papel':        { bg: '#0000FF', text: '#FFFFFF' },
+    'Papel/Papelão':{ bg: '#0000FF', text: '#FFFFFF' },
+    'Plástico':     { bg: '#FF0000', text: '#FFFFFF' },
+    'Vidro':        { bg: '#008000', text: '#FFFFFF' },
+    'Metal':        { bg: '#FFFF00', text: '#000000' }, // Texto preto para melhor leitura
+    
+    // Outros
+    'Madeira':      { bg: '#000000', text: '#FFFFFF' },
+    'Perigosos':    { bg: '#FFA500', text: '#FFFFFF' },
+    'Baterias':     { bg: '#FFA500', text: '#FFFFFF' }, // Mapeado para laranja
+    'Eletrônicos':  { bg: '#333333', text: '#FFFFFF' }, // Um cinza escuro para eletrônicos
+
+    // Cor padrão para tipos não mapeados
+    'default':      { bg: '#6b7280', text: '#FFFFFF' }
+};
 
 export default function WasteForm({ onAddWaste, clienteSelecionado }) {
   const [areaLancamento, setAreaLancamento] = useState('');
-  const [selectedWasteType, setSelectedWasteType] = useState('');
+  const [selectedMainCategory, setSelectedMainCategory] = useState('');
+  const [selectedSubType, setSelectedSubType] = useState('');
   const [peso, setPeso] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [formError, setFormError] = useState(''); // Novo estado para erros do formulário
+  const [formError, setFormError] = useState(''); 
 
   const [opcoesArea, setOpcoesArea] = useState([]);
   const [opcoesTipoResiduo, setOpcoesTipoResiduo] = useState([]);
+  const [opcoesSubtipoReciclavel, setOpcoesSubtipoReciclavel] = useState([]);
 
-  const pesoInputRef = useRef(null); // Ref para o campo de peso
+  const pesoInputRef = useRef(null);
 
   useEffect(() => {
-    // console.log('WASTEFORM - useEffect acionado por clienteSelecionado:', clienteSelecionado);
-
     if (clienteSelecionado) {
       const areasCliente = Array.isArray(clienteSelecionado.areasPersonalizadas) ? clienteSelecionado.areasPersonalizadas.filter(a => a && a.trim() !== '') : [];
       setOpcoesArea(areasCliente);
-      setAreaLancamento('');
 
-      let tiposResiduoDisponiveis = [];
       const categoriasPrincipais = (Array.isArray(clienteSelecionado.categoriasPrincipaisResiduo)
                                       ? clienteSelecionado.categoriasPrincipaisResiduo
                                       : []).filter(cat => cat && cat.trim() !== '');
+      setOpcoesTipoResiduo(categoriasPrincipais);
 
-      const tiposPersonalizadosCliente = (Array.isArray(clienteSelecionado.tiposReciclaveisPersonalizados)
-                                      ? clienteSelecionado.tiposReciclaveisPersonalizados
-                                      : []).filter(sub => sub && sub.trim() !== '');
-
-      // console.log('WASTEFORM - Cliente tem fazSeparacaoReciclaveisCompleta:', clienteSelecionado.fazSeparacaoReciclaveisCompleta);
-      // console.log('WASTEFORM - Cliente categoriasPrincipaisResiduo (limpas):', categoriasPrincipais);
-      // console.log('WASTEFORM - Cliente tiposReciclaveisPersonalizados (limpos):', tiposPersonalizadosCliente);
-
-      tiposResiduoDisponiveis = [...categoriasPrincipais];
-
-      if (clienteSelecionado.fazSeparacaoReciclaveisCompleta) {
-        let subtiposParaAdicionar = tiposPersonalizadosCliente;
-        if (tiposPersonalizadosCliente.length === 0) {
-          subtiposParaAdicionar = SUBTIPOS_RECICLAVEIS_FALLBACK;
-          // console.log('WASTEFORM - Usando SUBTIPOS_RECICLAVEIS_FALLBACK para detalhamento.');
+      if (clienteSelecionado.fazSeparacaoReciclaveisCompleta && categoriasPrincipais.includes('Reciclável')) {
+        let subtiposParaUsar = (Array.isArray(clienteSelecionado.tiposReciclaveisPersonalizados)
+                                  ? clienteSelecionado.tiposReciclaveisPersonalizados
+                                  : []).filter(sub => sub && sub.trim() !== '');
+        if (subtiposParaUsar.length === 0) {
+          subtiposParaUsar = SUBTIPOS_RECICLAVEIS_FALLBACK;
         }
-        tiposResiduoDisponiveis = [...new Set([...tiposResiduoDisponiveis, ...subtiposParaAdicionar])];
-        // console.log('WASTEFORM - Gerou COM detalhamento (principais + subtipos/fallback):', tiposResiduoDisponiveis);
+        setOpcoesSubtipoReciclavel(subtiposParaUsar);
       } else {
-        // console.log('WASTEFORM - Gerou SEM detalhamento (apenas principais):', tiposResiduoDisponiveis);
+        setOpcoesSubtipoReciclavel([]);
       }
-
-      setOpcoesTipoResiduo(tiposResiduoDisponiveis.filter(tipo => tipo && tipo.trim() !== ''));
-      setSelectedWasteType('');
+      
+      setAreaLancamento('');
+      setSelectedMainCategory('');
+      setSelectedSubType('');
+      setFormError('');
+      setPeso('');
 
     } else {
-      // console.log('WASTEFORM - Nenhum cliente selecionado, limpando opções.');
       setOpcoesArea([]);
-      setAreaLancamento('');
       setOpcoesTipoResiduo([]);
-      setSelectedWasteType('');
+      setOpcoesSubtipoReciclavel([]);
+      setAreaLancamento('');
+      setSelectedMainCategory('');
+      setSelectedSubType('');
+      setFormError('');
+      setPeso('');
     }
-    setFormError(''); // Limpa erros ao mudar de cliente
   }, [clienteSelecionado]);
 
   const clearErrorAfterDelay = () => {
-    setTimeout(() => {
-      setFormError('');
-    }, 3000); // Limpa o erro após 3 segundos
+    setTimeout(() => { setFormError(''); }, 3000);
+  };
+  
+  const handleSelectMainCategory = (categoria) => {
+    if (selectedMainCategory === categoria) {
+        setSelectedMainCategory('');
+        setSelectedSubType('');
+    } else {
+        setSelectedMainCategory(categoria);
+        setSelectedSubType('');
+    }
+    if (formError) setFormError('');
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setFormError(''); // Limpa erros anteriores
+    setFormError(''); 
 
-    if (!selectedWasteType) {
+    if (!selectedMainCategory) {
       setFormError('Por favor, selecione um tipo de resíduo.');
+      clearErrorAfterDelay();
+      return;
+    }
+    if (selectedMainCategory === 'Reciclável' && opcoesSubtipoReciclavel.length > 0 && !selectedSubType) {
+      setFormError('Por favor, especifique o tipo de reciclável.');
       clearErrorAfterDelay();
       return;
     }
@@ -96,47 +128,77 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
     }
 
     setSubmitting(true);
-    const success = await onAddWaste({
+    const formData = {
       areaLancamento: areaLancamento || (opcoesArea.length === 0 ? "Geral" : "Não especificada"),
-      wasteType: selectedWasteType,
+      wasteType: selectedMainCategory,
       peso: parsedPeso,
-    });
+    };
+    if (selectedMainCategory === 'Reciclável' && selectedSubType) {
+      formData.wasteSubType = selectedSubType;
+    }
+
+    const success = await onAddWaste(formData);
 
     if (success) {
-      setSelectedWasteType('');
+      setSelectedMainCategory('');
+      setSelectedSubType('');
       setAreaLancamento('');
       setPeso('');
-      setFormError(''); // Garante que não haja erros após sucesso
-      if (pesoInputRef.current) { // Tenta focar no campo de peso novamente para facilitar múltiplos lançamentos
+      setFormError(''); 
+      if (pesoInputRef.current) { 
         pesoInputRef.current.focus();
       }
-    } else {
-      // Se onAddWaste retornar false, pode indicar um erro no servidor
-      // A PaginaLancamento já mostra uma mensagem global via showMessage
-      // Mas podemos adicionar um erro local se necessário, embora possa ser redundante.
-      // setFormError('Falha ao registrar. Verifique a mensagem acima.');
-      // clearErrorAfterDelay();
     }
     setSubmitting(false);
   };
 
   const handlePesoKeyDown = (e) => {
     if (e.key === 'Enter') {
-      e.preventDefault(); // Previne o comportamento padrão do Enter (que poderia ser submeter o formulário de forma inesperada)
+      e.preventDefault();
       if (pesoInputRef.current) {
-        pesoInputRef.current.blur(); // Remove o foco do campo, o que deve fechar o teclado
+        pesoInputRef.current.blur();
       }
-      // Opcional: se quiser que o Enter no campo de peso também tente submeter o formulário:
-      // handleSubmit(new Event('submit', { cancelable: true })); // Simula um evento de submit
-      // No entanto, o blur() pode ser suficiente e o usuário pode clicar no botão de registrar.
     }
   };
 
+  // Função para gerar o estilo do botão dinamicamente
+  const getButtonStyles = (type, isSelected) => {
+    const colorTheme = wasteTypeColors[type] || wasteTypeColors['default'];
+    
+    // Converte a cor HEX para RGB para poder aplicar opacidade
+    const hexToRgb = (hex) => {
+      const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+      return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : null;
+    };
+
+    const rgbColor = hexToRgb(colorTheme.bg);
+
+    if (!rgbColor) return {}; // Retorna objeto vazio se a cor for inválida
+
+    if (isSelected) {
+        return { 
+            backgroundColor: `rgba(${rgbColor}, 1)`, // Opacidade total
+            color: colorTheme.text,
+            borderColor: `rgba(${rgbColor}, 1)` 
+        };
+    }
+    
+    // Estilo padrão com opacidade
+    return {
+        backgroundColor: `rgba(${rgbColor}, 0.7)`, // Opacidade de 70%
+        color: colorTheme.text,
+        borderColor: `rgba(${rgbColor}, 0.1)` // Borda sutil
+    };
+  };
+
   const labelStyle = "block text-sm font-medium text-gray-700 text-center text-lg mb-3";
+  const subLabelStyle = "block text-sm font-medium text-gray-600 text-center text-md mb-3";
 
   if (!clienteSelecionado) {
     return <p className="text-center text-gray-500">Selecione um cliente para iniciar o lançamento.</p>;
   }
+  
+  const showSubTypesSection = selectedMainCategory === 'Reciclável' && opcoesSubtipoReciclavel.length > 0;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
@@ -145,105 +207,97 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
         <label htmlFor="peso" className="sr-only">Peso Total (kg):</label>
         <div className="flex items-baseline justify-center">
             <input
-                ref={pesoInputRef} // Adicionada a ref
-                type="text"
-                inputMode="decimal" // Sugere teclado numérico/decimal
-                id="peso"
-                value={peso}
+                ref={pesoInputRef} type="text" inputMode="decimal" id="peso" value={peso}
                 onChange={(e) => {
                     const val = e.target.value;
-                    if (/^[0-9]*[.,]?[0-9]{0,2}$/.test(val) || val === "") {
-                        setPeso(val);
-                    }
-                    if (formError) setFormError(''); // Limpa erro ao digitar
+                    if (/^[0-9]*[.,]?[0-9]{0,2}$/.test(val) || val === "") { setPeso(val); }
+                    if (formError) setFormError('');
                 }}
-                onKeyDown={handlePesoKeyDown} // Adicionado manipulador de Enter
-                required
-                placeholder="0,00"
+                onKeyDown={handlePesoKeyDown} required placeholder="0,00"
                 className="w-auto max-w-[200px] p-2 border-2 border-gray-300 rounded-xl text-7xl font-bold text-center text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none"
             />
             <span className="text-4xl font-semibold text-gray-600 ml-2">kg</span>
         </div>
       </div>
 
-      {/* Botões para Tipo de Resíduo (Dinâmicos) */}
+      {/* Seção de Tipos de Resíduo */}
       {opcoesTipoResiduo.length > 0 ? (
         <div>
           <label className={labelStyle}>Tipo de Resíduo*</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {opcoesTipoResiduo.map((tipo) => (
               <button
-                key={`type-${tipo}`}
-                type="button"
-                onClick={() => {
-                  setSelectedWasteType(tipo);
-                  if (formError) setFormError(''); // Limpa erro ao selecionar
-                }}
-                className={`
-                    flex items-center justify-center w-full p-4 border-2 rounded-xl
-                    text-base font-semibold transition-all duration-150 ease-in-out
-                    focus:outline-none focus:ring-2 focus:ring-offset-2
-                    ${selectedWasteType === tipo
-                        ? 'bg-indigo-600 text-white border-indigo-600 ring-indigo-500 shadow-lg'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
-                    }
-                `}
+                key={`type-${tipo}`} type="button" onClick={() => handleSelectMainCategory(tipo)}
+                style={getButtonStyles(tipo, selectedMainCategory === tipo)}
+                className={`flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-bold transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2 
+                    ${selectedMainCategory === tipo 
+                        ? 'ring-gray-800 shadow-lg' 
+                        : 'ring-transparent hover:scale-105 hover:shadow-md'
+                    }`}
               >
                 {tipo}
               </button>
             ))}
           </div>
+
+          {showSubTypesSection && (
+             <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 transition-all duration-300">
+              <label className={subLabelStyle}>Especifique o Reciclável*</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {opcoesSubtipoReciclavel.map((subtipo) => (
+                  <button
+                    key={`subtype-${subtipo}`} type="button" onClick={() => setSelectedSubType(subtipo)}
+                    style={getButtonStyles(subtipo, selectedSubType === subtipo)}
+                    className={`flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-bold transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
+                        ${selectedSubType === subtipo
+                            ? 'ring-gray-800 shadow-lg'
+                            : 'ring-transparent hover:scale-105 hover:shadow-md'
+                        }`}
+                  >
+                    {subtipo}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
-        <p className="text-center text-gray-500">Este cliente não possui tipos de resíduo válidos configurados para lançamento.</p>
+        <p className="text-center text-gray-500">Este cliente não possui tipos de resíduo válidos para lançamento.</p>
       )}
 
-      {/* Botões para Área de Lançamento (Dinâmicos) */}
-      {opcoesArea.length > 0 ? (
+      {/* Seção de Áreas de Lançamento */}
+      {opcoesArea.length > 0 && (
         <div>
           <label className={labelStyle}>Área de Lançamento*</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {opcoesArea.map((areaOption) => (
               <button
-                key={`area-${areaOption}`}
-                type="button"
-                onClick={() => {
-                  setAreaLancamento(areaOption);
-                  if (formError) setFormError(''); // Limpa erro ao selecionar
-                }}
-                className={`
-                    flex items-center justify-center w-full p-4 border-2 rounded-xl
-                    text-base font-semibold transition-all duration-150 ease-in-out
-                    focus:outline-none focus:ring-2 focus:ring-offset-2
+                key={`area-${areaOption}`} type="button"
+                onClick={() => { setAreaLancamento(areaOption); if (formError) setFormError(''); }}
+                className={`flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-semibold transition-all duration-150 ease-in-out focus:outline-none ring-2 ring-offset-2
                     ${areaLancamento === areaOption
-                        ? 'bg-indigo-600 text-white border-indigo-600 ring-indigo-500 shadow-lg'
+                        ? 'bg-teal-600 text-white border-teal-600 ring-teal-500 shadow-lg'
                         : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
-                    }
-                `}
+                    }`}
               >
                 {areaOption}
               </button>
             ))}
           </div>
         </div>
-      ) : clienteSelecionado && (!clienteSelecionado.areasPersonalizadas || clienteSelecionado.areasPersonalizadas.length === 0) ? (
-         <p className="text-center text-sm text-gray-500 mt-4">Este cliente não possui áreas de lançamento configuradas. O lançamento será registado como área "Geral".</p>
-      ) : null}
+      )}
 
-
-      {/* Área de Mensagem de Erro do Formulário */}
+      {/* Mensagem de Erro e Botão de Submissão */}
       {formError && (
         <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-center">
           {formError}
         </div>
       )}
-
-      {/* Botão de Submissão */}
       <div className="pt-2">
         <button
             type="submit"
             className="w-full bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-4 px-6 rounded-xl shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70"
-            disabled={submitting || !selectedWasteType || (!areaLancamento && opcoesArea.length > 0) || !peso }
+            disabled={submitting || !peso || !selectedMainCategory || (!areaLancamento && opcoesArea.length > 0) || (showSubTypesSection && !selectedSubType)}
         >
             {submitting ? 'A Registar...' : 'Registar Pesagem'}
         </button>
