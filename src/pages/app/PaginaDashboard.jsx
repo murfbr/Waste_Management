@@ -30,8 +30,19 @@ const processDataForPieChartByWeight = (records, groupByField) => {
   const pieData = Object.entries(counts).map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }));
   return { pieData, totalWeight: parseFloat(totalWeight.toFixed(2)) };
 };
+
+/**
+ * Processa os registros de resíduos para calcular a Taxa de Desvio de Aterro.
+ * A taxa de desvio é o oposto da taxa de rejeito (100% - % de rejeito).
+ * @param {Array} records - Os registros de resíduos a serem processados.
+ * @param {string} rejectCategoryName - O nome da categoria que representa o rejeito.
+ * @returns {Array} - Um array de objetos, onde cada objeto representa um ponto de dados diário
+ * com a 'taxaDesvio' e a média móvel 'mediaTaxaDesvio'.
+ */
 const processDataForDesvioDeAterro = (records, rejectCategoryName = "Rejeito") => {
     if (!Array.isArray(records) || records.length === 0) return [];
+    
+    // 1. Agrega os dados por dia (peso total e peso do rejeito)
     const dailyDataAggregated = records.reduce((acc, record) => {
         if (!record || !record.timestamp) return acc;
         const recordTimestamp = typeof record.timestamp === 'number' ? record.timestamp : record.timestamp?.toDate?.().getTime();
@@ -39,24 +50,39 @@ const processDataForDesvioDeAterro = (records, rejectCategoryName = "Rejeito") =
         const dateKey = new Date(recordTimestamp).toISOString().split('T')[0];
         const weight = parseFloat(record.peso || 0);
         if (isNaN(weight)) return acc;
+        
         acc[dateKey] = acc[dateKey] || { total: 0, rejeito: 0 };
         acc[dateKey].total += weight;
+        
         if (record.wasteType === rejectCategoryName) {
             acc[dateKey].rejeito += weight;
         }
         return acc;
     }, {});
-    const sortedDailyData = Object.entries(dailyDataAggregated).map(([dateKey, data]) => ({
-        dateKey, name: new Date(dateKey + 'T00:00:00Z').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
-        total: data.total, rejeito: data.rejeito,
-        percentualRejeito: data.total > 0 ? parseFloat(((data.rejeito / data.total) * 100).toFixed(2)) : 0
-    })).sort((a, b) => new Date(a.dateKey) - new Date(b.dateKey));
-    let acumuladoSomaPercentual = 0;
+
+    // 2. Calcula a taxa de desvio diária e ordena por data
+    const sortedDailyData = Object.entries(dailyDataAggregated).map(([dateKey, data]) => {
+        const percentualRejeito = data.total > 0 ? (data.rejeito / data.total) * 100 : 0;
+        const taxaDesvio = 100 - percentualRejeito;
+        return {
+            dateKey,
+            name: new Date(dateKey + 'T00:00:00Z').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+            taxaDesvio: parseFloat(taxaDesvio.toFixed(2)),
+        };
+    }).sort((a, b) => new Date(a.dateKey) - new Date(b.dateKey));
+
+    // 3. Calcula a média móvel da taxa de desvio
+    let acumuladoSomaTaxaDesvio = 0;
     return sortedDailyData.map((dataPoint, index) => {
-        acumuladoSomaPercentual += dataPoint.percentualRejeito;
-        return { ...dataPoint, mediaPercentualRejeito: parseFloat((acumuladoSomaPercentual / (index + 1)).toFixed(2)) };
+        acumuladoSomaTaxaDesvio += dataPoint.taxaDesvio;
+        const mediaTaxaDesvio = acumuladoSomaTaxaDesvio / (index + 1);
+        return { 
+            ...dataPoint, 
+            mediaTaxaDesvio: parseFloat(mediaTaxaDesvio.toFixed(2)) 
+        };
     });
 };
+
 const processDataForMonthlyYearlyComparison = (records, year1, year2) => {
   if (!Array.isArray(records)) return { data: [], years: [] };
   const monthlyData = {};

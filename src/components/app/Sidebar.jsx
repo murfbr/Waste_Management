@@ -1,4 +1,4 @@
-// Supondo que este arquivo esteja em: src/components/app/Sidebar.jsx
+// src/components/app/Sidebar.jsx
 
 import React, { useContext } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
@@ -74,7 +74,6 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
           </button>
         </div>
 
-        {/* Links de Navegação com caminhos corrigidos */}
         <nav className="flex-grow overflow-y-auto p-4 space-y-1">
           {userProfile ? (
             <>
@@ -84,10 +83,23 @@ export default function Sidebar({ isOpen, toggleSidebar }) {
               {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
                 <NavLink to="/app/dashboard" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Dashboards</NavLink>
               )}
+              
+              {/* --- NOVA SEÇÃO DE INFORMATIVOS --- */}
+              {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
+                <>
+                  <hr className="my-2 border-gray-600" />
+                  <p className="px-4 pt-2 pb-1 text-xs text-gray-400 uppercase">Informativos</p>
+                  <NavLink to="/app/documentacao" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Documentação</NavLink>
+                  <NavLink to="/app/economia-circular" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Economia Circular</NavLink>
+                  <NavLink to="/app/glossario" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Glossário</NavLink>
+                </>
+              )}
+              
+              {/* Seção de Administração (já existente) */}
               {userProfile.role === 'master' && (
                 <>
                   <hr className="my-2 border-gray-600" />
-                  <p className="px-4 py-2 text-xs text-gray-400 uppercase">Administração</p>
+                  <p className="px-4 pt-2 pb-1 text-xs text-gray-400 uppercase">Administração</p>
                   <NavLink to="/app/admin/usuarios" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Usuários</NavLink>
                   <NavLink to="/app/admin/clientes" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Clientes</NavLink>
                   <NavLink to="/app/admin/empresas-coleta" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Empresas de Coleta</NavLink>

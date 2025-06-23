@@ -9,7 +9,8 @@ import ProtectedRoute from './ProtectedRoute';
 import MainLayout from '../layouts/MainLayout';
 import PublicLayout from '../layouts/PublicLayout';
 
-// Páginas do Site e de Transição
+// --- Páginas ---
+// CORREÇÃO: Caminhos ajustados para a pasta /pages/site/
 import PaginaLogin from '../pages/PaginaLogin';
 import HomePage from '../pages/site/HomePage';
 import PaginaProduto from '../pages/site/PaginaProduto';
@@ -19,15 +20,18 @@ import PaginaNotFound from '../pages/PaginaNotFound';
 import PaginaAcessoNegado from '../pages/PaginaAcessoNegado';
 
 
-// Páginas da Aplicação (Carregadas sob demanda com "lazy loading")
+// Páginas da Aplicação (Lazy-loaded)
 const PaginaLancamento = React.lazy(() => import('../pages/app/PaginaLancamento'));
 const PaginaDashboard = React.lazy(() => import('../pages/app/PaginaDashboard'));
 const PaginaAdminUsuarios = React.lazy(() => import('../pages/app/PaginaAdminUsuarios'));
 const PaginaAdminClientes = React.lazy(() => import('../pages/app/PaginaAdminClientes'));
 const PaginaAdminEmpresasColeta = React.lazy(() => import('../pages/app/PaginaAdminEmpresasColeta'));
+const PaginaDocumentacao = React.lazy(() => import('../pages/app/PaginaDocumentacao'));
+const PaginaEconomiaCircular = React.lazy(() => import('../pages/app/PaginaEconomiaCircular'));
+const PaginaGlossario = React.lazy(() => import('../pages/app/PaginaGlossario'));
 
 
-// Layout para Rotas Privadas
+// --- Layouts de Rota ---
 const PrivateRoutesLayout = () => {
   const { currentUser, isAuthReady } = useContext(AuthContext);
   if (!isAuthReady) return <div className="flex justify-center items-center min-h-screen">A carregar aplicação...</div>;
@@ -35,7 +39,6 @@ const PrivateRoutesLayout = () => {
   return (<MainLayout><Outlet /></MainLayout>);
 };
 
-// Componente para exibir enquanto as páginas "lazy" carregam
 const PageLoader = () => (
   <div className="flex justify-center items-center min-h-screen bg-gray-100">
     <p className="text-lg text-gray-600">A carregar...</p>
@@ -43,12 +46,12 @@ const PageLoader = () => (
 );
 
 
-// Estrutura Principal de Rotas
+// --- Componente Principal de Rotas ---
 export default function AppRoutes() {
   return (
     <Suspense fallback={<PageLoader />}>
       <Routes>
-        {/* ROTAS PÚBLICAS: Usam o layout do site (Navbar/Footer) */}
+        {/* ROTAS PÚBLICAS (SITE) */}
         <Route element={<PublicLayout />}>
           <Route path="/" element={<HomePage />} />
           <Route path="/produto" element={<PaginaProduto />} />
@@ -57,41 +60,22 @@ export default function AppRoutes() {
           <Route path="/login" element={<PaginaLogin />} />
         </Route>
 
-        {/* ROTA DE ACESSO NEGADO: Sem layout principal */}
+        {/* ROTAS DE TRANSIÇÃO */}
         <Route path="/acesso-negado" element={<PaginaAcessoNegado />} />
 
-        {/* ROTAS PRIVADAS (APLICAÇÃO): Usam o layout da aplicação e são protegidas */}
+        {/* ROTAS PRIVADAS (APLICAÇÃO) */}
         <Route path="/app" element={<PrivateRoutesLayout />}>
           
-          {/* Rota principal da aplicação (quando o usuário acessa /app) */}
-          <Route 
-            index 
-            element={
-              <ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}>
-                <PaginaLancamento />
-              </ProtectedRoute>
-            } 
-          />
+          <Route index element={ <ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}><PaginaLancamento /></ProtectedRoute> } />
+          <Route path="lancamento" element={ <ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}><PaginaLancamento /></ProtectedRoute> } />
+          <Route path="dashboard" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaDashboard /></ProtectedRoute> } />
+          
+          {/* NOVAS ROTAS INFORMATIVAS */}
+          <Route path="documentacao" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaDocumentacao /></ProtectedRoute> } />
+          <Route path="economia-circular" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaEconomiaCircular /></ProtectedRoute> } />
+          <Route path="glossario" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaGlossario /></ProtectedRoute> } />
 
-          {/* Rota explícita para lançamento */}
-          <Route
-            path="lancamento"
-            element={
-              <ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}>
-                <PaginaLancamento />
-              </ProtectedRoute>
-            }
-          />
-
-          {/* Outras rotas da aplicação */}
-          <Route
-            path="dashboard"
-            element={
-              <ProtectedRoute allowedRoles={['master', 'gerente']}>
-                <PaginaDashboard />
-              </ProtectedRoute>
-            }
-          />
+          {/* Rotas de Administração */}
           <Route path="admin" element={<ProtectedRoute allowedRoles={['master']}><Outlet /></ProtectedRoute>}>
             <Route path="usuarios" element={<PaginaAdminUsuarios />} />
             <Route path="clientes" element={<PaginaAdminClientes />} />
@@ -99,7 +83,6 @@ export default function AppRoutes() {
           </Route>
         </Route>
 
-        {/* Rota "Catch-all" para páginas não encontradas */}
         <Route path="*" element={<PaginaNotFound />} />
       </Routes>
     </Suspense>

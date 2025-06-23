@@ -4,17 +4,19 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 
+/**
+ * Renderiza um gráfico de linha para a "Taxa de Desvio de Aterro".
+ * Exibe a taxa de desvio diária e a média móvel, com uma linha de referência para a meta de 90%.
+ */
 export default function DesvioDeAterro({
-  data, // Anteriormente lixoZeroData
-  titleParts, // Objeto com { periodTitle, areaTitleSegment, dashboardTitleContext }
+  data,
   isLoading,
-  noDataMessageDetails = "" // Detalhes adicionais para a mensagem de "sem dados"
+  noDataMessageDetails = ""
 }) {
-  // Constrói o título completo do gráfico
-  const chartTitle = `Desvio de Aterro: % de Rejeito (${titleParts.periodTitleForOtherCharts || ''})${titleParts.areaTitleSegmentForOtherCharts || ''}${titleParts.dashboardTitleContext || ''}`;
+  // Título do gráfico conforme solicitado
+  const chartTitle = "TAXA DE DESVIO DE ATERRO";
 
-  // Mensagem padrão de "sem dados"
-  const baseNoDataMessage = `Sem dados para o gráfico Desvio de Aterro neste período${(titleParts.areaTitleSegmentForOtherCharts && titleParts.areaTitleSegmentForOtherCharts.toLowerCase().includes('área')) ? ' e área(s) selecionada(s)' : ''}.`;
+  const baseNoDataMessage = `Sem dados para o gráfico Taxa de Desvio de Aterro.`;
 
   if (isLoading) {
     return (
@@ -35,20 +37,50 @@ export default function DesvioDeAterro({
           <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="name" />
-            <YAxis label={{ value: '% Rejeito', angle: -90, position: 'insideLeft', offset: -10 }} domain={[0, 'dataMax + 10']} allowDataOverflow />
-            <Tooltip formatter={(value, name) => {
-                if (name === '% Rejeito') return [`${typeof value === 'number' ? value.toFixed(2) : value}%`, name];
-                if (name === 'Média % Rejeito') return [`${typeof value === 'number' ? value.toFixed(2) : value}%`, name];
+            <YAxis 
+              label={{ value: '% Desvio de Aterro', angle: -90, position: 'insideLeft', offset: -10 }} 
+              domain={[0, 100]} // Eixo Y vai de 0 a 100%
+              tickFormatter={(tick) => `${tick}%`}
+              allowDataOverflow 
+            />
+            <Tooltip 
+              formatter={(value, name) => {
+                const formattedValue = `${typeof value === 'number' ? value.toFixed(2) : value}%`;
+                if (name === 'Taxa de Desvio') return [formattedValue, 'Taxa de Desvio'];
+                if (name === 'Média de Desvio') return [formattedValue, 'Média de Desvio'];
                 return [value, name];
-            }} />
+              }}
+              labelFormatter={(label) => `Dia: ${label}`}
+            />
             <Legend />
-            <Line type="monotone" dataKey="percentualRejeito" stroke="#FF8042" name="% Rejeito" activeDot={{ r: 6 }} />
-            <Line type="monotone" dataKey="mediaPercentualRejeito" stroke="#82ca9d" name="Média % Rejeito" strokeDasharray="5 5" dot={false} />
-            <ReferenceLine y={10} label={{ value: "Meta 10%", position: "insideTopRight", fill: "#FF8042", dy: -5 }} stroke="#FF8042" strokeDasharray="3 3" />
+            <Line 
+              type="monotone" 
+              dataKey="taxaDesvio" // Chave de dados para a taxa de desvio
+              stroke="#8884d8" // Cor roxa para a taxa de desvio
+              name="Taxa de Desvio" // Nome da linha
+              activeDot={{ r: 6 }} 
+            />
+            <Line 
+              type="monotone" 
+              dataKey="mediaTaxaDesvio" // Chave de dados para a média da taxa de desvio
+              stroke="#82ca9d" // Cor verde para a média
+              name="Média de Desvio" // Nome da linha de média
+              strokeDasharray="5 5" 
+              dot={false} 
+            />
+            <ReferenceLine 
+              y={90} // Meta de 90%
+              label={{ value: "Meta 90%", position: "insideTopRight", fill: "#d946ef", dy: -5 }} 
+              stroke="#d946ef" // Cor magenta para a linha de meta
+              strokeDasharray="3 3" 
+              ifOverflow="extendDomain"
+            />
           </LineChart>
         </ResponsiveContainer>
       ) : (
-        <p className="text-center text-gray-500 py-4">{baseNoDataMessage}{noDataMessageDetails}</p>
+        <div className="h-[400px] flex items-center justify-center">
+          <p className="text-center text-gray-500 py-4">{baseNoDataMessage}{noDataMessageDetails}</p>
+        </div>
       )}
     </div>
   );

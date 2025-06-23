@@ -44,9 +44,14 @@ export const AuthProvider = ({ children }) => {
                             const querySnapshot = await getDocs(q);
                             loadedClientes = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                         } else if (newProfileData.clientesPermitidos && newProfileData.clientesPermitidos.length > 0) {
-                            const q = query(collection(db, "clientes"), where(documentId(), "in", newProfileData.clientesPermitidos), where("ativo", "==", true), orderBy("nome"));
-                            const querySnapshot = await getDocs(q);
-                            loadedClientes = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                            // Firestore tem um limite de 30 itens para queries 'in'
+                            const CHUNK_SIZE = 30;
+                            for (let i = 0; i < newProfileData.clientesPermitidos.length; i += CHUNK_SIZE) {
+                                const chunk = newProfileData.clientesPermitidos.slice(i, i + CHUNK_SIZE);
+                                const q = query(collection(db, "clientes"), where(documentId(), "in", chunk), where("ativo", "==", true), orderBy("nome"));
+                                const querySnapshot = await getDocs(q);
+                                loadedClientes.push(...querySnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+                            }
                         }
                         
                         setUserAllowedClientes(loadedClientes);
@@ -70,10 +75,11 @@ export const AuthProvider = ({ children }) => {
         return () => unsubscribe();
     }, []);
 
-    // CORREÇÃO: Adicionando db e appId de volta ao valor do contexto.
+    // CORREÇÃO: Adicionando db, auth, e appId de volta ao valor do contexto.
     const contextValue = useMemo(() => {
         return {
             db, // <-- Adicionado de volta
+            auth, // <-- Adicionado de volta
             appId, // <-- Adicionado de volta
             currentUser, 
             userProfile, 
