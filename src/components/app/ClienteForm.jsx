@@ -5,11 +5,10 @@ import React, { useState, useEffect } from 'react';
 const CATEGORIAS_RESIDUO_SUGERIDAS_CONTRATO = ["Reciclável", "Não Reciclável", "Rejeito", "Orgânico"];
 const CATEGORIAS_PRINCIPAIS_PADRAO = ["Reciclável", "Orgânico", "Rejeito"];
 const SUBTIPOS_RECICLAVEIS_COMUNS = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
+// NOVO: Constantes para os subtipos de orgânicos
+const SUBTIPOS_ORGANICOS_COMUNS = ["Pré-serviço", "Pós-serviço"];
 
-// Valor especial para indicar a seleção de "Nova Categoria" no dropdown
 const NOVA_CATEGORIA_VALUE = "__NOVA__";
-
-// Lista inicial de categorias de cliente.
 const CATEGORIAS_CLIENTE_INICIAIS = ["Hotel","Evento", "Escola", "Condomínio", "Aeroporto"];
 
 export default function ClienteForm({ 
@@ -18,7 +17,6 @@ export default function ClienteForm({
     onCancel, 
     empresasColetaDisponiveis, 
     isEditing,
-    // CORREÇÃO: Alterado o valor padrão para uma referência estável
     availableCategorias = CATEGORIAS_CLIENTE_INICIAIS, 
     onNewCategoriaAdded 
 }) {
@@ -26,7 +24,6 @@ export default function ClienteForm({
   const [rede, setRede] = useState('');
   const [selectedCategoriaCliente, setSelectedCategoriaCliente] = useState(''); 
   const [novaCategoriaInput, setNovaCategoriaInput] = useState('');
-  
   const [logoUrl, setLogoUrl] = useState('');
   const [cnpj, setCnpj] = useState('');
   const [endereco, setEndereco] = useState('');
@@ -37,16 +34,23 @@ export default function ClienteForm({
   const [categoriasPrincipaisSelecionadas, setCategoriasPrincipaisSelecionadas] = useState([...CATEGORIAS_PRINCIPAIS_PADRAO]); 
   const [outroCategoriaSelecionada, setOutroCategoriaSelecionada] = useState(false);
   const [outroCategoriaInput, setOutroCategoriaInput] = useState('');
+  
+  // Estados para recicláveis
   const [fazSeparacaoReciclaveisCompleta, setFazSeparacaoReciclaveisCompleta] = useState(false);
-  const [subtiposComunsSelecionados, setSubtiposComunsSelecionados] = useState([]);
+  const [subtiposComunsReciclaveisSelecionados, setSubtiposComunsReciclaveisSelecionados] = useState([]);
   const [outrosSubtiposReciclaveisInput, setOutrosSubtiposReciclaveisInput] = useState('');
+
+  // NOVOS ESTADOS: Para orgânicos
+  const [fazSeparacaoOrganicosCompleta, setFazSeparacaoOrganicosCompleta] = useState(false);
+  const [subtiposComunsOrganicosSelecionados, setSubtiposComunsOrganicosSelecionados] = useState([]);
+  const [outrosSubtiposOrganicosInput, setOutrosSubtiposOrganicosInput] = useState('');
+
   const [contratosColetaForm, setContratosColetaForm] = useState([{ empresaColetaId: '', tiposResiduoColetados: [] }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const arrayFromString = (str) => str.split(',').map(item => item.trim()).filter(item => item.length > 0);
 
   useEffect(() => {
-    // Cria uma lista combinada e única de categorias para o dropdown
     const categoriasParaDropdown = Array.from(new Set([...CATEGORIAS_CLIENTE_INICIAIS, ...availableCategorias]));
 
     if (isEditing && initialData) {
@@ -82,20 +86,26 @@ export default function ClienteForm({
         setOutroCategoriaInput('');
       }
 
+      // Lógica para recicláveis (existente)
       setFazSeparacaoReciclaveisCompleta(initialData.fazSeparacaoReciclaveisCompleta || false);
-      const todosSubtiposCliente = Array.isArray(initialData.tiposReciclaveisPersonalizados) ? initialData.tiposReciclaveisPersonalizados : [];
-      const comunsSelecionados = todosSubtiposCliente.filter(subtipo => SUBTIPOS_RECICLAVEIS_COMUNS.includes(subtipo));
-      const outrosSubtipos = todosSubtiposCliente.filter(subtipo => !SUBTIPOS_RECICLAVEIS_COMUNS.includes(subtipo));
-      setSubtiposComunsSelecionados(comunsSelecionados);
-      setOutrosSubtiposReciclaveisInput(outrosSubtipos.join(', '));
-
+      const todosSubtiposReciclaveis = Array.isArray(initialData.tiposReciclaveisPersonalizados) ? initialData.tiposReciclaveisPersonalizados : [];
+      setSubtiposComunsReciclaveisSelecionados(todosSubtiposReciclaveis.filter(subtipo => SUBTIPOS_RECICLAVEIS_COMUNS.includes(subtipo)));
+      setOutrosSubtiposReciclaveisInput(todosSubtiposReciclaveis.filter(subtipo => !SUBTIPOS_RECICLAVEIS_COMUNS.includes(subtipo)).join(', '));
+        
+      // NOVA LÓGICA: Para orgânicos
+      setFazSeparacaoOrganicosCompleta(initialData.fazSeparacaoOrganicosCompleta || false);
+      const todosSubtiposOrganicos = Array.isArray(initialData.tiposOrganicosPersonalizados) ? initialData.tiposOrganicosPersonalizados : [];
+      setSubtiposComunsOrganicosSelecionados(todosSubtiposOrganicos.filter(subtipo => SUBTIPOS_ORGANICOS_COMUNS.includes(subtipo)));
+      setOutrosSubtiposOrganicosInput(todosSubtiposOrganicos.filter(subtipo => !SUBTIPOS_ORGANICOS_COMUNS.includes(subtipo)).join(', '));
+        
       setContratosColetaForm(initialData.contratosColeta && initialData.contratosColeta.length > 0 
           ? initialData.contratosColeta.map(c => ({ 
               empresaColetaId: c.empresaColetaId || '', 
               tiposResiduoColetados: Array.isArray(c.tiposResiduoColetados) ? c.tiposResiduoColetados : [] 
             }))
           : [{ empresaColetaId: '', tiposResiduoColetados: [] }]);
-    } else { 
+    } else {
+        // Reseta todos os campos para um novo formulário
         setNome(''); setRede(''); 
         setSelectedCategoriaCliente(''); 
         setNovaCategoriaInput(''); 
@@ -105,12 +115,15 @@ export default function ClienteForm({
         setCategoriasPrincipaisSelecionadas([...CATEGORIAS_PRINCIPAIS_PADRAO]);
         setOutroCategoriaSelecionada(false); 
         setOutroCategoriaInput('');      
-        setFazSeparacaoReciclaveisCompleta(false); 
-        setSubtiposComunsSelecionados([]); 
-        setOutrosSubtiposReciclaveisInput(''); 
+        setFazSeparacaoReciclaveisCompleta(false);
+        setSubtiposComunsReciclaveisSelecionados([]);
+        setOutrosSubtiposReciclaveisInput('');
+        setFazSeparacaoOrganicosCompleta(false);
+        setSubtiposComunsOrganicosSelecionados([]);
+        setOutrosSubtiposOrganicosInput('');
         setContratosColetaForm([{ empresaColetaId: '', tiposResiduoColetados: [] }]);
     }
-  }, [initialData, isEditing, availableCategorias]); // availableCategorias aqui é a prop
+  }, [initialData, isEditing, availableCategorias]);
 
 
   const handleLocalSubmit = async (e) => {
@@ -141,9 +154,10 @@ export default function ClienteForm({
         return;
     }
 
+    // Lógica de Recicláveis (existente)
     let finaisTiposReciclaveisPersonalizados = [];
     if (fazSeparacaoReciclaveisCompleta) {
-        finaisTiposReciclaveisPersonalizados = [...subtiposComunsSelecionados];
+        finaisTiposReciclaveisPersonalizados = [...subtiposComunsReciclaveisSelecionados];
         const outrosArray = arrayFromString(outrosSubtiposReciclaveisInput);
         outrosArray.forEach(outro => {
             if (!finaisTiposReciclaveisPersonalizados.includes(outro)) {
@@ -152,8 +166,23 @@ export default function ClienteForm({
         });
         if (finaisTiposReciclaveisPersonalizados.length === 0) {
             alert("Se 'Cliente detalha os tipos de recicláveis' está marcado, defina pelo menos um sub-tipo.");
-            setIsSubmitting(false);
-            return;
+            setIsSubmitting(false); return;
+        }
+    }
+
+    // NOVA LÓGICA: para Orgânicos
+    let finaisTiposOrganicosPersonalizados = [];
+    if (fazSeparacaoOrganicosCompleta) {
+        finaisTiposOrganicosPersonalizados = [...subtiposComunsOrganicosSelecionados];
+        const outrosArray = arrayFromString(outrosSubtiposOrganicosInput);
+        outrosArray.forEach(outro => {
+            if (!finaisTiposOrganicosPersonalizados.includes(outro)) {
+                finaisTiposOrganicosPersonalizados.push(outro);
+            }
+        });
+        if (finaisTiposOrganicosPersonalizados.length === 0) {
+            alert("Se 'Cliente detalha os tipos de orgânicos' está marcado, defina pelo menos um sub-tipo.");
+            setIsSubmitting(false); return;
         }
     }
 
@@ -186,6 +215,9 @@ export default function ClienteForm({
       categoriasPrincipaisResiduo: finaisCategoriasPrincipais,
       fazSeparacaoReciclaveisCompleta,
       tiposReciclaveisPersonalizados: finaisTiposReciclaveisPersonalizados,
+      // NOVOS CAMPOS: para orgânicos
+      fazSeparacaoOrganicosCompleta,
+      tiposOrganicosPersonalizados: finaisTiposOrganicosPersonalizados,
       contratosColeta: contratosColetaForm.filter(c => c.empresaColetaId && c.tiposResiduoColetados.length > 0),
     };
 
@@ -212,16 +244,26 @@ export default function ClienteForm({
   const handleCategoriaPrincipalChange = (categoria) => { 
     setCategoriasPrincipaisSelecionadas(prev => prev.includes(categoria) ? prev.filter(c => c !== categoria) : [...prev, categoria]);
   };
-  const handleSubtipoComumChange = (subtipo) => {
-    setSubtiposComunsSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]);
+  const handleSubtipoComumChange = (subtipo, type) => {
+    if (type === 'reciclavel') {
+        setSubtiposComunsReciclaveisSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]);
+    } else if (type === 'organico') {
+        setSubtiposComunsOrganicosSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]);
+    }
   };
   
   const getOpcoesTipoResiduoContrato = () => { 
     let op = [...categoriasPrincipaisSelecionadas];
     if(outroCategoriaSelecionada && outroCategoriaInput.trim() && !op.includes(outroCategoriaInput.trim())) op.push(outroCategoriaInput.trim());
     if(fazSeparacaoReciclaveisCompleta) {
-        const ts = [...subtiposComunsSelecionados];
+        const ts = [...subtiposComunsReciclaveisSelecionados];
         arrayFromString(outrosSubtiposReciclaveisInput).forEach(s => { if(!ts.includes(s)) ts.push(s); });
+        ts.forEach(s => { if(!op.includes(s)) op.push(s); });
+    }
+    // Adiciona subtipos de orgânicos também
+    if(fazSeparacaoOrganicosCompleta) {
+        const ts = [...subtiposComunsOrganicosSelecionados];
+        arrayFromString(outrosSubtiposOrganicosInput).forEach(s => { if(!ts.includes(s)) ts.push(s); });
         ts.forEach(s => { if(!op.includes(s)) op.push(s); });
     }
     return op.length > 0 ? op : CATEGORIAS_RESIDUO_SUGERIDAS_CONTRATO;
@@ -232,9 +274,7 @@ export default function ClienteForm({
   const labelStyle = "block text-sm font-medium text-gray-700";
   const checkboxStyle = "h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500";
 
-  // Usa a prop availableCategorias (que agora tem um default estável) para popular o dropdown
   const dropdownCategorias = Array.from(new Set([...availableCategorias]));
-
 
   return (
     <form onSubmit={handleLocalSubmit} className="bg-white p-6 rounded-xl shadow-lg space-y-6">
@@ -304,16 +344,39 @@ export default function ClienteForm({
                     {outroCategoriaSelecionada && (<input type="text" value={outroCategoriaInput} onChange={(e) => setOutroCategoriaInput(e.target.value)} placeholder="Nome da nova categoria" className={`${inputStyle} sm:w-auto flex-grow`}/>)}
                 </div>
             </div>
-            <div className="mt-2"><label htmlFor="form-cliente-fazSeparacaoReciclaveisCompletaForm" className="flex items-center text-sm font-medium text-gray-700"><input type="checkbox" id="form-cliente-fazSeparacaoReciclaveisCompletaForm" checked={fazSeparacaoReciclaveisCompleta} onChange={(e) => setFazSeparacaoReciclaveisCompleta(e.target.checked)} className={`${checkboxStyle} mr-2`} />Cliente detalha os tipos de recicláveis?</label></div>
-            {fazSeparacaoReciclaveisCompleta && (
-                <div>
-                    <label className={labelStyle}>Sub-tipos de Recicláveis Detalhados*</label>
-                    <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
-                        {SUBTIPOS_RECICLAVEIS_COMUNS.map(subtipo => (<label key={subtipo} htmlFor={`form-cliente-subtipo-${subtipo}`} className="flex items-center"><input type="checkbox" id={`form-cliente-subtipo-${subtipo}`} value={subtipo} checked={subtiposComunsSelecionados.includes(subtipo)} onChange={() => handleSubtipoComumChange(subtipo)} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))}
-                    </div>
-                    <div className="mt-3"><label htmlFor="form-cliente-outrosSubtiposReciclaveisInputForm" className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" id="form-cliente-outrosSubtiposReciclaveisInputForm" value={outrosSubtiposReciclaveisInput} onChange={(e) => setOutrosSubtiposReciclaveisInput(e.target.value)} placeholder="Ex: Isopor, Embalagem Longa Vida" className={`${inputStyle} mt-1`} /></div>
-                </div>
-            )}
+            
+            <div className="border border-gray-200 p-3 rounded-md mt-4">
+              <label htmlFor="fazSeparacaoReciclaveisCompleta" className="flex items-center text-sm font-medium text-gray-700">
+                  <input type="checkbox" id="fazSeparacaoReciclaveisCompleta" checked={fazSeparacaoReciclaveisCompleta} onChange={(e) => setFazSeparacaoReciclaveisCompleta(e.target.checked)} className={`${checkboxStyle} mr-2`} />
+                  Cliente detalha os tipos de <span className="font-bold ml-1">recicláveis</span>?
+              </label>
+              {fazSeparacaoReciclaveisCompleta && (
+                  <div className="mt-3 pl-2">
+                      <label className={labelStyle}>Sub-tipos de Recicláveis Detalhados*</label>
+                      <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+                          {SUBTIPOS_RECICLAVEIS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsReciclaveisSelecionados.includes(subtipo)} onChange={() => handleSubtipoComumChange(subtipo, 'reciclavel')} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))}
+                      </div>
+                      <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposReciclaveisInput} onChange={(e) => setOutrosSubtiposReciclaveisInput(e.target.value)} placeholder="Ex: Isopor, Embalagem Longa Vida" className={`${inputStyle} mt-1`} /></div>
+                  </div>
+              )}
+            </div>
+
+            <div className="border border-gray-200 p-3 rounded-md mt-4">
+              <label htmlFor="fazSeparacaoOrganicosCompleta" className="flex items-center text-sm font-medium text-gray-700">
+                  <input type="checkbox" id="fazSeparacaoOrganicosCompleta" checked={fazSeparacaoOrganicosCompleta} onChange={(e) => setFazSeparacaoOrganicosCompleta(e.target.checked)} className={`${checkboxStyle} mr-2`} />
+                  Cliente detalha os tipos de <span className="font-bold ml-1">orgânicos</span>?
+              </label>
+              {fazSeparacaoOrganicosCompleta && (
+                  <div className="mt-3 pl-2">
+                      <label className={labelStyle}>Sub-tipos de Orgânicos Detalhados*</label>
+                      <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2">
+                          {SUBTIPOS_ORGANICOS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsOrganicosSelecionados.includes(subtipo)} onChange={() => handleSubtipoComumChange(subtipo, 'organico')} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))}
+                      </div>
+                      <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposOrganicosInput} onChange={(e) => setOutrosSubtiposOrganicosInput(e.target.value)} placeholder="Ex: Aparas, Cinzas" className={`${inputStyle} mt-1`} /></div>
+                  </div>
+              )}
+            </div>
+
           </div>
         </fieldset>
 

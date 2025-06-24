@@ -2,29 +2,34 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 
-// Lista de fallback para subtipos de recicláveis se o cliente não tiver definido os seus próprios
+// Constantes de fallback
 const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
+const SUBTIPOS_ORGANICOS_FALLBACK = ["Pré-serviço", "Pós-serviço"];
 
-// OBJETO DE CONFIGURAÇÃO DE CORES - Fácil de editar
+// Objeto de configuração de cores - Fácil de editar
 const wasteTypeColors = {
     // Cores Principais
-    'Reciclável':   { bg: '#007bff', text: '#FFFFFF' }, // Um azul mais moderno que o padrão
-    'Orgânico':     { bg: '#A52A2A', text: '#FFFFFF' },
-    'Rejeito':      { bg: '#808080', text: '#FFFFFF' },
-    'Não Reciclável': { bg: '#808080', text: '#FFFFFF' }, // Mapeado para cinza também
+    'Reciclável':   { bg: '#3f7fff', text: '#FFFFFF' },
+    'Orgânico':     { bg: '#704729', text: '#FFFFFF' },
+    'Rejeito':      { bg: '#757575', text: '#FFFFFF' },
+    'Não Reciclável': { bg: '#808080', text: '#FFFFFF' },
     
     // Sub-tipos Recicláveis
     'Papel':        { bg: '#0000FF', text: '#FFFFFF' },
     'Papel/Papelão':{ bg: '#0000FF', text: '#FFFFFF' },
     'Plástico':     { bg: '#FF0000', text: '#FFFFFF' },
     'Vidro':        { bg: '#008000', text: '#FFFFFF' },
-    'Metal':        { bg: '#FFFF00', text: '#000000' }, // Texto preto para melhor leitura
+    'Metal':        { bg: '#FFFF00', text: '#000000' },
     
     // Outros
     'Madeira':      { bg: '#000000', text: '#FFFFFF' },
     'Perigosos':    { bg: '#FFA500', text: '#FFFFFF' },
-    'Baterias':     { bg: '#FFA500', text: '#FFFFFF' }, // Mapeado para laranja
-    'Eletrônicos':  { bg: '#333333', text: '#FFFFFF' }, // Um cinza escuro para eletrônicos
+    'Baterias':     { bg: '#FFA500', text: '#FFFFFF' },
+    'Eletrônicos':  { bg: '#333333', text: '#FFFFFF' },
+
+    // NOVAS CORES PARA ORGÂNICOS
+    'Pré-serviço':  { bg: '#d4a373', text: '#FFFFFF' },
+    'Pós-serviço':  { bg: '#6f4e37', text: '#FFFFFF' },
 
     // Cor padrão para tipos não mapeados
     'default':      { bg: '#6b7280', text: '#FFFFFF' }
@@ -41,6 +46,7 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
   const [opcoesArea, setOpcoesArea] = useState([]);
   const [opcoesTipoResiduo, setOpcoesTipoResiduo] = useState([]);
   const [opcoesSubtipoReciclavel, setOpcoesSubtipoReciclavel] = useState([]);
+  const [opcoesSubtipoOrganico, setOpcoesSubtipoOrganico] = useState([]);
 
   const pesoInputRef = useRef(null);
 
@@ -54,16 +60,22 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
                                       : []).filter(cat => cat && cat.trim() !== '');
       setOpcoesTipoResiduo(categoriasPrincipais);
 
+      // Lógica para subtipos de Reciclável
       if (clienteSelecionado.fazSeparacaoReciclaveisCompleta && categoriasPrincipais.includes('Reciclável')) {
-        let subtiposParaUsar = (Array.isArray(clienteSelecionado.tiposReciclaveisPersonalizados)
-                                  ? clienteSelecionado.tiposReciclaveisPersonalizados
-                                  : []).filter(sub => sub && sub.trim() !== '');
-        if (subtiposParaUsar.length === 0) {
-          subtiposParaUsar = SUBTIPOS_RECICLAVEIS_FALLBACK;
-        }
-        setOpcoesSubtipoReciclavel(subtiposParaUsar);
+        let subtipos = clienteSelecionado.tiposReciclaveisPersonalizados || [];
+        if (subtipos.length === 0) subtipos = SUBTIPOS_RECICLAVEIS_FALLBACK;
+        setOpcoesSubtipoReciclavel(subtipos.filter(Boolean));
       } else {
         setOpcoesSubtipoReciclavel([]);
+      }
+
+      // Lógica para subtipos de Orgânico
+      if (clienteSelecionado.fazSeparacaoOrganicosCompleta && categoriasPrincipais.includes('Orgânico')) {
+        let subtipos = clienteSelecionado.tiposOrganicosPersonalizados || [];
+        if (subtipos.length === 0) subtipos = SUBTIPOS_ORGANICOS_FALLBACK;
+        setOpcoesSubtipoOrganico(subtipos.filter(Boolean));
+      } else {
+        setOpcoesSubtipoOrganico([]);
       }
       
       setAreaLancamento('');
@@ -76,6 +88,7 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
       setOpcoesArea([]);
       setOpcoesTipoResiduo([]);
       setOpcoesSubtipoReciclavel([]);
+      setOpcoesSubtipoOrganico([]);
       setAreaLancamento('');
       setSelectedMainCategory('');
       setSelectedSubType('');
@@ -113,6 +126,11 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
       clearErrorAfterDelay();
       return;
     }
+    if (selectedMainCategory === 'Orgânico' && opcoesSubtipoOrganico.length > 0 && !selectedSubType) {
+      setFormError('Por favor, especifique o tipo de orgânico.');
+      clearErrorAfterDelay();
+      return;
+    }
     if (!areaLancamento && opcoesArea.length > 0) {
       setFormError('Por favor, selecione uma área de lançamento.');
       clearErrorAfterDelay();
@@ -133,7 +151,7 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
       wasteType: selectedMainCategory,
       peso: parsedPeso,
     };
-    if (selectedMainCategory === 'Reciclável' && selectedSubType) {
+    if ((selectedMainCategory === 'Reciclável' || selectedMainCategory === 'Orgânico') && selectedSubType) {
       formData.wasteSubType = selectedSubType;
     }
 
@@ -161,33 +179,29 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
     }
   };
 
-  // Função para gerar o estilo do botão dinamicamente
   const getButtonStyles = (type, isSelected) => {
     const colorTheme = wasteTypeColors[type] || wasteTypeColors['default'];
     
-    // Converte a cor HEX para RGB para poder aplicar opacidade
     const hexToRgb = (hex) => {
       const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
       return result ? `${parseInt(result[1], 16)}, ${parseInt(result[2], 16)}, ${parseInt(result[3], 16)}` : null;
     };
 
     const rgbColor = hexToRgb(colorTheme.bg);
-
-    if (!rgbColor) return {}; // Retorna objeto vazio se a cor for inválida
+    if (!rgbColor) return {};
 
     if (isSelected) {
         return { 
-            backgroundColor: `rgba(${rgbColor}, 1)`, // Opacidade total
+            backgroundColor: `rgba(${rgbColor}, 1)`,
             color: colorTheme.text,
             borderColor: `rgba(${rgbColor}, 1)` 
         };
     }
     
-    // Estilo padrão com opacidade
     return {
-        backgroundColor: `rgba(${rgbColor}, 0.7)`, // Opacidade de 70%
+        backgroundColor: `rgba(${rgbColor}, 0.7)`,
         color: colorTheme.text,
-        borderColor: `rgba(${rgbColor}, 0.1)` // Borda sutil
+        borderColor: `rgba(${rgbColor}, 0.1)`
     };
   };
 
@@ -198,11 +212,11 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
     return <p className="text-center text-gray-500">Selecione um cliente para iniciar o lançamento.</p>;
   }
   
-  const showSubTypesSection = selectedMainCategory === 'Reciclável' && opcoesSubtipoReciclavel.length > 0;
+  const showRecyclableSubTypes = selectedMainCategory === 'Reciclável' && opcoesSubtipoReciclavel.length > 0;
+  const showOrganicSubTypes = selectedMainCategory === 'Orgânico' && opcoesSubtipoOrganico.length > 0;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Campo de Peso */}
       <div className="text-center">
         <label htmlFor="peso" className="sr-only">Peso Total (kg):</label>
         <div className="flex items-baseline justify-center">
@@ -220,7 +234,6 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
         </div>
       </div>
 
-      {/* Seção de Tipos de Resíduo */}
       {opcoesTipoResiduo.length > 0 ? (
         <div>
           <label className={labelStyle}>Tipo de Resíduo*</label>
@@ -240,8 +253,8 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
             ))}
           </div>
 
-          {showSubTypesSection && (
-             <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200 transition-all duration-300">
+          {showRecyclableSubTypes && (
+             <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <label className={subLabelStyle}>Especifique o Reciclável*</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {opcoesSubtipoReciclavel.map((subtipo) => (
@@ -260,12 +273,32 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
               </div>
             </div>
           )}
+
+          {showOrganicSubTypes && (
+             <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <label className={subLabelStyle}>Especifique o Orgânico*</label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                {opcoesSubtipoOrganico.map((subtipo) => (
+                  <button
+                    key={`subtype-${subtipo}`} type="button" onClick={() => setSelectedSubType(subtipo)}
+                    style={getButtonStyles(subtipo, selectedSubType === subtipo)}
+                    className={`flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-bold transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
+                        ${selectedSubType === subtipo
+                            ? 'ring-gray-800 shadow-lg'
+                            : 'ring-transparent hover:scale-105 hover:shadow-md'
+                        }`}
+                  >
+                    {subtipo}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : (
-        <p className="text-center text-gray-500">Este cliente não possui tipos de resíduo válidos para lançamento.</p>
+        <p className="text-center text-gray-500">Este cliente não possui tipos de resíduo para lançamento.</p>
       )}
 
-      {/* Seção de Áreas de Lançamento */}
       {opcoesArea.length > 0 && (
         <div>
           <label className={labelStyle}>Área de Lançamento*</label>
@@ -287,7 +320,6 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
         </div>
       )}
 
-      {/* Mensagem de Erro e Botão de Submissão */}
       {formError && (
         <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-center">
           {formError}
@@ -297,7 +329,7 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
         <button
             type="submit"
             className="w-full bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-4 px-6 rounded-xl shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70"
-            disabled={submitting || !peso || !selectedMainCategory || (!areaLancamento && opcoesArea.length > 0) || (showSubTypesSection && !selectedSubType)}
+            disabled={submitting || !peso || !selectedMainCategory || (!areaLancamento && opcoesArea.length > 0) || (showRecyclableSubTypes && !selectedSubType) || (showOrganicSubTypes && !selectedSubType)}
         >
             {submitting ? 'A Registar...' : 'Registar Pesagem'}
         </button>
