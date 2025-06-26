@@ -1,5 +1,6 @@
 // src/pages/app/PaginaDashboard.jsx
 import React, { useContext, useEffect, useState, useMemo } from 'react';
+import { collection, getDocs } from 'firebase/firestore';
 
 // Importações dos componentes
 import AuthContext from '../../context/AuthContext';
@@ -10,11 +11,13 @@ import DesvioDeAterro from '../../components/app/charts/DesvioDeAterro';
 import WasteTypePieChart from '../../components/app/charts/WasteTypePieChart';
 import AreaPieChart from '../../components/app/charts/AreaPieChart';
 import SummaryCards from '../../components/app/charts/SummaryCards';
-import DashboardFilters from '../../components/app/DashboardFilters'; 
+import DashboardFilters from '../../components/app/filters/DashboardFilters'; 
+import DestinacaoChart from '../../components/app/charts/DestinacaoChart';
 
 const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
+const TODOS_OS_MESES_INDICES = Array.from({ length: 12 }, (_, i) => i);
 
-// --- Funções de Processamento de Dados (Implementadas) ---
+// --- Funções de Processamento de Dados (Exemplo) ---
 const processDataForPieChartByWeight = (records, groupByField) => {
   if (!Array.isArray(records) || records.length === 0) return { pieData: [], totalWeight: 0 };
   let totalWeight = 0;
@@ -31,18 +34,8 @@ const processDataForPieChartByWeight = (records, groupByField) => {
   return { pieData, totalWeight: parseFloat(totalWeight.toFixed(2)) };
 };
 
-/**
- * Processa os registros de resíduos para calcular a Taxa de Desvio de Aterro.
- * A taxa de desvio é o oposto da taxa de rejeito (100% - % de rejeito).
- * @param {Array} records - Os registros de resíduos a serem processados.
- * @param {string} rejectCategoryName - O nome da categoria que representa o rejeito.
- * @returns {Array} - Um array de objetos, onde cada objeto representa um ponto de dados diário
- * com a 'taxaDesvio' e a média móvel 'mediaTaxaDesvio'.
- */
 const processDataForDesvioDeAterro = (records, rejectCategoryName = "Rejeito") => {
     if (!Array.isArray(records) || records.length === 0) return [];
-    
-    // 1. Agrega os dados por dia (peso total e peso do rejeito)
     const dailyDataAggregated = records.reduce((acc, record) => {
         if (!record || !record.timestamp) return acc;
         const recordTimestamp = typeof record.timestamp === 'number' ? record.timestamp : record.timestamp?.toDate?.().getTime();
@@ -50,17 +43,13 @@ const processDataForDesvioDeAterro = (records, rejectCategoryName = "Rejeito") =
         const dateKey = new Date(recordTimestamp).toISOString().split('T')[0];
         const weight = parseFloat(record.peso || 0);
         if (isNaN(weight)) return acc;
-        
         acc[dateKey] = acc[dateKey] || { total: 0, rejeito: 0 };
         acc[dateKey].total += weight;
-        
         if (record.wasteType === rejectCategoryName) {
             acc[dateKey].rejeito += weight;
         }
         return acc;
     }, {});
-
-    // 2. Calcula a taxa de desvio diária e ordena por data
     const sortedDailyData = Object.entries(dailyDataAggregated).map(([dateKey, data]) => {
         const percentualRejeito = data.total > 0 ? (data.rejeito / data.total) * 100 : 0;
         const taxaDesvio = 100 - percentualRejeito;
@@ -70,16 +59,11 @@ const processDataForDesvioDeAterro = (records, rejectCategoryName = "Rejeito") =
             taxaDesvio: parseFloat(taxaDesvio.toFixed(2)),
         };
     }).sort((a, b) => new Date(a.dateKey) - new Date(b.dateKey));
-
-    // 3. Calcula a média móvel da taxa de desvio
     let acumuladoSomaTaxaDesvio = 0;
     return sortedDailyData.map((dataPoint, index) => {
         acumuladoSomaTaxaDesvio += dataPoint.taxaDesvio;
         const mediaTaxaDesvio = acumuladoSomaTaxaDesvio / (index + 1);
-        return { 
-            ...dataPoint, 
-            mediaTaxaDesvio: parseFloat(mediaTaxaDesvio.toFixed(2)) 
-        };
+        return { ...dataPoint, mediaTaxaDesvio: parseFloat(mediaTaxaDesvio.toFixed(2)) };
     });
 };
 
@@ -113,10 +97,7 @@ const processDataForMonthlyYearlyComparison = (records, year1, year2) => {
   return { data: chartData, years: actualYearsInData };
 };
 const processDataForSummaryCards = (records) => {
-  let totalGeralKg = 0;
-  let totalCompostavelKg = 0;
-  let totalReciclavelKg = 0;
-  let totalNaoReciclavelKg = 0;
+  let totalGeralKg = 0, totalCompostavelKg = 0, totalReciclavelKg = 0, totalNaoReciclavelKg = 0;
   records.forEach(record => {
     const weight = parseFloat(record.peso || 0);
     if (isNaN(weight)) return;
@@ -149,20 +130,39 @@ const SectionTitle = ({ title }) => (
 // --- Fim das Funções de Processamento ---
 
 export default function PaginaDashboard() {
-  const { userProfile, userAllowedClientes, loadingAuth, loadingAllowedClientes } = useContext(AuthContext);
+  const { db, userProfile, userAllowedClientes, loadingAuth, loadingAllowedClientes } = useContext(AuthContext);
   
+  const now = new Date();
   const [selectedClienteIds, setSelectedClienteIds] = useState([]);
   const [selectAllClientesToggle, setSelectAllClientesToggle] = useState(false);
-  
-  const [selectedYears, setSelectedYears] = useState([]); // Inicia vazio
-  const [selectedMonths, setSelectedMonths] = useState(Array.from({ length: 12 }, (_, i) => i));
+  // ESTADO INICIAL CORRIGIDO: Define o ano e mês atuais como padrão.
+  const [selectedYears, setSelectedYears] = useState([now.getFullYear()]);
+  const [selectedMonths, setSelectedMonths] = useState([now.getMonth()]);
   const [selectedAreas, setSelectedAreas] = useState([]);
   
   const [availableYears, setAvailableYears] = useState([]);
   const [availableAreas, setAvailableAreas] = useState([]);
 
-  // Usando a versão robusta do hook que busca todos os dados
+  const [empresasColeta, setEmpresasColeta] = useState([]);
+  const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const { allWasteRecords, loadingRecords } = useWasteData(selectedClienteIds);
+
+  useEffect(() => {
+    if (!db) return;
+    const fetchEmpresasColeta = async () => {
+        setLoadingEmpresas(true);
+        try {
+            const querySnapshot = await getDocs(collection(db, "empresasColeta"));
+            const empresasData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setEmpresasColeta(empresasData);
+        } catch (error) {
+            console.error("Erro ao buscar empresas de coleta:", error);
+        }
+        setLoadingEmpresas(false);
+    };
+    fetchEmpresasColeta();
+  }, [db]);
+
 
   useEffect(() => {
     if (!loadingAllowedClientes && userAllowedClientes?.length > 0) {
@@ -174,13 +174,7 @@ export default function PaginaDashboard() {
 
   useEffect(() => {
     if (userAllowedClientes.length > 0 && selectedClienteIds.length > 0) {
-      const areas = new Set();
-      const selectedClientes = userAllowedClientes.filter(cliente => selectedClienteIds.includes(cliente.id));
-      selectedClientes.forEach(cliente => {
-        if (Array.isArray(cliente.areasPersonalizadas)) {
-          cliente.areasPersonalizadas.forEach(area => areas.add(area));
-        }
-      });
+      const areas = new Set(userAllowedClientes.filter(c => selectedClienteIds.includes(c.id)).flatMap(c => c.areasPersonalizadas || []));
       setAvailableAreas(Array.from(areas).sort());
     } else {
       setAvailableAreas([]);
@@ -188,40 +182,62 @@ export default function PaginaDashboard() {
     setSelectedAreas([]);
   }, [selectedClienteIds, userAllowedClientes]);
   
-  // Efeito que define os anos disponíveis e o padrão a partir dos dados recebidos
   useEffect(() => {
     if (allWasteRecords.length > 0) {
       const yearsFromData = Array.from(new Set(allWasteRecords.map(r => new Date(r.timestamp).getFullYear()))).sort((a, b) => b - a);
       setAvailableYears(yearsFromData);
-      
-      // Se nenhum ano estiver selecionado, define o mais recente dos dados como padrão
-      if (yearsFromData.length > 0 && selectedYears.length === 0) {
-        setSelectedYears([yearsFromData[0]]);
-      }
+      // Lógica de inicialização de ano removida daqui, pois já é feita no useState
     }
-  }, [allWasteRecords, selectedYears]);
+  }, [allWasteRecords]);
 
   const recordsFullyFiltered = useMemo(() => {
-    if (selectedYears.length === 0 || loadingRecords || allWasteRecords.length === 0) {
-        return [];
-    }
+    if (selectedYears.length === 0 || loadingRecords || allWasteRecords.length === 0) return [];
     return allWasteRecords.filter(record => {
-      if (!record || !record.timestamp) return false;
+      if (!record?.timestamp) return false;
       const recordDate = new Date(record.timestamp);
       if (isNaN(recordDate.getTime())) return false;
-      
-      const recordYear = recordDate.getFullYear();
-      const recordMonth = recordDate.getMonth();
-
-      const yearMatch = selectedYears.includes(recordYear);
-      const monthMatch = selectedMonths.includes(recordMonth);
+      const yearMatch = selectedYears.includes(recordDate.getFullYear());
+      const monthMatch = selectedMonths.includes(recordDate.getMonth());
       const areaMatch = selectedAreas.length === 0 || selectedAreas.includes(record.areaLancamento);
-
       return yearMatch && monthMatch && areaMatch;
     });
   }, [allWasteRecords, selectedYears, selectedMonths, selectedAreas, loadingRecords]);
 
-  // Handlers
+
+  const destinacaoData = useMemo(() => {
+    if (recordsFullyFiltered.length === 0 || empresasColeta.length === 0) {
+        return [{ name: 'Recovery', value: 0 }, { name: 'Disposal', value: 0 }];
+    }
+
+    const empresasMap = new Map(empresasColeta.map(e => [e.id, e]));
+    let recoveryWeight = 0;
+    let disposalWeight = 0;
+    const disposalDestinations = ['Aterro Sanitário', 'Incineração'];
+
+    recordsFullyFiltered.forEach(record => {
+        const empresaId = record.empresaColetaId;
+        if (!empresaId) return;
+
+        const empresa = empresasMap.get(empresaId);
+        if (!empresa?.destinacoes) return;
+
+        const destinacoesDoTipo = empresa.destinacoes[record.wasteType] || [];
+        const isDisposal = destinacoesDoTipo.some(dest => disposalDestinations.includes(dest));
+
+        if (isDisposal) {
+            disposalWeight += record.peso;
+        } else {
+            recoveryWeight += record.peso;
+        }
+    });
+
+    return [
+        { name: 'Recovery', value: parseFloat(recoveryWeight.toFixed(2)) },
+        { name: 'Disposal', value: parseFloat(disposalWeight.toFixed(2)) }
+    ];
+  }, [recordsFullyFiltered, empresasColeta]);
+
+
   const handleClienteSelectionChange = (clienteId) => {
     setSelectedClienteIds(prev => {
         const newSelection = prev.includes(clienteId) ? prev.filter(id => id !== clienteId) : [...prev, clienteId];
@@ -232,8 +248,7 @@ export default function PaginaDashboard() {
   const handleSelectAllClientesToggleChange = () => {
     setSelectAllClientesToggle(prev => {
         const newToggleState = !prev;
-        if (newToggleState && userAllowedClientes) { setSelectedClienteIds(userAllowedClientes.map(c => c.id)); } 
-        else { setSelectedClienteIds([]); }
+        setSelectedClienteIds(newToggleState ? userAllowedClientes.map(c => c.id) : []);
         return newToggleState;
     });
   };
@@ -241,32 +256,57 @@ export default function PaginaDashboard() {
   const handleYearToggle = (year) => {
     setSelectedYears(prev => {
       const newSelection = prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year];
+      // Garante que pelo menos um ano esteja sempre selecionado
       return newSelection.length === 0 ? prev : newSelection;
     });
   };
 
-  const handleMonthToggle = (monthIndex) => {
-    setSelectedMonths(prev => {
-      const newSelection = prev.includes(monthIndex) ? prev.filter(m => m !== monthIndex) : [...prev, monthIndex];
-      return newSelection.length === 0 ? prev : newSelection;
-    });
+  const handleQuickPeriodSelect = (period) => {
+    const currentDate = new Date();
+    let years = [];
+    let months = [];
+
+    switch (period) {
+        case 'thisMonth':
+            years = [currentDate.getFullYear()];
+            months = [currentDate.getMonth()];
+            break;
+        case 'last3Months':
+            let tempDate = new Date();
+            for (let i = 0; i < 3; i++) {
+                years.push(tempDate.getFullYear());
+                months.push(tempDate.getMonth());
+                tempDate.setMonth(tempDate.getMonth() - 1);
+            }
+            years = [...new Set(years)];
+            months = [...new Set(months)];
+            break;
+        case 'thisYear':
+            years = [currentDate.getFullYear()];
+            months = TODOS_OS_MESES_INDICES;
+            break;
+        case 'lastYear':
+            years = [currentDate.getFullYear() - 1];
+            months = TODOS_OS_MESES_INDICES;
+            break;
+        default:
+            years = [currentDate.getFullYear()];
+            months = [currentDate.getMonth()];
+    }
+    setSelectedYears(years);
+    setSelectedMonths(months);
   };
-  const handleSelectAllMonthsToggle = () => {
-    setSelectedMonths(prev => prev.length === 12 ? prev : Array.from({ length: 12 }, (_, i) => i));
-  };
-  
+
   const summaryData = useMemo(() => processDataForSummaryCards(recordsFullyFiltered), [recordsFullyFiltered]);
   const { pieData: wasteTypePieData } = useMemo(() => processDataForPieChartByWeight(recordsFullyFiltered, 'wasteType'), [recordsFullyFiltered]);
   const { pieData: areaPieData } = useMemo(() => processDataForPieChartByWeight(recordsFullyFiltered, 'areaLancamento'), [recordsFullyFiltered]);
   const desvioDeAterroData = useMemo(() => processDataForDesvioDeAterro(recordsFullyFiltered, "Rejeito"), [recordsFullyFiltered]);
-  
   const comparisonYears = useMemo(() => {
     const sortedYears = [...availableYears].sort((a, b) => b - a);
     if (sortedYears.length === 0) return [new Date().getFullYear()];
     if (sortedYears.length === 1) return [sortedYears[0]];
     return [sortedYears[0], sortedYears[1]];
   }, [availableYears]);
-
   const { data: monthlyComparisonChartData, years: actualYearsInComparisonData } = useMemo(() => {
     return processDataForMonthlyYearlyComparison(allWasteRecords, comparisonYears[0], comparisonYears[1] || comparisonYears[0]);
   }, [allWasteRecords, comparisonYears]);
@@ -279,24 +319,31 @@ export default function PaginaDashboard() {
     <div className="bg-gray-100 min-h-screen p-4 md:p-6 space-y-6">
       <div className="bg-slate-700 text-white py-3 px-6 rounded-md shadow-lg"><h1 className="text-2xl md:text-3xl font-bold text-center">DASHBOARD</h1></div>
       
-      <ClienteSelectorDropdown userAllowedClientes={userAllowedClientes} selectedClienteIds={selectedClienteIds} onClienteSelectionChange={handleClienteSelectionChange} selectAllClientesToggle={selectAllClientesToggle} onSelectAllClientesToggleChange={handleSelectAllClientesToggleChange} loadingAllowedClientes={loadingAllowedClientes} userProfile={userProfile} />
+      <ClienteSelectorDropdown 
+          userAllowedClientes={userAllowedClientes} 
+          selectedClienteIds={selectedClienteIds} 
+          onClienteSelectionChange={handleClienteSelectionChange} 
+          selectAllClientesToggle={selectAllClientesToggle} 
+          onSelectAllClientesToggleChange={handleSelectAllClientesToggleChange} 
+          loadingAllowedClientes={loadingAllowedClientes} 
+          userProfile={userProfile} 
+      />
       
       <DashboardFilters 
         selectedYears={selectedYears} 
         onYearToggle={handleYearToggle} 
         availableYears={availableYears} 
         selectedMonths={selectedMonths} 
-        onMonthToggle={handleMonthToggle} 
-        allMonthsSelected={selectedMonths.length === 12} 
-        onSelectAllMonthsToggle={handleSelectAllMonthsToggle} 
+        onSelectedMonthsChange={setSelectedMonths}
         selectedAreas={selectedAreas} 
         onSelectedAreasChange={setSelectedAreas} 
         availableAreas={availableAreas} 
+        onQuickPeriodSelect={handleQuickPeriodSelect}
         isLoading={loadingRecords || selectedYears.length === 0} 
       />
       
       <div className="mt-8 space-y-8">
-        {loadingRecords || selectedYears.length === 0 ? (<div className="text-center p-8 text-gray-600">A carregar dados dos resíduos...</div>) :
+        {loadingRecords || loadingEmpresas ? (<div className="text-center p-8 text-gray-600">A carregar dados...</div>) :
          !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center">Por favor, selecione um cliente para visualizar os dados.</div>) :
          !allWasteRecords.length ? (<div className="p-6 bg-white rounded-lg shadow text-center">Nenhum dado de resíduo registado para os clientes selecionados.</div>) : (
           <>
@@ -320,8 +367,12 @@ export default function PaginaDashboard() {
             <section>
                 <SectionTitle title="COMPOSIÇÃO DA DESTINAÇÃO" />
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
-                    {recordsFullyFiltered.length > 0 ? <DesvioDeAterro data={desvioDeAterroData} titleParts={{}} isLoading={loadingRecords} /> : <div className="p-6 bg-white rounded-lg shadow text-center min-h-[488px] flex items-center justify-center">Sem dados de destinação para o período selecionado.</div>}
-                    <div className="p-6 bg-white rounded-lg shadow h-full flex items-center justify-center min-h-[488px]"><p className="text-gray-500 text-xl">Em Desenvolvimento</p></div>
+                    {recordsFullyFiltered.length > 0 ? <DesvioDeAterro data={desvioDeAterroData} isLoading={loadingRecords} /> : <div className="p-6 bg-white rounded-lg shadow text-center min-h-[488px] flex items-center justify-center">Sem dados de desvio para o período selecionado.</div>}
+                    
+                    <DestinacaoChart 
+                        data={destinacaoData} 
+                        isLoading={loadingRecords || loadingEmpresas} 
+                    />
                 </div>
             </section>
           </>

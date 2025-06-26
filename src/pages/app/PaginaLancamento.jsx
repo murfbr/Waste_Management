@@ -16,7 +16,6 @@ import {
     startAfter 
 } from 'firebase/firestore';
 
-// CAMINHOS CORRIGIDOS
 import MessageBox from '../../components/app/MessageBox';
 import WasteForm from '../../components/app/WasteForm';
 import WasteRecordsList from '../../components/app/WasteRecordsList';
@@ -66,7 +65,7 @@ export default function PaginaLancamento() {
           const querySnapshot = await getDocs(q);
           loadedClientes = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
         } catch (e) { console.error("Erro ao carregar clientes (master):", e); }
-      } else if (userProfile.clientesPermitidos && userProfile.clientesPermitidos.length > 0) {
+      } else if (userProfile.clientesPermitidos?.length > 0) {
         clienteIdsToFetch = userProfile.clientesPermitidos;
         const CHUNK_SIZE = 30; 
         for (let i = 0; i < clienteIdsToFetch.length; i += CHUNK_SIZE) {
@@ -82,7 +81,7 @@ export default function PaginaLancamento() {
         loadedClientes.sort((a, b) => a.nome.localeCompare(b.nome));
       }
       setUserAllowedClientes(loadedClientes);
-      if (loadedClientes.length > 0 && !selectedClienteId) { // Define o primeiro cliente apenas se nenhum estiver selecionado
+      if (loadedClientes.length > 0 && !selectedClienteId) {
         setSelectedClienteId(loadedClientes[0].id); 
       } else if (loadedClientes.length === 0) {
         setSelectedClienteId('');
@@ -92,7 +91,6 @@ export default function PaginaLancamento() {
     fetchUserClientes();
   }, [db, userProfile]);
 
-  // Atualiza selectedClienteData quando selectedClienteId muda
   useEffect(() => {
     if (selectedClienteId && userAllowedClientes.length > 0) {
       const cliente = userAllowedClientes.find(c => c.id === selectedClienteId);
@@ -183,17 +181,29 @@ export default function PaginaLancamento() {
         showMessage("Nenhum cliente selecionado para o lançamento.", true);
         return false; 
     }
+    
+    const contratosDoCliente = selectedClienteData.contratosColeta || [];
+    const contratoAplicavel = contratosDoCliente.find(c => 
+        c.tiposResiduoColetados?.includes(formDataFromWasteForm.wasteType)
+    );
+
+    if (!contratoAplicavel || !contratoAplicavel.empresaColetaId) {
+        showMessage(`Nenhum contrato de coleta encontrado para o resíduo do tipo "${formDataFromWasteForm.wasteType}". Verifique o cadastro do cliente.`, true);
+        return false;
+    }
+
     try {
-      // NENHUMA ALTERAÇÃO NECESSÁRIA AQUI.
-      // A sintaxe `...formDataFromWasteForm` garante que todos os campos do objeto
-      // (incluindo o novo `wasteSubType`, quando ele existir) sejam salvos no Firestore.
-      await addDoc(collection(db, `artifacts/${appId}/public/data/wasteRecords`), {
+      const dadosParaSalvar = {
         ...formDataFromWasteForm, 
         clienteId: selectedClienteId, 
+        empresaColetaId: contratoAplicavel.empresaColetaId,
         timestamp: Date.now(), 
         userId: currentUser.uid, 
         userEmail: currentUser.email,
-      });
+      };
+
+      await addDoc(collection(db, `artifacts/${appId}/public/data/wasteRecords`), dadosParaSalvar);
+      
       showMessage('Resíduo registado com sucesso!');
       fetchInitialRecords(); 
       return true; 
@@ -222,7 +232,6 @@ export default function PaginaLancamento() {
   };
 
   const toggleRecordsVisibility = () => setIsRecordsVisible(!isRecordsVisible);
-
 
   if (loadingUserClientes && !userProfile) return <div className="text-center text-gray-600 p-8">A carregar dados...</div>;
   if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">A carregar perfil...</div>;
