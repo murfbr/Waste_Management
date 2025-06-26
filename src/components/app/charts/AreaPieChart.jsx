@@ -1,10 +1,10 @@
 // src/components/charts/AreaPieChart.jsx
-import React, { useMemo } from 'react'; // useMemo já estava aqui, o erro era no WasteTypePieChart
+import React, { useMemo } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#3D9140', '#FF5733', '#8333FF'];
 
-// Helper function to format numbers in Brazilian Portuguese style
+// Função auxiliar para formatar números
 const formatNumberBR = (number) => {
   if (typeof number !== 'number' || isNaN(number)) {
     return '0,00';
@@ -12,16 +12,45 @@ const formatNumberBR = (number) => {
   return number.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
+// RÓTULO CUSTOMIZADO FINAL: Posição, alinhamento e fonte ajustados.
+const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, fill }) => {
+    if (percent < 0.05) { // Oculta o rótulo para fatias muito pequenas
+        return null;
+    }
+    const RADIAN = Math.PI / 180;
+    // 1. Aumenta a distância do rótulo em relação ao gráfico
+    const radius = outerRadius + 35;
+    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+    return (
+        <text
+            x={x}
+            y={y}
+            fill={fill}
+            // 2. Garante que o bloco de texto esteja centralizado em seu ponto de ancoragem
+            textAnchor="middle"
+            dominantBaseline="central"
+            className="text-sm font-bold"
+        >
+            {/* O tspan herda o text-anchor e se alinha ao centro */}
+            <tspan x={x} dy="0">{formatNumberBR(value)} kg</tspan>
+            <tspan x={x} dy="1.2em">{`(${(percent * 100).toFixed(0)}%)`}</tspan>
+        </text>
+    );
+};
+
+
 export default function AreaPieChart({
   data,
   isLoading,
   titleContext = ""
 }) {
-  const chartTitle = `Composição por Área do Cliente (Peso)${titleContext}`;
+  const chartTitle = `Composição por Área (Peso)${titleContext}`;
 
   if (isLoading) {
     return (
-      <div className="bg-gray-50 p-4 rounded-lg shadow h-[400px] md:h-[450px] flex flex-col">
+      <div className="bg-white p-4 rounded-lg shadow h-[400px] md:h-[450px] flex flex-col">
         <h3 className="text-md md:text-lg font-semibold text-gray-700 mb-3 text-center">{chartTitle}</h3>
         <div className="flex-grow flex items-center justify-center">
           <p className="text-center text-gray-500">Carregando dados...</p>
@@ -30,27 +59,25 @@ export default function AreaPieChart({
     );
   }
 
-  // Calculate total for percentage calculation in tooltip
   const totalValue = useMemo(() => {
-    if (!data || data.length === 0) return 0; // Adiciona verificação para data vazia ou nula
+    if (!data || data.length === 0) return 0;
     return data.reduce((sum, entry) => sum + (entry.value || 0), 0);
   }, [data]);
 
   return (
-    <div className="bg-gray-50 p-4 rounded-lg shadow h-[400px] md:h-[450px] flex flex-col">
+    <div className="bg-white p-4 rounded-lg shadow h-[400px] md:h-[450px] flex flex-col">
       <h3 className="text-md md:text-lg font-semibold text-gray-700 mb-3 text-center">
         {chartTitle}
       </h3>
       {data && data.length > 0 ? (
         <ResponsiveContainer width="100%" height="90%">
-          <PieChart>
+          <PieChart margin={{ top: 30, right: 40, left: 40, bottom: 20 }}>
             <Pie
               data={data}
               cx="50%"
               cy="50%"
               labelLine={false}
-              // Label da fatia mostrando nome e peso formatado
-              label={({ name, value }) => `${name}: ${formatNumberBR(value)} kg`}
+              label={renderCustomizedLabel}
               outerRadius="80%"
               fill="#82ca9d"
               dataKey="value"
@@ -60,16 +87,12 @@ export default function AreaPieChart({
               ))}
             </Pie>
             <Tooltip
-              formatter={(value, name, props) => {
-                const itemName = props.payload.name;
-                const itemValue = props.payload.value;
-                // Recalculate percentage for tooltip
-                const percentage = totalValue > 0 && typeof itemValue === 'number' ? (itemValue / totalValue) * 100 : 0;
-                return [
-                  `${itemName}: ${formatNumberBR(itemValue)} kg (${percentage.toFixed(0)}%)`,
-                  null // null como segundo argumento remove o label "Valor:"
-                ];
-              }}
+              formatter={(value, name) => [
+                  `${formatNumberBR(value)} kg (${(value / totalValue * 100).toFixed(0)}%)`,
+                  name
+              ]}
+              labelStyle={{ fontWeight: 'bold' }}
+              wrapperClassName="rounded-md border-gray-300 shadow-lg"
             />
             <Legend />
           </PieChart>
