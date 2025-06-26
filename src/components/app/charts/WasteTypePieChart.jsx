@@ -18,14 +18,13 @@ const formatNumberBR = (number) => {
   return number.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 };
 
-// RÓTULO CUSTOMIZADO FINAL: Posição, alinhamento e fonte ajustados.
+// RÓTULO CUSTOMIZADO: Posição, alinhamento e fonte ajustados.
 const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, fill }) => {
     if (percent < 0.05) { // Oculta o rótulo para fatias muito pequenas
         return null;
     }
     const RADIAN = Math.PI / 180;
-    // 1. Aumenta a distância do rótulo em relação ao gráfico
-    const radius = outerRadius + 35; 
+    const radius = outerRadius + 40; 
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
@@ -34,12 +33,10 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, 
             x={x}
             y={y}
             fill={fill} 
-            // 2. Garante que o bloco de texto esteja centralizado em seu ponto de ancoragem
             textAnchor="middle"
             dominantBaseline="central"
             className="text-sm font-bold" 
         >
-            {/* O tspan herda o text-anchor e se alinha ao centro */}
             <tspan x={x} dy="0">{formatNumberBR(value)} kg</tspan>
             <tspan x={x} dy="1.2em">{`(${(percent * 100).toFixed(0)}%)`}</tspan>
         </text>
@@ -56,7 +53,7 @@ export default function WasteTypePieChart({
 
   if (isLoading) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow h-[400px] md:h-[450px] flex flex-col">
+      <div className="bg-white p-4 rounded-lg shadow h-[500px] flex flex-col">
         <h3 className="text-md md:text-lg font-semibold text-gray-700 mb-3 text-center">{chartTitle}</h3>
         <div className="flex-grow flex items-center justify-center">
           <p className="text-center text-gray-500">Carregando dados...</p>
@@ -71,20 +68,22 @@ export default function WasteTypePieChart({
   }, [data]);
 
   return (
-    <div className="bg-white p-4 rounded-lg shadow h-[400px] md:h-[450px] flex flex-col">
+    <div className="bg-white p-4 rounded-lg shadow h-[500px] flex flex-col">
       <h3 className="text-md md:text-lg font-semibold text-gray-700 mb-3 text-center">
         {chartTitle}
       </h3>
       {data && data.length > 0 ? (
-        <ResponsiveContainer width="100%" height="90%">
-          <PieChart margin={{ top: 30, right: 40, left: 40, bottom: 20 }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
             <Pie
               data={data}
               cx="50%"
-              cy="50%"
+              // AJUSTE DE ESPAÇAMENTO: O valor 'cy' move o centro do gráfico para cima.
+              // Diminua o valor (ex: "40%") para subir mais e dar mais espaço para a legenda.
+              cy="45%"
               labelLine={false} 
               label={renderCustomizedLabel}
-              outerRadius="80%"
+              outerRadius="65%"
               fill="#8884d8"
               dataKey="value"
             >
@@ -100,7 +99,7 @@ export default function WasteTypePieChart({
               labelStyle={{ fontWeight: 'bold' }}
               wrapperClassName="rounded-md border-gray-300 shadow-lg"
             />
-            <Legend />
+            <Legend verticalAlign="bottom" />
           </PieChart>
         </ResponsiveContainer>
       ) : (
