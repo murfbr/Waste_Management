@@ -4,18 +4,18 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 
 // Cores temáticas para os tipos de resíduo
 const WASTE_TYPE_COLORS = {
-    'Reciclável': '#3f7fff',
-    'Orgânico': '#704729',
-    'Rejeito': '#757575',
+    'Reciclável': '#007bff',
+    'Orgânico': '#A52A2A',
+    'Rejeito': '#808080',
     'default': '#6b7280'
 };
 
-// Função auxiliar para formatar números
+// Função auxiliar para formatar números com 1 casa decimal
 const formatNumberBR = (number) => {
   if (typeof number !== 'number' || isNaN(number)) {
-    return '0,00';
+    return '0,0';
   }
-  return number.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  return number.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 };
 
 // RÓTULO CUSTOMIZADO: Posição, alinhamento e fonte ajustados.
@@ -38,7 +38,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, 
             className="text-sm font-bold" 
         >
             <tspan x={x} dy="0">{formatNumberBR(value)} kg</tspan>
-            <tspan x={x} dy="1.2em">{`(${(percent * 100).toFixed(0)}%)`}</tspan>
+            <tspan x={x} dy="1.2em">{`(${(percent * 100).toFixed(1)}%)`}</tspan>
         </text>
     );
 };
@@ -78,12 +78,10 @@ export default function WasteTypePieChart({
             <Pie
               data={data}
               cx="50%"
-              // AJUSTE DE ESPAÇAMENTO: O valor 'cy' move o centro do gráfico para cima.
-              // Diminua o valor (ex: "40%") para subir mais e dar mais espaço para a legenda.
               cy="45%"
               labelLine={false} 
               label={renderCustomizedLabel}
-              outerRadius="65%"
+              outerRadius="70%"
               fill="#8884d8"
               dataKey="value"
             >
@@ -93,13 +91,17 @@ export default function WasteTypePieChart({
             </Pie>
             <Tooltip
               formatter={(value, name) => [
-                  `${formatNumberBR(value)} kg (${(value / totalValue * 100).toFixed(0)}%)`,
+                  `${formatNumberBR(value)} kg (${(value / totalValue * 100).toFixed(1)}%)`,
                   name
               ]}
               labelStyle={{ fontWeight: 'bold' }}
               wrapperClassName="rounded-md border-gray-300 shadow-lg"
             />
-            <Legend verticalAlign="bottom" />
+            {/* AJUSTE DE ESPAÇAMENTO DA LEGENDA:
+              A propriedade wrapperStyle aplica um espaçamento no topo do contêiner da legenda,
+              forçando-a para baixo e evitando a sobreposição com os rótulos do gráfico.
+            */}
+            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: "40px" }} />
           </PieChart>
         </ResponsiveContainer>
       ) : (

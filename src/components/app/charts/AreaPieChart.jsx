@@ -7,9 +7,10 @@ const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#3D9140'
 // Função auxiliar para formatar números
 const formatNumberBR = (number) => {
   if (typeof number !== 'number' || isNaN(number)) {
-    return '0,00';
+    return '0,0';
   }
-  return number.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  // AJUSTADO: Agora formata com 1 casa decimal
+  return number.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
 };
 
 // RÓTULO CUSTOMIZADO: Posição, alinhamento e fonte ajustados.
@@ -32,7 +33,8 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, 
             className="text-sm font-bold"
         >
             <tspan x={x} dy="0">{formatNumberBR(value)} kg</tspan>
-            <tspan x={x} dy="1.2em">{`(${(percent * 100).toFixed(0)}%)`}</tspan>
+            {/* AJUSTADO: Percentual com 1 casa decimal */}
+            <tspan x={x} dy="1.2em">{`(${(percent * 100).toFixed(1)}%)`}</tspan>
         </text>
     );
 };
@@ -87,7 +89,8 @@ export default function AreaPieChart({
             </Pie>
             <Tooltip
               formatter={(value, name) => [
-                  `${formatNumberBR(value)} kg (${(value / totalValue * 100).toFixed(0)}%)`,
+                  // AJUSTADO: Percentual com 1 casa decimal no tooltip
+                  `${formatNumberBR(value)} kg (${(value / totalValue * 100).toFixed(1)}%)`,
                   name
               ]}
               labelStyle={{ fontWeight: 'bold' }}
