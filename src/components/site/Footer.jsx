@@ -19,7 +19,7 @@ export default function Footer() {
         </div>
         <hr className="my-6 border-gray-700" />
         <p className="text-center text-gray-400 text-sm">
-          &copy; {currentYear} CtrlWaste. Todos os direitos reservados.
+          &copy; {currentYear} CtrlWaste. Todos os direitos reservados 2025.
         </p>
       </div>
     </footer>
