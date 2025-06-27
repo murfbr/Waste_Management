@@ -4,7 +4,8 @@ import { Link } from 'react-router-dom';
 export default function HeroSection() {
   return (
     <section className="bg-white text-gray-800">
-      <div className="container mx-auto flex px-5 py-24 md:flex-row flex-col items-center">
+      {/* Container principal agora usa max-w-7xl e padding responsivo para garantir a centralização */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24 flex md:flex-row flex-col items-center">
         <div className="lg:flex-grow md:w-1/2 lg:pr-24 md:pr-16 flex flex-col md:items-start md:text-left mb-16 md:mb-0 items-center text-center">
           <h1 className="title-font sm:text-5xl text-4xl mb-4 font-extrabold text-gray-900">
             <span className="text-green-600">Ctrl Waste:</span> Tecnologia simples. Resultados mensuráveis.

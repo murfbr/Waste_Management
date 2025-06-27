@@ -10,7 +10,8 @@ const BenefitCard = ({ title, children }) => (
 export default function BenefitsSection() {
     return (
         <section className="text-gray-600 body-font bg-gray-100">
-            <div className="container px-5 py-24 mx-auto">
+             {/* Container principal agora usa max-w-7xl e padding responsivo para garantir a centralização */}
+            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
                 <div className="text-center mb-20">
                     <h2 className="sm:text-4xl text-3xl font-bold title-font text-gray-900 mb-4">
                         Por que escolher o Ctrl Waste?

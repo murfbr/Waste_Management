@@ -40,17 +40,21 @@ export default function ValuesSection() {
   return (
     <section className="bg-white py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        {/* A mudança principal está aqui: de 'items-center' para 'items-start' para alinhar os blocos pelo topo. */}
         <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-12 gap-y-16 sm:gap-y-20 lg:mx-0 lg:max-w-none lg:grid-cols-2 items-start">
-          <div className="lg:pr-8 lg:pt-4">
+          {/* Bloco de texto à esquerda, agora com o padding e a ordem dos elementos ajustados */}
+          <div className="lg:pr-8 lg:pt-2">
             <div className="lg:max-w-lg">
-              <h2 className="text-base font-semibold leading-7 text-green-600">Nossos Princípios</h2>
-              <p className="mt-2 text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Nossos valores</p>
+              {/* O título principal agora vem primeiro para alinhar com os ícones */}
+              <p className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Nossos valores</p>
               <p className="mt-6 text-lg leading-8 text-gray-600">
                 Acreditamos que a tecnologia deve servir a um propósito maior. Nossos valores guiam cada linha de código, cada funcionalidade e cada interação que temos com nossos clientes e com o planeta.
               </p>
+               {/* O subtítulo "Nossos Princípios" foi movido para baixo para não interferir no alinhamento */}
+              <h2 className="mt-10 text-base font-semibold leading-7 text-green-600">Nossos Princípios</h2>
             </div>
           </div>
+          
+          {/* Bloco de valores à direita, com o mesmo padding superior para garantir o alinhamento */}
           <dl className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:pt-2">
             {values.map((value) => (
               <ValueItem key={value.text} icon={value.icon} text={value.text} />
