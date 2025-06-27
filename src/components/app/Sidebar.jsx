@@ -5,128 +5,154 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import AuthContext from '../../context/AuthContext';
 import { signOut } from 'firebase/auth';
 
-const CloseIcon = () => (
-  <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path>
-  </svg>
-);
+// --- ÍCONES SVG PARA UMA MELHOR EXPERIÊNCIA VISUAL ---
+const LançamentoIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
+const DashboardIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
+const DocsIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
+const EconomiaIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
+const GlossarioIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v11.494m-9-5.747h18" /></svg>;
+const AdminUsersIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M15 21a6 6 0 00-9-5.197m0 0A5.975 5.975 0 0112 13a5.975 5.975 0 016-5.197M15 21a9 9 0 00-9-5.197" /></svg>;
+const AdminClientesIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" /></svg>;
+const LogoutIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" /></svg>;
+const ChevronDoubleLeftIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" /></svg>;
+const ChevronDoubleRightIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" /></svg>;
+const CloseIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>;
 
-export default function Sidebar({ isOpen, toggleSidebar }) {
+
+// Componente de link de navegação para evitar repetição
+const NavItem = ({ to, icon, text, isCollapsed, onClick }) => {
+  const activeStyle = { backgroundColor: '#4338ca', color: 'white' };
+  return (
+    <NavLink 
+      to={to} 
+      style={({ isActive }) => isActive ? activeStyle : undefined}
+      onClick={onClick}
+      className="flex items-center p-2.5 rounded-md transition duration-200 hover:bg-gray-700 space-x-4"
+      title={isCollapsed ? text : ""}
+    >
+      {icon}
+      <span className={`${isCollapsed ? 'hidden' : 'inline-block'}`}>{text}</span>
+    </NavLink>
+  );
+};
+
+export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCollapse }) {
   const { userProfile, currentUser, auth: authInstanceFromContext } = useContext(AuthContext);
   const navigate = useNavigate();
 
   const handleLogout = async () => {
     try {
-      if (!authInstanceFromContext) {
-        console.error('Instância de autenticação não disponível.');
-        return;
-      }
       await signOut(authInstanceFromContext);
-      if (typeof toggleSidebar === 'function') {
-        toggleSidebar();
-      }
+      if (isOpen && typeof toggleSidebar === 'function') toggleSidebar();
       navigate('/login');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
   };
-  
-  const activeLinkStyle = {
-    backgroundColor: '#4338ca', // Tailwind: indigo-700
-    color: 'white',
-  };
 
   const handleLinkClick = () => {
     if (isOpen && typeof toggleSidebar === 'function') {
-        toggleSidebar();
+      toggleSidebar();
     }
   };
 
   return (
     <>
+      {/* Overlay para mobile (lógica existente mantida) */}
       {isOpen && (
-        <div
-          className="fixed inset-0 z-20 bg-black opacity-50 md:hidden"
-          onClick={toggleSidebar}
-          aria-hidden="true"
-        ></div>
+        <div className="fixed inset-0 z-20 bg-black opacity-50 md:hidden" onClick={toggleSidebar}></div>
       )}
 
+      {/* Container principal da Sidebar */}
       <aside
         className={`
-          bg-gray-800 text-gray-100 w-64 flex flex-col
+          bg-gray-800 text-gray-100 flex flex-col
           fixed inset-y-0 left-0 z-30 h-screen
-          transform transition-transform duration-300 ease-in-out
-          ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 md:relative
+          transform transition-all duration-300 ease-in-out
+          md:relative
+          ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
+          ${isCollapsed ? 'w-20' : 'w-64'} 
         `}
         aria-label="Sidebar principal"
       >
-        <div className="p-4 flex justify-between items-center md:justify-center border-b border-gray-700 flex-shrink-0">
-          <h1 className="text-2xl font-bold text-white">
+        {/* Header da Sidebar */}
+        <div className={`p-4 flex items-center border-b border-gray-700 flex-shrink-0 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+          <h1 className={`text-2xl font-bold text-white transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'inline-block'}`}>
             CtrlWaste
           </h1>
-          <button
-            onClick={toggleSidebar}
-            className="md:hidden p-1 text-gray-300 hover:text-white"
-            aria-label="Fechar menu"
-          >
+           <span className={`text-2xl font-bold text-white transition-opacity duration-200 ${isCollapsed ? 'inline-block' : 'hidden'}`}>
+            CW
+          </span>
+          <button onClick={toggleSidebar} className="md:hidden p-1 text-gray-300 hover:text-white" aria-label="Fechar menu">
             <CloseIcon />
           </button>
         </div>
 
-        <nav className="flex-grow overflow-y-auto p-4 space-y-1">
+        {/* Navegação Principal */}
+        <nav className="flex-grow overflow-y-auto p-2 space-y-1">
           {userProfile ? (
             <>
               {(userProfile.role === 'master' || userProfile.role === 'gerente' || userProfile.role === 'operacional') && (
-                <NavLink to="/app/lancamento" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Lançamento</NavLink>
+                <NavItem to="/app/lancamento" icon={<LançamentoIcon />} text="Lançamento" isCollapsed={isCollapsed} onClick={handleLinkClick} />
               )}
               {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
-                <NavLink to="/app/dashboard" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Dashboards</NavLink>
+                <NavItem to="/app/dashboard" icon={<DashboardIcon />} text="Dashboards" isCollapsed={isCollapsed} onClick={handleLinkClick} />
               )}
               
-              {/* --- NOVA SEÇÃO DE INFORMATIVOS --- */}
               {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
                 <>
-                  <hr className="my-2 border-gray-600" />
-                  <p className="px-4 pt-2 pb-1 text-xs text-gray-400 uppercase">Informativos</p>
-                  <NavLink to="/app/documentacao" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Documentação</NavLink>
-                  <NavLink to="/app/economia-circular" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Economia Circular</NavLink>
-                  <NavLink to="/app/glossario" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Glossário</NavLink>
+                  <hr className={`my-2 border-gray-600 ${isCollapsed && 'mx-4'}`} />
+                  {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs text-gray-400 uppercase">Informativos</p>}
+                  <NavItem to="/app/documentacao" icon={<DocsIcon />} text="Documentação" isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                  <NavItem to="/app/economia-circular" icon={<EconomiaIcon />} text="Economia Circular" isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                  <NavItem to="/app/glossario" icon={<GlossarioIcon />} text="Glossário" isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}
               
-              {/* Seção de Administração (já existente) */}
               {userProfile.role === 'master' && (
                 <>
-                  <hr className="my-2 border-gray-600" />
-                  <p className="px-4 pt-2 pb-1 text-xs text-gray-400 uppercase">Administração</p>
-                  <NavLink to="/app/admin/usuarios" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Usuários</NavLink>
-                  <NavLink to="/app/admin/clientes" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Clientes</NavLink>
-                  <NavLink to="/app/admin/empresas-coleta" style={({ isActive }) => isActive ? activeLinkStyle : undefined} onClick={handleLinkClick} className="block py-2.5 px-4 rounded transition duration-200 hover:bg-gray-700">Empresas de Coleta</NavLink>
+                  <hr className={`my-2 border-gray-600 ${isCollapsed && 'mx-4'}`} />
+                  {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs text-gray-400 uppercase">Administração</p>}
+                  <NavItem to="/app/admin/usuarios" icon={<AdminUsersIcon />} text="Usuários" isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                  <NavItem to="/app/admin/clientes" icon={<AdminClientesIcon />} text="Clientes" isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                  <NavItem to="/app/admin/empresas-coleta" icon={<AdminClientesIcon />} text="Empresas de Coleta" isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}
             </>
           ) : (
-            <p className="p-4 text-gray-400">Carregando menu...</p>
+            <div className="p-4 text-gray-400">...</div> // Skeleton loader can be added here
           )}
         </nav>
 
-        <div className="p-4 border-t border-gray-700 flex-shrink-0">
-          {userProfile && userProfile.role && (
-            <p className="text-xs text-gray-400 text-center mb-1">
-              Nível: {userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)}
-            </p>
-          )}
-          {currentUser && currentUser.email && (
-            <p className="text-xs text-gray-500 text-center break-all mb-2 truncate" title={currentUser.email}>
-              {currentUser.email}
-            </p>
-          )}
+        {/* Rodapé da Sidebar */}
+        <div className="p-2 border-t border-gray-700 flex-shrink-0">
+          {/* Botão para recolher/expandir */}
+          <button
+            onClick={onToggleCollapse}
+            className="hidden md:flex items-center justify-center w-full p-2.5 rounded-md transition duration-200 hover:bg-gray-700 mb-2"
+            title={isCollapsed ? "Expandir menu" : "Recolher menu"}
+          >
+            {isCollapsed ? <ChevronDoubleRightIcon className="w-6 h-6" /> : <ChevronDoubleLeftIcon className="w-6 h-6" />}
+          </button>
+        
+          <div className={isCollapsed ? 'hidden' : 'block'}>
+            {userProfile && userProfile.role && (
+              <p className="text-xs text-gray-400 text-center mb-1">
+                Nível: {userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)}
+              </p>
+            )}
+            {currentUser && currentUser.email && (
+              <p className="text-xs text-gray-500 text-center break-all mb-2 truncate" title={currentUser.email}>
+                {currentUser.email}
+              </p>
+            )}
+          </div>
           <button
             onClick={handleLogout}
-            className="w-full bg-red-500 hover:bg-red-600 text-white font-semibold py-2 px-4 rounded-lg text-sm transition duration-200"
+            className={`w-full flex items-center font-semibold py-2 px-4 rounded-lg text-sm transition duration-200 bg-red-500 hover:bg-red-600 ${isCollapsed ? 'justify-center' : ''}`}
           >
-            Sair
+            <LogoutIcon />
+            <span className={isCollapsed ? 'hidden' : 'ml-2'}>Sair</span>
           </button>
         </div>
       </aside>
