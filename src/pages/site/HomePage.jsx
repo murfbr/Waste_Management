@@ -1,18 +1,18 @@
-// Salve este arquivo como: src/pages/site/HomePage.jsx
+// src/pages/site/HomePage.jsx
 
 import React from 'react';
 
-// Importando os componentes de seção que vamos criar
+// Importando os componentes de seção atualizados e novos
 import HeroSection from '../../components/site/HeroSection';
-import FeaturesSection from '../../components/site/FeaturesSection';
-import CallToActionSection from '../../components/site/CallToActionSection';
+import BenefitsSection from '../../components/site/BenefitsSection';
+import PlatformSection from '../../components/site/PlatformSection';
 
 export default function HomePage() {
   return (
     <>
       <HeroSection />
-      <FeaturesSection />
-      <CallToActionSection />
+      <BenefitsSection />
+      <PlatformSection />
     </>
   );
 }
