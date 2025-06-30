@@ -1,4 +1,7 @@
 import React from 'react';
+import dashboardImg from '../../pages/site/img/composicaogeracao.png'
+import pesagemImg from '../../pages/site/img/pesagem.png'
+import mtrImg from '../../pages/site/img/mtr.png'
 
 const FeatureDetail = ({ title, children, imageUrl, reverse = false }) => (
     <div className={`flex items-center gap-8 md:gap-16 ${reverse ? 'md:flex-row-reverse' : 'md:flex-row'} flex-col`}>
@@ -27,7 +30,7 @@ export default function PlatformSection() {
                 </div>
 
                 <div className="space-y-20">
-                    <FeatureDetail title="Dashboards em tempo real" imageUrl="https://placehold.co/600x400/D1FAE5/10B981?text=Gráficos+Interativos">
+                    <FeatureDetail title="Dashboards em tempo real" imageUrl={dashboardImg}>
                         <p>Visualize de forma clara e interativa os principais indicadores da sua operação:</p>
                         <ul className="list-disc list-inside space-y-2">
                             <li>Peso dos resíduos por tipo</li>
@@ -38,7 +41,7 @@ export default function PlatformSection() {
                         <p className="font-semibold">Tudo 100% digital, atualizado em tempo real.</p>
                     </FeatureDetail>
 
-                    <FeatureDetail title="Lançamento rápido e eficiente" imageUrl="https://placehold.co/600x400/DBEAFE/3B82F6?text=Interface+Intuitiva" reverse={true}>
+                    <FeatureDetail title="Lançamento rápido e eficiente" imageUrl={pesagemImg} reverse={true}>
                         <p>Registro de dados simplificado via:</p>
                         <ul className="list-disc list-inside space-y-2">
                             <li>Tablet, desktop ou celular (tablet opcional fornecido pela Ctrl Waste)</li>
@@ -47,7 +50,7 @@ export default function PlatformSection() {
                         </ul>
                     </FeatureDetail>
 
-                    <FeatureDetail title="Relatórios e conformidade" imageUrl="https://placehold.co/600x400/FEF3C7/F59E0B?text=Documentos+e+MTRs">
+                    <FeatureDetail title="Relatórios e conformidade" imageUrl={mtrImg}>
                         <p>Acompanhe, exporte e comprove os resultados da sua gestão de resíduos:</p>
                         <ul className="list-disc list-inside space-y-2">
                             <li>Relatórios técnicos e gerenciais gerados em tempo real, com apenas um clique</li>

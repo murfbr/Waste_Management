@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import lancamentoImg from '../../pages/site/img/lancamento.png'
 
 export default function HeroSection() {
   return (
@@ -26,7 +27,7 @@ export default function HeroSection() {
           </div>
         </div>
         <div className="lg:max-w-lg lg:w-full md:w-1/2 w-5/6">
-          <img className="object-cover object-center rounded-lg shadow-2xl" alt="ilustração do painel do sistema Ctrl Waste" src="https://placehold.co/720x600/E2E8F0/4A5568?text=Dashboard+Ctrl+Waste" />
+          <img className="object-cover object-center rounded-lg shadow-2xl" alt="ilustração do painel do sistema Ctrl Waste" src={lancamentoImg} />
         </div>
       </div>
     </section>
