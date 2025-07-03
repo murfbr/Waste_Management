@@ -4,8 +4,8 @@ import React, { createContext, useState, useEffect, useMemo } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, documentId, orderBy, getDocs } from 'firebase/firestore'; 
 
-// As importações de db e appId estão corretas
-import { app, db, auth } from '../firebase/init'; 
+// Agora importamos também 'functions'
+import { app, db, auth, functions } from '../firebase/init'; 
 import { appId } from '../firebase/config'; 
 
 const AuthContext = createContext(null);
@@ -44,7 +44,6 @@ export const AuthProvider = ({ children }) => {
                             const querySnapshot = await getDocs(q);
                             loadedClientes = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                         } else if (newProfileData.clientesPermitidos && newProfileData.clientesPermitidos.length > 0) {
-                            // Firestore tem um limite de 30 itens para queries 'in'
                             const CHUNK_SIZE = 30;
                             for (let i = 0; i < newProfileData.clientesPermitidos.length; i += CHUNK_SIZE) {
                                 const chunk = newProfileData.clientesPermitidos.slice(i, i + CHUNK_SIZE);
@@ -75,12 +74,13 @@ export const AuthProvider = ({ children }) => {
         return () => unsubscribe();
     }, []);
 
-    // CORREÇÃO: Adicionando db, auth, e appId de volta ao valor do contexto.
+    // Adicionamos 'functions' ao valor do contexto
     const contextValue = useMemo(() => {
         return {
-            db, // <-- Adicionado de volta
-            auth, // <-- Adicionado de volta
-            appId, // <-- Adicionado de volta
+            db,
+            auth,
+            functions, // <-- Adicionado aqui
+            appId,
             currentUser, 
             userProfile, 
             isAuthReady, 

@@ -23,3 +23,51 @@ dist-ssr
 *.sln
 *.sw?
 *.env
+
+# Ficheiro .gitignore para um projeto React (Vite) + Firebase Functions
+
+# # # Dependências # # #
+# Ignora as pastas de módulos do Node, tanto na raiz quanto na pasta de funções.
+# Estas pastas podem ser enormes e são recriadas com o comando 'npm install'.
+node_modules/
+functions/node_modules/
+
+# # # Ficheiros de Build e Gerados # # #
+# Ignora as pastas de output da compilação.
+# A pasta 'dist' é do seu site React, e a 'lib' é das suas Cloud Functions.
+dist/
+functions/lib/
+
+# # # Ficheiros de Ambiente e Segredos (MUITO IMPORTANTE) # # #
+# NUNCA envie ficheiros .env para o GitHub. Eles contêm as suas chaves de API e segredos.
+.env
+.env*.local
+.env.*.local
+functions/.env.local
+
+# # # Dados dos Emuladores e de Teste (MUITO IMPORTANTE) # # #
+# Ignora os dados exportados dos emuladores e os dados de seed.
+# Estes ficheiros podem conter informações de teste ou cópias de dados de produção.
+.emulator-data/
+seed-data/
+saved-emulator-state/
+
+# # # Logs e Ficheiros de Depuração # # #
+# Ignora ficheiros de log que podem conter informações sensíveis.
+*.log
+firebase-debug.log
+firebase-debug.*.log
+firestore-debug.log
+
+# # # Ficheiros de Configuração do Editor e do Sistema Operativo # # #
+# Ignora ficheiros específicos do ambiente de desenvolvimento de cada utilizador.
+.vscode/
+.DS_Store
+*.suo
+*.user
+*.userosscache
+*.sln.docstates
+
+# # # Ficheiros Temporários de Exportação do Firebase # # #
+# Ignora as pastas temporárias que o emulador cria durante a exportação.
+firebase-export-*/

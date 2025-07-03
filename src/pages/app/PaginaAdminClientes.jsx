@@ -3,26 +3,26 @@
 import React, { useState, useEffect, useContext } from 'react';
 import AuthContext from '../../context/AuthContext';
 import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc, serverTimestamp, orderBy, writeBatch } from 'firebase/firestore';
+import { httpsCallable } from 'firebase/functions';
 import MessageBox from '../../components/app/MessageBox';
 import ClienteForm from '../../components/app/ClienteForm'; 
 import Papa from 'papaparse';
 
-// Categorias iniciais - pode ser movido para um arquivo de constantes se usado em mais lugares
 const CATEGORIAS_CLIENTE_INICIAIS = ["Hotel", "Escola", "Condomínio", "Aeroporto"];
 
 export default function PaginaAdminClientes() {
-  const { db, appId, userProfile: masterProfile, currentUser: masterCurrentUser } = useContext(AuthContext);
+  const { db, functions, appId, userProfile: masterProfile, currentUser: masterCurrentUser } = useContext(AuthContext);
+
+  const saveIneaCredentials = httpsCallable(functions, 'saveIneaCredentials');
+  const testIneaConnection = httpsCallable(functions, 'testIneaConnection');
 
   const [clientes, setClientes] = useState([]);
   const [loadingClientes, setLoadingClientes] = useState(true);
   
   const [empresasColetaDisponiveis, setEmpresasColetaDisponiveis] = useState([]);
   
-  // Estado para as categorias de cliente disponíveis para o formulário e filtro
   const [availableClientCategorias, setAvailableClientCategorias] = useState([...CATEGORIAS_CLIENTE_INICIAIS]);
-  // Estado para o filtro de categoria na tabela
   const [selectedCategoriaFiltro, setSelectedCategoriaFiltro] = useState('');
-
 
   const [showForm, setShowForm] = useState(false); 
   const [editingClienteData, setEditingClienteData] = useState(null); 
@@ -30,6 +30,8 @@ export default function PaginaAdminClientes() {
 
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
+
+  const [testConnectionStatus, setTestConnectionStatus] = useState({ loading: false, message: '', isError: false });
 
   const [importFile, setImportFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -39,8 +41,22 @@ export default function PaginaAdminClientes() {
     setMessage(msg); setIsError(error);
     setTimeout(() => setMessage(''), duration);
   };
+  
+  const handleTestConnection = async (clienteId) => {
+    if (!clienteId) {
+        showMessage("ID do cliente não encontrado. Salve o cliente primeiro.", true);
+        return;
+    }
+    setTestConnectionStatus({ loading: true, message: 'A testar conexão...', isError: false });
+    try {
+        const result = await testIneaConnection({ clienteId });
+        setTestConnectionStatus({ loading: false, message: result.data.message, isError: false });
+    } catch (error) {
+        console.error("Erro no teste de conexão:", error);
+        setTestConnectionStatus({ loading: false, message: error.message, isError: true });
+    }
+  };
 
-  // Efeito para carregar clientes e extrair categorias únicas deles
   useEffect(() => {
     if (!db) return; 
     setLoadingClientes(true);
@@ -49,14 +65,13 @@ export default function PaginaAdminClientes() {
       const clientesData = qs.docs.map(d => ({ id: d.id, ...d.data() }));
       setClientes(clientesData);
       
-      // Extrai categorias únicas dos clientes carregados e mescla com as iniciais
       const categoriasDosClientes = clientesData
         .map(cliente => cliente.categoriaCliente)
         .filter(categoria => typeof categoria === 'string' && categoria.trim() !== '');
       
       setAvailableClientCategorias(prevCategorias => {
         const todasCategorias = Array.from(new Set([...CATEGORIAS_CLIENTE_INICIAIS, ...prevCategorias, ...categoriasDosClientes]));
-        return todasCategorias.sort(); // Opcional: manter ordenado
+        return todasCategorias.sort();
       });
 
       setLoadingClientes(false);
@@ -68,7 +83,7 @@ export default function PaginaAdminClientes() {
     return () => unsub();
   }, [db]);
 
-  useEffect(() => { /* Carregar Empresas */
+  useEffect(() => {
     if (!db) return;
     const qE = query(collection(db, "empresasColeta"), orderBy("nomeFantasia"));
     const unsubE = onSnapshot(qE, (qs) => {
@@ -77,12 +92,11 @@ export default function PaginaAdminClientes() {
     return () => unsubE();
   }, [db]);
 
-  // Handler para quando uma nova categoria é adicionada através do ClienteForm
   const handleNewCategoriaAdded = (novaCategoria) => {
     if (novaCategoria && !availableClientCategorias.includes(novaCategoria)) {
       setAvailableClientCategorias(prevCategorias => {
         const novas = Array.from(new Set([...prevCategorias, novaCategoria]));
-        return novas.sort(); // Opcional: manter ordenado
+        return novas.sort();
       });
     }
   };
@@ -92,12 +106,14 @@ export default function PaginaAdminClientes() {
     setEditingClienteData(null); 
     setShowForm(true); 
     setClienteParaImportar(null); 
+    setTestConnectionStatus({ loading: false, message: '', isError: false });
   };
   const handleEditCliente = (cliente) => { 
     setEditingClienteId(cliente.id); 
     setEditingClienteData(cliente); 
     setShowForm(true); 
     setClienteParaImportar(null); 
+    setTestConnectionStatus({ loading: false, message: '', isError: false });
     window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
   const handleCancelForm = () => { 
@@ -108,7 +124,6 @@ export default function PaginaAdminClientes() {
   
   const handleDeleteCliente = async (clienteId) => {
     if (!db || !masterProfile || masterProfile.role !== 'master') return showMessage("Ação não permitida.", true);
-    // Substituir window.confirm por um modal customizado em produção
     if (window.confirm("Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita e removerá também os utilizadores associados.")) {
         try { 
           await deleteDoc(doc(db, "clientes", clienteId)); 
@@ -121,34 +136,53 @@ export default function PaginaAdminClientes() {
     }
   };
 
+  // --- FUNÇÃO handleFormSubmit ATUALIZADA ---
   const handleFormSubmit = async (formData) => {
-    if (!db || !masterCurrentUser || !masterProfile || masterProfile.role !== 'master') return showMessage("Ação não permitida.", true);
+    if (!db || !masterCurrentUser || !masterProfile || masterProfile.role !== 'master') {
+      return showMessage("Ação não permitida.", true);
+    }
     
+    const { configINEA, ...clienteDataPrincipal } = formData;
+
     const clienteDataToSave = { 
-      ...formData, 
+      ...clienteDataPrincipal, 
       ultimaModificacao: serverTimestamp(), 
       modificadoPor: masterCurrentUser.uid 
     };
 
-    // Se a categoria submetida for nova, adiciona à lista de availableClientCategorias
-    if (formData.categoriaCliente && !availableClientCategorias.includes(formData.categoriaCliente)) {
-        handleNewCategoriaAdded(formData.categoriaCliente);
-    }
-
     try {
+      let clienteId = editingClienteId;
+
       if (editingClienteId) { 
         await updateDoc(doc(db, "clientes", editingClienteId), clienteDataToSave); 
-        showMessage("Cliente atualizado com sucesso!");
+        showMessage("Dados do cliente atualizados com sucesso!");
       } else { 
         clienteDataToSave.criadoPor = masterCurrentUser.uid; 
         clienteDataToSave.dataCriacao = serverTimestamp();
-        await addDoc(collection(db, "clientes"), clienteDataToSave); 
+        const docRef = await addDoc(collection(db, "clientes"), clienteDataToSave); 
+        clienteId = docRef.id;
         showMessage("Cliente adicionado com sucesso!");
       }
+
+      // Lógica simplificada: sempre chama a função de salvar se houver um clienteId e dados INEA
+      if (clienteId && configINEA && (configINEA.login || configINEA.senha || configINEA.cnpj || configINEA.codUnidade)) {
+        showMessage("A salvar credenciais da integração INEA...", false, 3000);
+        
+        await saveIneaCredentials({
+          clienteId: clienteId,
+          login: configINEA.login,
+          senha: configINEA.senha, // Pode ser uma string vazia, a função de backend lida com isso
+          cnpj: configINEA.cnpj,
+          codUnidade: configINEA.codUnidade,
+        });
+
+        showMessage("Credenciais INEA salvas com sucesso!", false);
+      }
+
       handleCancelForm(); 
     } catch (e) { 
-      console.error("Erro ao salvar cliente:", e); 
-      showMessage("Erro ao salvar cliente. Tente novamente.", true); 
+      console.error("Erro ao salvar cliente ou credenciais:", e); 
+      showMessage(`Erro ao salvar: ${e.message}`, true); 
     }
   };
   
@@ -213,7 +247,6 @@ export default function PaginaAdminClientes() {
   if (!masterProfile && masterCurrentUser) return <div className="p-8 text-center">A carregar perfil...</div>;
   if (!masterProfile || masterProfile.role !== 'master') return <div className="p-8 text-center text-red-600">Acesso negado.</div>;
 
-  // Filtra os clientes com base na categoria selecionada
   const clientesFiltrados = selectedCategoriaFiltro 
     ? clientes.filter(cliente => cliente.categoriaCliente === selectedCategoriaFiltro)
     : clientes;
@@ -242,6 +275,9 @@ export default function PaginaAdminClientes() {
           isEditing={!!editingClienteId}
           availableCategorias={availableClientCategorias}
           onNewCategoriaAdded={handleNewCategoriaAdded}
+          editingClienteId={editingClienteId}
+          onTestConnection={handleTestConnection}
+          testConnectionStatus={testConnectionStatus}
         />
       )}
 
@@ -287,14 +323,12 @@ export default function PaginaAdminClientes() {
       <div className="bg-white p-6 rounded-xl shadow-lg mt-8">
         <div className="flex flex-col sm:flex-row justify-between items-center mb-4">
             <h2 className="text-2xl font-semibold text-gray-800">Clientes Cadastrados</h2>
-            {/* Filtro de Categoria com Estilo Atualizado */}
             <div className="mt-4 sm:mt-0">
                 <label htmlFor="filtro-categoria-cliente" className="sr-only">Filtrar por Categoria</label>
                 <select
                     id="filtro-categoria-cliente"
                     value={selectedCategoriaFiltro}
                     onChange={(e) => setSelectedCategoriaFiltro(e.target.value)}
-                    // Aplicando as classes de estilo solicitadas
                     className="mt-1 block w-full sm:w-auto p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 >
                     <option value="">Todas as Categorias</option>
@@ -329,7 +363,7 @@ export default function PaginaAdminClientes() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {clientesFiltrados.map((cliente) => ( // Usa clientesFiltrados aqui
+                {clientesFiltrados.map((cliente) => (
                   <tr key={cliente.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-normal break-words text-sm font-medium text-gray-900">{cliente.nome}</td>
                     <td className="px-6 py-4 whitespace-normal break-words text-sm text-gray-500">{cliente.rede || '-'}</td>

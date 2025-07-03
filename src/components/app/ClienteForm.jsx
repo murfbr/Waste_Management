@@ -1,11 +1,10 @@
-// src/components/ClienteForm.jsx
+// src/components/app/ClienteForm.jsx
 
 import React, { useState, useEffect, useMemo } from 'react';
 
 const CATEGORIAS_PRINCIPAIS_PADRAO = ["Reciclável", "Orgânico", "Rejeito"];
 const SUBTIPOS_RECICLAVEIS_COMUNS = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
 const SUBTIPOS_ORGANICOS_COMUNS = ["Pré-serviço", "Pós-serviço"];
-
 const NOVA_CATEGORIA_VALUE = "__NOVA__";
 const CATEGORIAS_CLIENTE_INICIAIS = ["Hotel","Evento", "Escola", "Condomínio", "Aeroporto"];
 
@@ -16,7 +15,11 @@ export default function ClienteForm({
     empresasColetaDisponiveis, 
     isEditing,
     availableCategorias = CATEGORIAS_CLIENTE_INICIAIS, 
-    onNewCategoriaAdded 
+    onNewCategoriaAdded,
+    // --- NOVAS PROPS PARA O TESTE DE CONEXÃO ---
+    editingClienteId,
+    onTestConnection,
+    testConnectionStatus
 }) {
   const [nome, setNome] = useState('');
   const [rede, setRede] = useState('');
@@ -32,17 +35,18 @@ export default function ClienteForm({
   const [categoriasPrincipaisSelecionadas, setCategoriasPrincipaisSelecionadas] = useState([...CATEGORIAS_PRINCIPAIS_PADRAO]); 
   const [outroCategoriaSelecionada, setOutroCategoriaSelecionada] = useState(false);
   const [outroCategoriaInput, setOutroCategoriaInput] = useState('');
-  
   const [fazSeparacaoReciclaveisCompleta, setFazSeparacaoReciclaveisCompleta] = useState(false);
   const [subtiposComunsReciclaveisSelecionados, setSubtiposComunsReciclaveisSelecionados] = useState([]);
   const [outrosSubtiposReciclaveisInput, setOutrosSubtiposReciclaveisInput] = useState('');
-
   const [fazSeparacaoOrganicosCompleta, setFazSeparacaoOrganicosCompleta] = useState(false);
   const [subtiposComunsOrganicosSelecionados, setSubtiposComunsOrganicosSelecionados] = useState([]);
   const [outrosSubtiposOrganicosInput, setOutrosSubtiposOrganicosInput] = useState('');
-
   const [contratosColetaForm, setContratosColetaForm] = useState([{ empresaColetaId: '', tiposResiduoColetados: [] }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [ineaLogin, setIneaLogin] = useState('');
+  const [ineaSenha, setIneaSenha] = useState('');
+  const [ineaCnpj, setIneaCnpj] = useState('');
+  const [ineaCodUnidade, setIneaCodUnidade] = useState('');
 
   const arrayFromString = (str) => str.split(',').map(item => item.trim()).filter(item => item.length > 0);
 
@@ -98,6 +102,19 @@ export default function ClienteForm({
               tiposResiduoColetados: Array.isArray(c.tiposResiduoColetados) ? c.tiposResiduoColetados : [] 
             }))
           : [{ empresaColetaId: '', tiposResiduoColetados: [] }]);
+      
+      if (initialData.configINEA) {
+        setIneaLogin(initialData.configINEA.login || '');
+        setIneaCnpj(initialData.configINEA.cnpj || '');
+        setIneaCodUnidade(initialData.configINEA.codUnidade || '');
+        setIneaSenha('');
+      } else {
+        setIneaLogin('');
+        setIneaSenha('');
+        setIneaCnpj('');
+        setIneaCodUnidade('');
+      }
+
     } else {
         setNome(''); setRede(''); 
         setSelectedCategoriaCliente(''); 
@@ -115,6 +132,10 @@ export default function ClienteForm({
         setSubtiposComunsOrganicosSelecionados([]);
         setOutrosSubtiposOrganicosInput('');
         setContratosColetaForm([{ empresaColetaId: '', tiposResiduoColetados: [] }]);
+        setIneaLogin('');
+        setIneaSenha('');
+        setIneaCnpj('');
+        setIneaCodUnidade('');
     }
   }, [initialData, isEditing, availableCategorias]);
 
@@ -209,6 +230,12 @@ export default function ClienteForm({
       fazSeparacaoOrganicosCompleta,
       tiposOrganicosPersonalizados: finaisTiposOrganicosPersonalizados,
       contratosColeta: contratosColetaForm.filter(c => c.empresaColetaId && c.tiposResiduoColetados.length > 0),
+      configINEA: {
+        login: ineaLogin.trim(),
+        senha: ineaSenha,
+        cnpj: ineaCnpj.trim(),
+        codUnidade: ineaCodUnidade.trim(),
+      }
     };
 
     await onSubmit(clienteData); 
@@ -242,7 +269,6 @@ export default function ClienteForm({
     }
   };
   
-  // LÓGICA ATUALIZADA: As opções para os contratos agora vêm somente das categorias principais selecionadas.
   const opcoesResiduoContrato = useMemo(() => {
     let opcoes = [...categoriasPrincipaisSelecionadas];
     if (outroCategoriaSelecionada && outroCategoriaInput.trim()) {
@@ -250,11 +276,15 @@ export default function ClienteForm({
             opcoes.push(outroCategoriaInput.trim());
         }
     }
-    // Garante que só as 3 categorias base apareçam, conforme solicitado
     const categoriasBaseContrato = ["Reciclável", "Orgânico", "Rejeito"];
     return opcoes.filter(op => categoriasBaseContrato.includes(op));
   }, [categoriasPrincipaisSelecionadas, outroCategoriaSelecionada, outroCategoriaInput]);
 
+  const handleTestButtonClick = () => {
+    if (onTestConnection) {
+        onTestConnection(editingClienteId);
+    }
+  };
 
   const inputStyle = "mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
   const labelStyle = "block text-sm font-medium text-gray-700";
@@ -394,20 +424,63 @@ export default function ClienteForm({
             </div>
         </fieldset>
 
+        <fieldset className="border border-gray-300 p-4 rounded-lg">
+            <legend className="text-lg font-semibold text-indigo-700 px-2">Integração INEA (MTR)</legend>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pt-3">
+                <div>
+                    <label htmlFor="form-cliente-inea-login" className={labelStyle}>Login INEA (CPF)</label>
+                    <input type="text" id="form-cliente-inea-login" value={ineaLogin} onChange={(e) => setIneaLogin(e.target.value)} className={inputStyle} placeholder="CPF do responsável" />
+                </div>
+                <div>
+                    <label htmlFor="form-cliente-inea-senha" className={labelStyle}>Senha INEA</label>
+                    <input type="password" id="form-cliente-inea-senha" value={ineaSenha} onChange={(e) => setIneaSenha(e.target.value)} className={inputStyle} placeholder={isEditing ? "Preencha apenas para alterar" : ""} />
+                </div>
+                <div>
+                    <label htmlFor="form-cliente-inea-cnpj" className={labelStyle}>CNPJ (para a API)</label>
+                    <input type="text" id="form-cliente-inea-cnpj" value={ineaCnpj} onChange={(e) => setIneaCnpj(e.target.value)} className={inputStyle} placeholder="CNPJ ou CPF da unidade" />
+                </div>
+                <div>
+                    <label htmlFor="form-cliente-inea-codunidade" className={labelStyle}>Código da Unidade</label>
+                    <input type="text" id="form-cliente-inea-codunidade" value={ineaCodUnidade} onChange={(e) => setIneaCodUnidade(e.target.value)} className={inputStyle} placeholder="Código numérico da unidade" />
+                </div>
+            </div>
+           <p className="text-xs text-gray-500 mt-3">
+              Preencha estes campos para habilitar a emissão automática de MTRs para este cliente. A senha é armazenada de forma segura e criptografada.
+          </p>
+          
+          {isEditing && (
+            <div className="mt-4 flex items-center space-x-4">
+                <button
+                    type="button"
+                    onClick={handleTestButtonClick}
+                    disabled={testConnectionStatus?.loading}
+                    className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                >
+                    {testConnectionStatus?.loading ? 'A Testar...' : 'Testar Conexão'}
+                </button>
+                {testConnectionStatus?.message && (
+                    <p className={`text-sm ${testConnectionStatus.isError ? 'text-red-600' : 'text-green-600'}`}>
+                        {testConnectionStatus.message}
+                    </p>
+                )}
+            </div>
+          )}
+      </fieldset>
+
       <div className="flex justify-end space-x-3 pt-4">
           <button 
             type="button" 
             onClick={onCancel}
-            className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+            className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
           >
-            {isEditing ? "Cancelar Edição" : "Limpar"}
+            Cancelar
           </button>
           <button 
             type="submit" 
-            className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+            className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
             disabled={isSubmitting}
           >
-            {isSubmitting ? (isEditing ? "A Atualizar..." : "A Adicionar...") : (isEditing ? "Atualizar Cliente" : "Adicionar Cliente")}
+            {isSubmitting ? "A Salvar..." : (isEditing ? "Atualizar Cliente" : "Adicionar Cliente")}
           </button>
       </div>
     </form>
