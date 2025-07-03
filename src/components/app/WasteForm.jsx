@@ -301,7 +301,7 @@ export default function WasteForm({ onAddWaste, clienteSelecionado }) {
 
       {opcoesArea.length > 0 && (
         <div>
-          <label className={labelStyle}>Área de Lançamento*</label>
+          <label className={labelStyle}>Área da empresa*</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {opcoesArea.map((areaOption) => (
               <button

@@ -51,6 +51,7 @@ functions/.env.local
 .emulator-data/
 seed-data/
 saved-emulator-state/
+emulator-data/
 
 # # # Logs e Ficheiros de Depuração # # #
 # Ignora ficheiros de log que podem conter informações sensíveis.

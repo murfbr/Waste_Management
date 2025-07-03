@@ -1,15 +1,25 @@
-// src/components/WasteRecordsList.jsx
+// src/components/app/WasteRecordsList.jsx
 
 import React from 'react';
 import { exportToCsv } from '../../utils/csvExport';
+
+// Função auxiliar para verificar se um timestamp é do dia de hoje
+const isToday = (timestamp) => {
+    if (!timestamp) return false;
+    const recordDate = new Date(timestamp);
+    const today = new Date();
+    return recordDate.getFullYear() === today.getFullYear() &&
+           recordDate.getMonth() === today.getMonth() &&
+           recordDate.getDate() === today.getDate();
+};
 
 /**
  * Componente para exibir a lista de registros de resíduos.
  *
  * @param {object} props
  * @param {Array} props.records
- * @param {boolean} props.loading - Loading principal da lista
- * @param {function} props.onDelete
+ * @param {boolean} props.loading
+ * @param {function} props.onDelete - Agora espera o objeto 'record' completo
  * @param {string | null} props.userRole
  * @param {function} [props.showMessage]
  * @param {boolean} props.hasMoreRecords
@@ -29,7 +39,6 @@ function WasteRecordsList({
 
   const handleExportClick = () => {
     if (records && records.length > 0) {
-      // Lembrete: A função exportToCsv pode precisar ser atualizada para incluir a nova coluna "wasteSubType"
       exportToCsv(records, showMessage || alert); 
     } else {
       if (showMessage) { showMessage("Não há registos para exportar.", true); } 
@@ -61,39 +70,46 @@ function WasteRecordsList({
       )}
 
       <div className="space-y-3">
-        {records.map((record) => (
-          <div 
-            key={record.id} 
-            className="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-center"
-          >
-            <div className="flex-grow mb-2 sm:mb-0">
-              {record.areaLancamento && <p><strong className="text-gray-700">Área:</strong> {record.areaLancamento}</p>}
-              
-              {/* LÓGICA DE EXIBIÇÃO ATUALIZADA */}
-              {record.wasteType && (
-                <p>
-                  <strong className="text-gray-700">Tipo:</strong> {record.wasteType}
-                  {/* Adiciona o subtipo entre parênteses se ele existir no registro */}
-                  {record.wasteSubType && <span className="text-gray-600"> ({record.wasteSubType})</span>}
-                </p>
-              )}
+        {records.map((record) => {
+          // Lógica para determinar se o botão de exclusão deve ser exibido
+          const canUserDelete = 
+            userRole === 'master' || 
+            userRole === 'gerente' ||
+            (userRole === 'operacional' && isToday(record.timestamp));
 
-              {record.peso && <p><strong className="text-gray-700">Peso:</strong> {record.peso} kg</p>}
-              {record.timestamp && <p className="text-xs text-gray-500">Data: {new Date(record.timestamp).toLocaleString('pt-BR')}</p>}
+          return (
+            <div 
+              key={record.id} 
+              className="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-center"
+            >
+              <div className="flex-grow mb-2 sm:mb-0">
+                {record.areaLancamento && <p><strong className="text-gray-700">Área:</strong> {record.areaLancamento}</p>}
+                
+                {record.wasteType && (
+                  <p>
+                    <strong className="text-gray-700">Tipo:</strong> {record.wasteType}
+                    {record.wasteSubType && <span className="text-gray-600"> ({record.wasteSubType})</span>}
+                  </p>
+                )}
+
+                {record.peso && <p><strong className="text-gray-700">Peso:</strong> {record.peso} kg</p>}
+                {record.timestamp && <p className="text-xs text-gray-500">Data: {new Date(record.timestamp).toLocaleString('pt-BR')}</p>}
+              </div>
+              
+              {/* Renderiza o botão de exclusão apenas se o usuário tiver permissão */}
+              {canUserDelete && (
+                <button
+                  onClick={() => onDelete(record)} // Passa o objeto 'record' inteiro
+                  className={btnDeleteStyle}
+                >
+                  Excluir
+                </button>
+              )}
             </div>
-            {userRole === 'master' && (
-              <button
-                onClick={() => onDelete(record.id)}
-                className={btnDeleteStyle}
-              >
-                Excluir
-              </button>
-            )}
-          </div>
-        ))}
+          );
+        })}
       </div>
 
-      {/* Botão "Carregar Mais Registos" */}
       {hasMoreRecords && (
         <div className="mt-6 text-center">
           <button
