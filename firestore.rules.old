@@ -3,17 +3,24 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    // --- A CORREÇÃO FINAL ESTÁ NESTE BLOCO ---
     match /users/{userId} {
       allow read: if request.auth != null && (
+        // 1. O usuário pode ler o seu próprio perfil.
         request.auth.uid == userId ||
+        // 2. Um 'master' pode ler qualquer perfil.
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'master' ||
+        // 3. (BLINDADO) Um 'gerente' pode ler o perfil de um 'operacional' se eles compartilharem pelo menos um cliente.
         (
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'gerente' &&
           resource.data.role == 'operacional' &&
+          // Verificações de existência (mantidas por segurança)
           'clientesPermitidos' in get(/databases/$(database)/documents/users/$(request.auth.uid)).data &&
           'clientesPermitidos' in resource.data &&
+          // ADICIONADO: Garante que os campos são do tipo LISTA (array) antes de usar o hasAny
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.clientesPermitidos is list &&
           resource.data.clientesPermitidos is list &&
+          // A verificação 'hasAny' agora é 100% segura
           get(/databases/$(database)/documents/users/$(request.auth.uid)).data.clientesPermitidos.hasAny(resource.data.clientesPermitidos)
         )
       );
@@ -23,7 +30,9 @@ service cloud.firestore {
         get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'master'
       );
     }
+    // --- FIM DA CORREÇÃO ---
 
+    // Regras restantes inalteradas
     match /artifacts/default-app-id/public/data/wasteRecords/{recordId} {
       allow create: if request.auth != null &&
                       get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['master', 'gerente', 'operacional'];

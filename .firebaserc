@@ -1,5 +1,9 @@
 {
   "projects": {
-    "default": "controleresiduoshotel"
-  }
+    "default": "controleresiduoshotel",
+    "development": "ctrlwaste-dev",
+    "production": "controleresiduoshotel"
+  },
+  "targets": {},
+  "etags": {}
 }

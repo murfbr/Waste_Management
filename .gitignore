@@ -40,7 +40,7 @@ functions/lib/
 
 # # # Ficheiros de Ambiente e Segredos (MUITO IMPORTANTE) # # #
 # NUNCA envie ficheiros .env para o GitHub. Eles contêm as suas chaves de API e segredos.
-.env
+.env*
 .env*.local
 .env.*.local
 functions/.env.local
