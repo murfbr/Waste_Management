@@ -1,6 +1,6 @@
-// Crie este novo arquivo em: src/pages/app/PaginaGlossario.jsx
+// src/pages/app/PaginaGlossario.jsx
 
-import React from 'react';
+import React, { useMemo } from 'react';
 
 const glossarioData = [
     { term: "Resíduos Sólidos", definition: "Materiais descartados nas atividades humanas que, após seu uso, não têm mais utilidade imediata. Incluem resíduos domésticos, industriais, comerciais, hospitalares, entre outros." },
@@ -19,7 +19,7 @@ const glossarioData = [
     { term: "Materiais Recicláveis", definition: "Resíduos que podem ser reaproveitados como matéria-prima para novos produtos. Exemplos: papel, plástico, vidro, metal." },
     { term: "Materiais Orgânicos", definition: "Resíduos de origem biológica que podem ser transformados em adubo por compostagem. Exemplos: restos de alimentos, folhas secas, borra de café, papel toalha." },
     { term: "Rejeitos", definition: "Resíduos que não podem ser reciclados nem compostados, devendo ser enviados a aterros sanitários. Exemplos: fraldas, papel higiênico, esponjas usadas, louça de cerâmica." },
-    { term: "Resíduo para Energia (Waste-to-Energy)", definition: "Tecnologia que converte resíduos sólidos em energia térmica, elétrica ou combustível, por meio de processos como incineração, gaseificação ou digestão anaeróbica." },
+    { term: "Resíduo para Energia (Waste-to-Energy)", definition: "Tecnologia que converte resíduos sólidos em energia térmica, elétrica ou combustível, por meio de processos como incineração, gaseificação ou digestão anaeróbrica." },
     { term: "Aterro Sanitário", definition: "Local projetado para o descarte final de resíduos sólidos de forma controlada, com medidas para minimizar impactos ambientais e à saúde pública." },
     { term: "Chorume", definition: "Líquido escuro e altamente poluente resultante da decomposição de resíduos orgânicos em aterros sanitários, podendo contaminar o solo e a água se não for tratado adequadamente." },
     { term: "Gás Metano (CH₄)", definition: "Gás inflamável gerado na decomposição anaeróbica da matéria orgânica. É um dos principais componentes do biogás e um potente gás de efeito estufa." },
@@ -40,7 +40,6 @@ const glossarioData = [
     { term: "CETESB (Companhia Ambiental do Estado de São Paulo)", definition: "Órgão vinculado à Secretaria de Meio Ambiente, Infraestrutura e Logística do Estado de São Paulo, responsável pelo controle, fiscalização, monitoramento e licenciamento ambiental no estado. A CETESB atua na prevenção e controle da poluição, na gestão da qualidade do ar, da água e do solo, além de fornecer suporte técnico e emitir pareceres ambientais. É o equivalente ao INEA no estado do Rio de Janeiro." }
 ];
 
-
 const GlossarioItem = ({ term, definition }) => (
     <div className="py-6 border-b border-gray-200">
         <dt>
@@ -51,6 +50,25 @@ const GlossarioItem = ({ term, definition }) => (
 );
 
 export default function PaginaGlossario() {
+  // --- MELHORIA 1: Ordenar e agrupar os dados ---
+  const groupedData = useMemo(() => {
+    // Ordena os dados alfabeticamente pelo termo
+    const sortedData = [...glossarioData].sort((a, b) => a.term.localeCompare(b.term));
+
+    // Agrupa os dados pela primeira letra do termo
+    return sortedData.reduce((acc, item) => {
+      const firstLetter = item.term[0].toUpperCase();
+      if (!acc[firstLetter]) {
+        acc[firstLetter] = [];
+      }
+      acc[firstLetter].push(item);
+      return acc;
+    }, {});
+  }, []); // O array vazio [] significa que isso só será calculado uma vez
+
+  // Pega as letras disponíveis para criar o menu de navegação
+  const availableLetters = Object.keys(groupedData);
+
   return (
     <div className="bg-white p-8 rounded-2xl shadow-lg">
         <div className="max-w-7xl mx-auto">
@@ -58,10 +76,37 @@ export default function PaginaGlossario() {
             <p className="mt-4 text-lg text-gray-600 text-center max-w-3xl mx-auto">
                 Uma lista de termos essenciais para entender a gestão de resíduos sólidos e o universo Lixo Zero.
             </p>
-            <div className="mt-12">
-                <dl className="space-y-4">
-                    {glossarioData.map((item) => (
-                        <GlossarioItem key={item.term} term={item.term} definition={item.definition} />
+
+            {/* --- MELHORIA 2: Menu de navegação por letra --- */}
+            <nav className="mt-12 sticky top-0 bg-white py-4 z-10 border-b-2 border-gray-200">
+                <ul className="flex justify-center flex-wrap gap-x-3 gap-y-2">
+                    {availableLetters.map(letter => (
+                        <li key={letter}>
+                            <a 
+                                href={`#letra-${letter}`}
+                                className="block w-8 h-8 flex items-center justify-center text-sm font-bold text-gray-500 bg-gray-100 rounded-full hover:bg-indigo-500 hover:text-white transition-colors duration-200"
+                            >
+                                {letter}
+                            </a>
+                        </li>
+                    ))}
+                </ul>
+            </nav>
+
+            <div className="mt-8">
+                <dl>
+                    {/* --- MELHORIA 3: Renderização em seções agrupadas --- */}
+                    {availableLetters.map(letter => (
+                        <div key={letter} id={`letra-${letter}`} className="pt-8 -mt-8"> {/* Padding e margem negativa para o scroll */}
+                            <h2 className="text-3xl font-bold text-indigo-600 border-b-2 border-indigo-200 pb-2 mb-4">
+                                {letter}
+                            </h2>
+                            <div className="space-y-4">
+                                {groupedData[letter].map((item) => (
+                                    <GlossarioItem key={item.term} term={item.term} definition={item.definition} />
+                                ))}
+                            </div>
+                        </div>
                     ))}
                 </dl>
             </div>
