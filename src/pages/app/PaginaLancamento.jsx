@@ -20,50 +20,10 @@ import {
 import MessageBox from '../../components/app/MessageBox';
 import WasteForm from '../../components/app/WasteForm';
 import WasteRecordsList from '../../components/app/WasteRecordsList';
-import { getPendingRecords, deletePendingRecord } from '../../services/offlineSyncService';
+import { getPendingRecords, deletePendingRecord, addPendingRecord } from '../../services/offlineSyncService';
+import ConfirmationModal from '../../components/app/ConfirmationModal';
 
 const REGISTOS_POR_PAGINA = 20; 
-
-// --- MODAIS (Sem alterações) ---
-const LogoutConfirmationModal = ({ isOpen, onCancel, onConfirm }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-      <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
-        <h2 className="text-xl font-bold mb-4">Confirmar Saída</h2>
-        <p className="mb-6">Tem certeza de que deseja encerrar a sessão?</p>
-        <div className="flex justify-end space-x-4">
-          <button onClick={onCancel} className="px-4 py-2 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300">Cancelar</button>
-          <button onClick={onConfirm} className="px-4 py-2 rounded-md text-white bg-red-500 hover:bg-red-600">Sim, Sair</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const DeleteConfirmationModal = ({ isOpen, onCancel, onConfirm, record }) => {
-  if (!isOpen) return null;
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex justify-center items-center">
-      <div className="bg-white p-6 rounded-lg shadow-xl max-w-sm w-full mx-4">
-        <h2 className="text-xl font-bold text-red-600 mb-4">Confirmar Exclusão</h2>
-        <p className="mb-2">Tem certeza de que deseja excluir permanentemente este registo?</p>
-        {record && (
-          <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-800 mb-6">
-            <p><strong>Tipo:</strong> {record.wasteType} {record.wasteSubType ? `(${record.wasteSubType})` : ''}</p>
-            <p><strong>Peso:</strong> {record.peso} kg</p>
-            <p><strong>Data:</strong> {new Date(record.timestamp).toLocaleString('pt-BR')}</p>
-          </div>
-        )}
-        <div className="flex justify-end space-x-4">
-          <button onClick={onCancel} className="px-4 py-2 rounded-md text-gray-700 bg-gray-200 hover:bg-gray-300">Cancelar</button>
-          <button onClick={onConfirm} className="px-4 py-2 rounded-md text-white bg-red-600 hover:bg-red-700">Sim, Excluir</button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 
 export default function PaginaLancamento() {
   const { db, auth, currentUser, appId, userProfile, userAllowedClientes, loadingUserClientes } = useContext(AuthContext);
@@ -79,8 +39,17 @@ export default function PaginaLancamento() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedClienteId, setSelectedClienteId] = useState('');
   const [selectedClienteData, setSelectedClienteData] = useState(null);
-  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-  const [recordToDelete, setRecordToDelete] = useState(null);
+  
+  const [modalState, setModalState] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    confirmText: 'Confirmar',
+    cancelText: 'Cancelar',
+    theme: 'info',
+    onConfirm: () => {},
+    content: null,
+  });
 
   const showMessage = (msg, error = false) => {
     setMessage(msg);
@@ -98,6 +67,21 @@ export default function PaginaLancamento() {
     }
   };
   
+  const handleLogoutRequest = () => {
+    setModalState({
+        isOpen: true,
+        title: 'Confirmar Saída',
+        message: 'Tem certeza de que deseja encerrar a sessão?',
+        confirmText: 'Sim, Sair',
+        theme: 'danger',
+        onConfirm: () => {
+            handleLogout();
+            setModalState({ isOpen: false });
+        },
+        content: null,
+    });
+  };
+
   useEffect(() => {
     if (!loadingUserClientes && userAllowedClientes.length > 0 && !selectedClienteId) {
         setSelectedClienteId(userAllowedClientes[0].id);
@@ -165,8 +149,6 @@ export default function PaginaLancamento() {
   }, [selectedClienteId, loadAndCombineRecords]);
 
   useEffect(() => {
-    // O evento agora é o 'pending-records-updated', que é mais genérico e confiável.
-    // Ele é disparado tanto ao adicionar um novo item quanto após uma sincronização.
     window.addEventListener('pending-records-updated', loadAndCombineRecords);
     return () => window.removeEventListener('pending-records-updated', loadAndCombineRecords);
   }, [loadAndCombineRecords]);
@@ -200,10 +182,24 @@ export default function PaginaLancamento() {
   };
 
   const handleDeleteRequest = (record) => {
-    setRecordToDelete(record);
+    setModalState({
+        isOpen: true,
+        title: 'Confirmar Exclusão',
+        message: 'Tem certeza de que deseja excluir permanentemente este registo?',
+        confirmText: 'Sim, Excluir',
+        theme: 'danger',
+        onConfirm: () => handleConfirmDelete(record),
+        content: (
+            <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-800 mb-6 text-left">
+                <p><strong>Tipo:</strong> {record.wasteType} {record.wasteSubType ? `(${record.wasteSubType})` : ''}</p>
+                <p><strong>Peso:</strong> {record.peso} kg</p>
+                <p><strong>Data:</strong> {new Date(record.timestamp).toLocaleString('pt-BR')}</p>
+            </div>
+        )
+    });
   };
 
-  const handleConfirmDelete = async () => {
+  const handleConfirmDelete = async (recordToDelete) => {
     if (!recordToDelete) return;
     try {
       if (recordToDelete.isPending) {
@@ -213,18 +209,63 @@ export default function PaginaLancamento() {
         await deleteDoc(doc(db, `artifacts/${appId}/public/data/wasteRecords`, recordToDelete.id));
         showMessage('Registo excluído com sucesso!');
       }
-      setRecordToDelete(null); 
-      // Não precisamos mais chamar loadAndCombineRecords aqui, pois o evento 'pending-records-updated'
-      // disparado por deletePendingRecord já fará isso. Para exclusões do Firestore,
-      // uma atualização manual é necessária.
       if (!recordToDelete.isPending) {
         loadAndCombineRecords();
       }
     } catch (error) { 
       console.error("Erro ao excluir registo:", error);
       showMessage('Erro ao excluir registo. Tente novamente.', true);
-      setRecordToDelete(null);
     }
+    setModalState({ isOpen: false });
+  };
+
+  const handleLimitExceeded = (data) => {
+    const { peso, limite, wasteType } = data;
+    setModalState({
+        isOpen: true,
+        title: 'Atenção: Limite Máximo Excedido',
+        message: 'O peso lançado está acima do limite configurado. Deseja confirmar mesmo assim?',
+        confirmText: 'Confirmar Mesmo Assim',
+        theme: 'warning',
+        onConfirm: () => handleConfirmLimit(data),
+        content: (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2 mb-6 text-left">
+                <div className="flex justify-between text-lg"><span className="font-medium text-gray-500">Tipo:</span><span className="font-bold text-gray-900">{wasteType}</span></div>
+                <div className="flex justify-between text-lg"><span className="font-medium text-gray-500">Limite:</span><span className="font-bold text-gray-900">{limite} kg</span></div>
+                <div className="flex justify-between text-2xl"><span className="font-medium text-gray-500">Lançado:</span><span className="font-extrabold text-red-600">{peso} kg</span></div>
+            </div>
+        )
+    });
+  };
+
+  const handleMinimumLimitExceeded = (data) => {
+    const { peso, wasteType } = data;
+    setModalState({
+        isOpen: true,
+        title: 'Atenção: Lançamento Baixo',
+        message: 'Lançamentos abaixo de 1kg podem indicar um erro de digitação. Deseja confirmar mesmo assim?',
+        confirmText: 'Confirmar Mesmo Assim',
+        theme: 'warning',
+        onConfirm: () => handleConfirmLimit(data),
+        content: (
+            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2 mb-6 text-left">
+                <div className="flex justify-between text-lg"><span className="font-medium text-gray-500">Tipo:</span><span className="font-bold text-gray-900">{wasteType}</span></div>
+                <div className="flex justify-between text-2xl"><span className="font-medium text-gray-500">Lançado:</span><span className="font-extrabold text-yellow-600">{peso} kg</span></div>
+            </div>
+        )
+    });
+  };
+
+  const handleConfirmLimit = async (limitModalData) => {
+    if (!limitModalData) return;
+    const { limite, ...recordData } = limitModalData;
+    const result = await addPendingRecord(recordData);
+    if (result.success) {
+      showMessage(result.message);
+    } else {
+      showMessage(result.message, true);
+    }
+    setModalState({ isOpen: false });
   };
 
   const toggleRecordsVisibility = () => setIsRecordsVisible(!isRecordsVisible);
@@ -269,7 +310,7 @@ export default function PaginaLancamento() {
                   </span>
                 )}
                 <button 
-                  onClick={() => setIsLogoutModalOpen(true)}
+                  onClick={handleLogoutRequest}
                   className="w-auto px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 transition duration-150 flex-shrink-0"
                 >
                   Sair
@@ -313,6 +354,9 @@ export default function PaginaLancamento() {
           <div className="bg-white p-6 rounded-lg shadow">
             <WasteForm 
                 clienteSelecionado={selectedClienteData} 
+                onLimitExceeded={handleLimitExceeded}
+                onMinimumLimitExceeded={handleMinimumLimitExceeded}
+                onSuccessfulSubmit={loadAndCombineRecords}
             />
           </div>
           <div className="bg-white rounded-lg shadow">
@@ -347,17 +391,18 @@ export default function PaginaLancamento() {
          <div className="text-center text-gray-500 p-8">Por favor, selecione um cliente para continuar.</div>
       ) : null}
 
-      <LogoutConfirmationModal 
-        isOpen={isLogoutModalOpen}
-        onCancel={() => setIsLogoutModalOpen(false)}
-        onConfirm={handleLogout}
-      />
-      <DeleteConfirmationModal
-        isOpen={!!recordToDelete}
-        onCancel={() => setRecordToDelete(null)}
-        onConfirm={handleConfirmDelete}
-        record={recordToDelete}
-      />
+      <ConfirmationModal
+        isOpen={modalState.isOpen}
+        onCancel={() => setModalState({ isOpen: false })}
+        onConfirm={modalState.onConfirm}
+        title={modalState.title}
+        message={modalState.message}
+        confirmText={modalState.confirmText}
+        cancelText={modalState.cancelText}
+        theme={modalState.theme}
+      >
+        {modalState.content}
+      </ConfirmationModal>
     </div>
   );
 }

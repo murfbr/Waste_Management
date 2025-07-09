@@ -1,53 +1,42 @@
 // src/components/app/WasteForm.jsx
 
-import React, { useState, useEffect, useRef, useContext } from 'react'; // Adicionado useContext
-import AuthContext from '../../context/AuthContext'; // Importa o AuthContext
-import { addPendingRecord } from '../../services/offlineSyncService'; // Importa a nova função de salvar localmente
+import React, { useState, useEffect, useRef, useContext } from 'react';
+import AuthContext from '../../context/AuthContext'; 
+import { addPendingRecord } from '../../services/offlineSyncService';
 
-// Constantes de fallback
 const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
 const SUBTIPOS_ORGANICOS_FALLBACK = ["Pré-serviço", "Pós-serviço"];
 
-// Objeto de configuração de cores - Fácil de editar
 const wasteTypeColors = {
-    // Cores Principais
     'Reciclável':   { bg: '#3f7fff', text: '#FFFFFF' },
     'Orgânico':     { bg: '#704729', text: '#FFFFFF' },
     'Rejeito':      { bg: '#757575', text: '#FFFFFF' },
     'Não Reciclável': { bg: '#808080', text: '#FFFFFF' },
-    
-    // Sub-tipos Recicláveis
     'Papel':        { bg: '#0000FF', text: '#FFFFFF' },
     'Papel/Papelão':{ bg: '#0000FF', text: '#FFFFFF' },
     'Plástico':     { bg: '#FF0000', text: '#FFFFFF' },
     'Vidro':        { bg: '#008000', text: '#FFFFFF' },
     'Metal':        { bg: '#FFFF00', text: '#000000' },
-    
-    // Outros
     'Madeira':      { bg: '#000000', text: '#FFFFFF' },
     'Perigosos':    { bg: '#FFA500', text: '#FFFFFF' },
     'Baterias':     { bg: '#FFA500', text: '#FFFFFF' },
     'Eletrônicos':  { bg: '#333333', text: '#FFFFFF' },
-
-    // NOVAS CORES PARA ORGÂNICOS
     'Pré-serviço':  { bg: '#d4a373', text: '#FFFFFF' },
     'Pós-serviço':  { bg: '#6f4e37', text: '#FFFFFF' },
-
-    // Cor padrão para tipos não mapeados
     'default':      { bg: '#6b7280', text: '#FFFFFF' }
 };
 
-// A prop onAddWaste foi removida, pois agora o formulário lida com o salvamento local diretamente.
-export default function WasteForm({ clienteSelecionado }) { 
-  const { currentUser, appId } = useContext(AuthContext); // Pega o usuário e o appId do contexto
+export default function WasteForm({ clienteSelecionado, onLimitExceeded, onMinimumLimitExceeded, onSuccessfulSubmit }) { 
+  const { currentUser, appId } = useContext(AuthContext);
 
   const [areaLancamento, setAreaLancamento] = useState('');
   const [selectedMainCategory, setSelectedMainCategory] = useState('');
   const [selectedSubType, setSelectedSubType] = useState('');
-  const [peso, setPeso] = useState('');
+  const [peso, setPeso] = useState(0); 
+
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState('');
-  const [formSuccess, setFormSuccess] = useState(''); // Novo estado para mensagem de sucesso
+  const [formSuccess, setFormSuccess] = useState('');
 
   const [opcoesArea, setOpcoesArea] = useState([]);
   const [opcoesTipoResiduo, setOpcoesTipoResiduo] = useState([]);
@@ -87,7 +76,7 @@ export default function WasteForm({ clienteSelecionado }) {
       setSelectedSubType('');
       setFormError('');
       setFormSuccess('');
-      setPeso('');
+      setPeso(0);
 
     } else {
       setOpcoesArea([]);
@@ -99,9 +88,16 @@ export default function WasteForm({ clienteSelecionado }) {
       setSelectedSubType('');
       setFormError('');
       setFormSuccess('');
-      setPeso('');
+      setPeso(0);
     }
   }, [clienteSelecionado]);
+
+  const formatPesoForDisplay = (valor) => {
+    const valorString = String(valor).padStart(3, '0');
+    const inteiro = valorString.slice(0, -2);
+    const decimal = valorString.slice(-2);
+    return `${inteiro},${decimal}`;
+  };
 
   const clearMessagesAfterDelay = () => {
     setTimeout(() => { 
@@ -127,7 +123,6 @@ export default function WasteForm({ clienteSelecionado }) {
     setFormError(''); 
     setFormSuccess('');
 
-    // Validações (permanecem as mesmas)
     if (!selectedMainCategory) {
       setFormError('Por favor, selecione um tipo de resíduo.');
       clearMessagesAfterDelay();
@@ -148,8 +143,8 @@ export default function WasteForm({ clienteSelecionado }) {
       clearMessagesAfterDelay();
       return;
     }
-    const pesoString = String(peso).replace(',', '.');
-    const parsedPeso = parseFloat(pesoString);
+    
+    const parsedPeso = peso / 100;
     if (isNaN(parsedPeso) || parsedPeso <= 0) {
       setFormError('Por favor, insira um peso válido.');
       clearMessagesAfterDelay();
@@ -158,7 +153,6 @@ export default function WasteForm({ clienteSelecionado }) {
 
     setSubmitting(true);
 
-    // --- LÓGICA DE COLETA DE DADOS ATUALIZADA ---
     const contratoAplicavel = (clienteSelecionado.contratosColeta || []).find(c => 
         c.tiposResiduoColetados?.includes(selectedMainCategory)
     );
@@ -181,21 +175,50 @@ export default function WasteForm({ clienteSelecionado }) {
       userEmail: currentUser.email,
       appId: appId || 'default-app-id'
     };
-    if ((selectedMainCategory === 'Reciclável' || selectedMainCategory === 'Orgânico') && selectedSubType) {
+
+    let categoriaParaVerificarLimite = selectedMainCategory;
+    let tipoParaExibir = selectedMainCategory;
+
+    if (selectedSubType) {
       recordData.wasteSubType = selectedSubType;
+      tipoParaExibir = `${selectedMainCategory} (${selectedSubType})`;
+      categoriaParaVerificarLimite = selectedMainCategory;
     }
 
-    // --- NOVA LÓGICA DE SALVAMENTO ---
-    // Em vez de chamar uma prop, chamamos diretamente a função do nosso serviço offline.
+    const limites = clienteSelecionado.limitesPorResiduo || {};
+    const limiteDaCategoria = limites[categoriaParaVerificarLimite] || 0;
+    const limiteMinimo = 1;
+
+    if (limiteDaCategoria > 0 && parsedPeso > limiteDaCategoria) {
+        onLimitExceeded({
+            ...recordData,
+            wasteType: tipoParaExibir,
+            limite: limiteDaCategoria,
+        });
+        setSubmitting(false);
+        return;
+    }
+    
+    if (parsedPeso < limiteMinimo) {
+        onMinimumLimitExceeded({
+            ...recordData,
+            wasteType: tipoParaExibir,
+            limite: limiteMinimo,
+        });
+        setSubmitting(false);
+        return;
+    }
+
     const result = await addPendingRecord(recordData);
 
     if (result.success) {
       setFormSuccess(result.message);
-      // Limpa o formulário para o próximo lançamento
+      if (onSuccessfulSubmit) onSuccessfulSubmit();
+      
       setSelectedMainCategory('');
       setSelectedSubType('');
       setAreaLancamento('');
-      setPeso('');
+      setPeso(0);
       if (pesoInputRef.current) { 
         pesoInputRef.current.focus();
       }
@@ -207,12 +230,32 @@ export default function WasteForm({ clienteSelecionado }) {
     clearMessagesAfterDelay();
   };
 
+  // --- LÓGICA DE INPUT ATUALIZADA ---
   const handlePesoKeyDown = (e) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      if (pesoInputRef.current) {
-        pesoInputRef.current.blur();
-      }
+    // Impede a ação padrão do navegador para a tecla pressionada.
+    e.preventDefault();
+    
+    // Limpa erros/sucesso ao começar a digitar
+    if (formError) setFormError('');
+    if (formSuccess) setFormSuccess('');
+
+    const key = e.key;
+
+    // Se for um número, adiciona ao final do valor atual.
+    if (!isNaN(key) && key !== ' ') {
+        const numero = parseInt(key, 10);
+        // O Módulo (%) garante que o número não fique absurdamente grande.
+        setPeso(prev => (prev * 10 + numero) % 1000000); 
+    } 
+    // Se for Backspace, remove o último dígito.
+    else if (key === 'Backspace') {
+        setPeso(prev => Math.floor(prev / 10));
+    }
+    // Permite que Enter e Tab funcionem normalmente para navegação no formulário.
+    else if (key === 'Enter') {
+        handleSubmit(e);
+    } else if (key === 'Tab') {
+        // A lógica de tabulação pode ser complexa, por enquanto focamos na digitação.
     }
   };
 
@@ -253,15 +296,15 @@ export default function WasteForm({ clienteSelecionado }) {
       <div className="text-center">
         <label htmlFor="peso" className="sr-only">Peso Total (kg):</label>
         <div className="flex items-baseline justify-center">
+            {/* --- MUDANÇA: Usamos onKeyDown em vez de onChange. O input é apenas um display. --- */}
             <input
-                ref={pesoInputRef} type="text" inputMode="decimal" id="peso" value={peso}
-                onChange={(e) => {
-                    const val = e.target.value;
-                    if (/^[0-9]*[.,]?[0-9]{0,2}$/.test(val) || val === "") { setPeso(val); }
-                    if (formError) setFormError('');
-                    if (formSuccess) setFormSuccess('');
-                }}
-                onKeyDown={handlePesoKeyDown} required placeholder="0,00"
+                ref={pesoInputRef} 
+                type="text" 
+                inputMode="numeric" 
+                id="peso" 
+                value={formatPesoForDisplay(peso)}
+                onKeyDown={handlePesoKeyDown}
+                readOnly // Impede a digitação direta, forçando o uso do onKeyDown
                 className="w-auto max-w-[200px] p-2 border-2 border-gray-300 rounded-xl text-7xl font-bold text-center text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none"
             />
             <span className="text-4xl font-semibold text-gray-600 ml-2">kg</span>
@@ -368,7 +411,7 @@ export default function WasteForm({ clienteSelecionado }) {
         <button
             type="submit"
             className="w-full bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-4 px-6 rounded-xl shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70"
-            disabled={submitting || !peso || !selectedMainCategory || (!areaLancamento && opcoesArea.length > 0) || (showRecyclableSubTypes && !selectedSubType) || (showOrganicSubTypes && !selectedSubType)}
+            disabled={submitting || peso === 0 || !selectedMainCategory || (!areaLancamento && opcoesArea.length > 0) || (showRecyclableSubTypes && !selectedSubType) || (showOrganicSubTypes && !selectedSubType)}
         >
             {submitting ? 'A Registar...' : 'Registar Pesagem'}
         </button>
