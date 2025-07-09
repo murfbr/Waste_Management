@@ -10,7 +10,6 @@ import MainLayout from '../layouts/MainLayout';
 import PublicLayout from '../layouts/PublicLayout';
 
 // --- Páginas ---
-// CORREÇÃO: Caminhos ajustados para a pasta /pages/site/
 import PaginaLogin from '../pages/PaginaLogin';
 import HomePage from '../pages/site/HomePage';
 import PaginaProduto from '../pages/site/PaginaProduto';
@@ -70,16 +69,15 @@ export default function AppRoutes() {
           <Route path="lancamento" element={ <ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}><PaginaLancamento /></ProtectedRoute> } />
           <Route path="dashboard" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaDashboard /></ProtectedRoute> } />
           
-          {/* NOVAS ROTAS INFORMATIVAS */}
           <Route path="documentacao" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaDocumentacao /></ProtectedRoute> } />
           <Route path="economia-circular" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaEconomiaCircular /></ProtectedRoute> } />
           <Route path="glossario" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaGlossario /></ProtectedRoute> } />
 
-          {/* Rotas de Administração */}
-          <Route path="admin" element={<ProtectedRoute allowedRoles={['master']}><Outlet /></ProtectedRoute>}>
-            <Route path="usuarios" element={<PaginaAdminUsuarios />} />
-            <Route path="clientes" element={<PaginaAdminClientes />} />
-            <Route path="empresas-coleta" element={<PaginaAdminEmpresasColeta />} />
+          {/* --- MUDANÇA AQUI: A proteção foi movida para as rotas filhas --- */}
+          <Route path="admin">
+            <Route path="usuarios" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaAdminUsuarios /></ProtectedRoute> } />
+            <Route path="clientes" element={ <ProtectedRoute allowedRoles={['master']}><PaginaAdminClientes /></ProtectedRoute> } />
+            <Route path="empresas-coleta" element={ <ProtectedRoute allowedRoles={['master']}><PaginaAdminEmpresasColeta /></ProtectedRoute> } />
           </Route>
         </Route>
 

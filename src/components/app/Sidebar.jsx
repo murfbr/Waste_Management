@@ -1,11 +1,12 @@
 // src/components/app/Sidebar.jsx
 
-import React, { useContext } from 'react';
+import React, { useState, useContext } from 'react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import AuthContext from '../../context/AuthContext';
 import { signOut } from 'firebase/auth';
+import ConfirmationModal from './ConfirmationModal'; 
 
-// --- ÍCONES SVG PARA UMA MELHOR EXPERIÊNCIA VISUAL ---
+// --- ÍCONES SVG (sem alterações) ---
 const LançamentoIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
 const DashboardIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
 const DocsIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
@@ -19,7 +20,6 @@ const ChevronDoubleRightIcon = (props) => <svg {...props} xmlns="http://www.w3.o
 const CloseIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>;
 
 
-// Componente de link de navegação para evitar repetição
 const NavItem = ({ to, icon, text, isCollapsed, onClick }) => {
   const activeStyle = { backgroundColor: '#4338ca', color: 'white' };
   return (
@@ -39,15 +39,22 @@ const NavItem = ({ to, icon, text, isCollapsed, onClick }) => {
 export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCollapse }) {
   const { userProfile, currentUser, auth: authInstanceFromContext } = useContext(AuthContext);
   const navigate = useNavigate();
+  
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
-  const handleLogout = async () => {
+  const handleConfirmLogout = async () => {
     try {
       await signOut(authInstanceFromContext);
+      setIsLogoutModalOpen(false);
       if (isOpen && typeof toggleSidebar === 'function') toggleSidebar();
       navigate('/login');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
+  };
+
+  const handleLogoutRequest = () => {
+    setIsLogoutModalOpen(true);
   };
 
   const handleLinkClick = () => {
@@ -58,12 +65,10 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
 
   return (
     <>
-      {/* Overlay para mobile (lógica existente mantida) */}
       {isOpen && (
         <div className="fixed inset-0 z-20 bg-black opacity-50 md:hidden" onClick={toggleSidebar}></div>
       )}
 
-      {/* Container principal da Sidebar */}
       <aside
         className={`
           bg-gray-800 text-gray-100 flex flex-col
@@ -75,20 +80,18 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
         `}
         aria-label="Sidebar principal"
       >
-        {/* Header da Sidebar */}
         <div className={`p-4 flex items-center border-b border-gray-700 flex-shrink-0 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           <h1 className={`text-2xl font-bold text-white transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'inline-block'}`}>
             CtrlWaste
           </h1>
            <span className={`text-2xl font-bold text-white transition-opacity duration-200 ${isCollapsed ? 'inline-block' : 'hidden'}`}>
             CW
-          </span>
+           </span>
           <button onClick={toggleSidebar} className="md:hidden p-1 text-gray-300 hover:text-white" aria-label="Fechar menu">
             <CloseIcon />
           </button>
         </div>
 
-        {/* Navegação Principal */}
         <nav className="flex-grow overflow-y-auto p-2 space-y-1">
           {userProfile ? (
             <>
@@ -109,24 +112,29 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
                 </>
               )}
               
-              {userProfile.role === 'master' && (
+              {/* --- MUDANÇA AQUI: Agora 'gerente' também vê esta seção --- */}
+              {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
                 <>
                   <hr className={`my-2 border-gray-600 ${isCollapsed && 'mx-4'}`} />
                   {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs text-gray-400 uppercase">Administração</p>}
                   <NavItem to="/app/admin/usuarios" icon={<AdminUsersIcon />} text="Usuários" isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                </>
+              )}
+
+              {/* --- MUDANÇA AQUI: Seção separada apenas para 'master' --- */}
+              {userProfile.role === 'master' && (
+                <>
                   <NavItem to="/app/admin/clientes" icon={<AdminClientesIcon />} text="Clientes" isCollapsed={isCollapsed} onClick={handleLinkClick} />
                   <NavItem to="/app/admin/empresas-coleta" icon={<AdminClientesIcon />} text="Empresas de Coleta" isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}
             </>
           ) : (
-            <div className="p-4 text-gray-400">...</div> // Skeleton loader can be added here
+            <div className="p-4 text-gray-400">...</div>
           )}
         </nav>
 
-        {/* Rodapé da Sidebar */}
         <div className="p-2 border-t border-gray-700 flex-shrink-0">
-          {/* Botão para recolher/expandir */}
           <button
             onClick={onToggleCollapse}
             className="hidden md:flex items-center justify-center w-full p-2.5 rounded-md transition duration-200 hover:bg-gray-700 mb-2"
@@ -148,7 +156,7 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
             )}
           </div>
           <button
-            onClick={handleLogout}
+            onClick={handleLogoutRequest}
             className={`w-full flex items-center font-semibold py-2 px-4 rounded-lg text-sm transition duration-200 bg-red-500 hover:bg-red-600 ${isCollapsed ? 'justify-center' : ''}`}
           >
             <LogoutIcon />
@@ -156,6 +164,16 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
           </button>
         </div>
       </aside>
+
+      <ConfirmationModal
+        isOpen={isLogoutModalOpen}
+        onCancel={() => setIsLogoutModalOpen(false)}
+        onConfirm={handleConfirmLogout}
+        title="Confirmar Saída"
+        message="Tem certeza de que deseja encerrar a sessão?"
+        confirmText="Sim, Sair"
+        theme="danger"
+      />
     </>
   );
 }
