@@ -230,32 +230,23 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onMinim
     clearMessagesAfterDelay();
   };
 
-  // --- LÓGICA DE INPUT ATUALIZADA ---
   const handlePesoKeyDown = (e) => {
-    // Impede a ação padrão do navegador para a tecla pressionada.
     e.preventDefault();
     
-    // Limpa erros/sucesso ao começar a digitar
     if (formError) setFormError('');
     if (formSuccess) setFormSuccess('');
 
     const key = e.key;
 
-    // Se for um número, adiciona ao final do valor atual.
     if (!isNaN(key) && key !== ' ') {
         const numero = parseInt(key, 10);
-        // O Módulo (%) garante que o número não fique absurdamente grande.
         setPeso(prev => (prev * 10 + numero) % 1000000); 
     } 
-    // Se for Backspace, remove o último dígito.
     else if (key === 'Backspace') {
         setPeso(prev => Math.floor(prev / 10));
     }
-    // Permite que Enter e Tab funcionem normalmente para navegação no formulário.
     else if (key === 'Enter') {
         handleSubmit(e);
-    } else if (key === 'Tab') {
-        // A lógica de tabulação pode ser complexa, por enquanto focamos na digitação.
     }
   };
 
@@ -296,7 +287,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onMinim
       <div className="text-center">
         <label htmlFor="peso" className="sr-only">Peso Total (kg):</label>
         <div className="flex items-baseline justify-center">
-            {/* --- MUDANÇA: Usamos onKeyDown em vez de onChange. O input é apenas um display. --- */}
+            {/* --- MUDANÇA: O 'readOnly' foi removido para permitir o foco e o teclado em dispositivos móveis --- */}
             <input
                 ref={pesoInputRef} 
                 type="text" 
@@ -304,7 +295,6 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onMinim
                 id="peso" 
                 value={formatPesoForDisplay(peso)}
                 onKeyDown={handlePesoKeyDown}
-                readOnly // Impede a digitação direta, forçando o uso do onKeyDown
                 className="w-auto max-w-[200px] p-2 border-2 border-gray-300 rounded-xl text-7xl font-bold text-center text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none"
             />
             <span className="text-4xl font-semibold text-gray-600 ml-2">kg</span>
