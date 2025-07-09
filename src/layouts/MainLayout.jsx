@@ -1,9 +1,11 @@
 // src/layouts/MainLayout.jsx
 
-import React, { useState, useContext } from 'react'; // 1. useContext importado
+import React, { useState, useContext } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/app/Sidebar'; 
-import AuthContext from '../context/AuthContext'; // 2. AuthContext importado
+import AuthContext from '../context/AuthContext'; 
+// --- NOVA IMPORTAÇÃO ---
+import SyncStatusIndicator from '../components/app/SyncStatusIndicator';
 
 const HamburgerIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -15,7 +17,6 @@ export default function MainLayout() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
 
-  // 3. Obtendo o perfil do usuário do contexto
   const { userProfile } = useContext(AuthContext);
 
   const toggleSidebar = () => {
@@ -26,13 +27,11 @@ export default function MainLayout() {
     setIsSidebarCollapsed(!isSidebarCollapsed);
   };
 
-  // 4. Determina se a sidebar deve ser exibida
   const shouldShowSidebar = userProfile && userProfile.role !== 'operacional';
 
   return (
     <div className="relative flex h-screen bg-gray-100 overflow-hidden">
       
-      {/* 5. Renderização condicional da Sidebar */}
       {shouldShowSidebar && (
         <Sidebar 
           isOpen={isSidebarOpen}
@@ -44,7 +43,6 @@ export default function MainLayout() {
 
       <div className="flex-1 flex flex-col w-full">
         
-        {/* 6. Header do Mobile modificado para não mostrar o botão para o 'operacional' */}
         <header className="bg-white shadow-md md:hidden flex-shrink-0"> 
           <div className="flex items-center justify-between h-16 px-4">
               {shouldShowSidebar ? (
@@ -56,17 +54,25 @@ export default function MainLayout() {
                   <HamburgerIcon />
                 </button>
               ) : (
-                <div className="w-8"></div> // Placeholder para manter o título centralizado
+                // --- MUDANÇA AQUI: Adiciona o indicador de status para o operacional no mobile ---
+                <div className="w-1/3">
+                    <SyncStatusIndicator />
+                </div>
               )}
-              <div className="text-xl font-semibold text-gray-700">
+              <div className="text-xl font-semibold text-gray-700 text-center w-1/3">
                 CtrlWaste
               </div>
-              <div className="w-8"></div>
+              {/* --- MUDANÇA AQUI: Adiciona um placeholder para alinhar --- */}
+              <div className="w-1/3"></div>
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto">
           <div className="container mx-auto px-4 sm:px-6 py-8">
+            {/* --- MUDANÇA AQUI: Adiciona o indicador de status no topo para telas maiores --- */}
+            <div className="hidden md:flex justify-end mb-4">
+                <SyncStatusIndicator />
+            </div>
             <Outlet />
           </div>
         </main>

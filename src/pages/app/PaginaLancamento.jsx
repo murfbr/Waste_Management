@@ -1,12 +1,11 @@
 // src/pages/app/PaginaLancamento.jsx
 
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import AuthContext from '../../context/AuthContext';
 import { 
     collection, 
-    addDoc, 
     deleteDoc, 
     doc, 
     query, 
@@ -21,11 +20,11 @@ import {
 import MessageBox from '../../components/app/MessageBox';
 import WasteForm from '../../components/app/WasteForm';
 import WasteRecordsList from '../../components/app/WasteRecordsList';
+import { getPendingRecords, deletePendingRecord } from '../../services/offlineSyncService';
 
 const REGISTOS_POR_PAGINA = 20; 
 
-// --- MODAIS ---
-
+// --- MODAIS (Sem alterações) ---
 const LogoutConfirmationModal = ({ isOpen, onCancel, onConfirm }) => {
   if (!isOpen) return null;
   return (
@@ -42,7 +41,6 @@ const LogoutConfirmationModal = ({ isOpen, onCancel, onConfirm }) => {
   );
 };
 
-// NOVO: Modal de Confirmação de Exclusão
 const DeleteConfirmationModal = ({ isOpen, onCancel, onConfirm, record }) => {
   if (!isOpen) return null;
   return (
@@ -68,25 +66,20 @@ const DeleteConfirmationModal = ({ isOpen, onCancel, onConfirm, record }) => {
 
 
 export default function PaginaLancamento() {
-  const { db, auth, currentUser, appId, userProfile } = useContext(AuthContext);
+  const { db, auth, currentUser, appId, userProfile, userAllowedClientes, loadingUserClientes } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // Estados existentes
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
-  const [wasteRecords, setWasteRecords] = useState([]);
+  const [unifiedRecords, setUnifiedRecords] = useState([]);
   const [loadingRecords, setLoadingRecords] = useState(false); 
   const [isRecordsVisible, setIsRecordsVisible] = useState(false);
-  const [lastVisibleRecord, setLastVisibleRecord] = useState(null); 
+  const [lastVisibleFirestoreRecord, setLastVisibleFirestoreRecord] = useState(null); 
   const [hasMoreRecords, setHasMoreRecords] = useState(false); 
   const [loadingMore, setLoadingMore] = useState(false);
-  const [userAllowedClientes, setUserAllowedClientes] = useState([]);
   const [selectedClienteId, setSelectedClienteId] = useState('');
   const [selectedClienteData, setSelectedClienteData] = useState(null);
-  const [loadingUserClientes, setLoadingUserClientes] = useState(true);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
-
-  // NOVO: Estado para controlar o modal de exclusão e o registro a ser excluído
   const [recordToDelete, setRecordToDelete] = useState(null);
 
   const showMessage = (msg, error = false) => {
@@ -104,197 +97,138 @@ export default function PaginaLancamento() {
       showMessage('Erro ao tentar sair. Tente novamente.', true);
     }
   };
+  
+  useEffect(() => {
+    if (!loadingUserClientes && userAllowedClientes.length > 0 && !selectedClienteId) {
+        setSelectedClienteId(userAllowedClientes[0].id);
+    }
+  }, [loadingUserClientes, userAllowedClientes, selectedClienteId]);
 
-  // ... (useEffects para carregar clientes e registros permanecem os mesmos) ...
-    // Carregar os detalhes dos CLIENTES permitidos ao utilizador
-    useEffect(() => {
-        if (!db || !userProfile) { 
-          setLoadingUserClientes(false); 
-          setUserAllowedClientes([]); 
-          setSelectedClienteData(null); 
-          return; 
-        }
-        const fetchUserClientes = async () => {
-          setLoadingUserClientes(true); 
-          let clienteIdsToFetch = []; 
-          let loadedClientes = [];
-          if (userProfile.role === 'master') {
-            try {
-              const q = query(collection(db, "clientes"), where("ativo", "==", true), orderBy("nome"));
-              const querySnapshot = await getDocs(q);
-              loadedClientes = querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-            } catch (e) { console.error("Erro ao carregar clientes (master):", e); }
-          } else if (userProfile.clientesPermitidos?.length > 0) {
-            clienteIdsToFetch = userProfile.clientesPermitidos;
-            const CHUNK_SIZE = 30; 
-            for (let i = 0; i < clienteIdsToFetch.length; i += CHUNK_SIZE) {
-                const chunk = clienteIdsToFetch.slice(i, i + CHUNK_SIZE);
-                if (chunk.length > 0) {
-                    try {
-                        const q = query(collection(db, "clientes"), where(documentId(), "in", chunk), where("ativo", "==", true), orderBy("nome"));
-                        const querySnapshot = await getDocs(q);
-                        loadedClientes.push(...querySnapshot.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() })));
-                    } catch (e) { console.error("Erro ao carregar clientes (gerente/operacional):", e); }
-                }
-            }
-            loadedClientes.sort((a, b) => a.nome.localeCompare(b.nome));
-          }
-          setUserAllowedClientes(loadedClientes);
-          if (loadedClientes.length > 0 && !selectedClienteId) {
-            setSelectedClienteId(loadedClientes[0].id); 
-          } else if (loadedClientes.length === 0) {
-            setSelectedClienteId('');
-          }
-          setLoadingUserClientes(false);
-        };
-        fetchUserClientes();
-      }, [db, userProfile]);
-    
-      useEffect(() => {
-        if (selectedClienteId && userAllowedClientes.length > 0) {
-          const cliente = userAllowedClientes.find(c => c.id === selectedClienteId);
-          setSelectedClienteData(cliente || null);
-        } else { 
-          setSelectedClienteData(null); 
-        }
-      }, [selectedClienteId, userAllowedClientes]);
-    
-      const fetchInitialRecords = async () => {
-        if (!db || !currentUser || !userProfile || !selectedClienteId) {
-          setWasteRecords([]); setLoadingRecords(false); setHasMoreRecords(false); setLastVisibleRecord(null);
-          return;
-        }
-        const canViewRecords = ['master', 'gerente', 'operacional'].includes(userProfile.role);
-        if (!canViewRecords) {
-          setWasteRecords([]); setLoadingRecords(false); setHasMoreRecords(false); setLastVisibleRecord(null);
-          return;
-        }
-    
-        setLoadingRecords(true);
-        try {
-          const firstBatchQuery = query(
-            collection(db, `artifacts/${appId}/public/data/wasteRecords`),
-            where("clienteId", "==", selectedClienteId),
-            orderBy("timestamp", "desc"),
-            limit(REGISTOS_POR_PAGINA)
-          );
-          const documentSnapshots = await getDocs(firstBatchQuery);
-          const records = documentSnapshots.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-          
-          setWasteRecords(records);
-          setLastVisibleRecord(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
-          setHasMoreRecords(documentSnapshots.docs.length === REGISTOS_POR_PAGINA);
-    
-        } catch (error) {
-          console.error("PAGINA LANCAMENTO - Erro ao buscar registos iniciais:", error);
-          showMessage('Erro ao carregar registos.', true);
-          setWasteRecords([]);
-          setHasMoreRecords(false);
-        }
-        setLoadingRecords(false);
-      };
+  useEffect(() => {
+    if (selectedClienteId && userAllowedClientes.length > 0) {
+      const cliente = userAllowedClientes.find(c => c.id === selectedClienteId);
+      setSelectedClienteData(cliente || null);
+    } else { 
+      setSelectedClienteData(null); 
+    }
+  }, [selectedClienteId, userAllowedClientes]);
+
+  const loadAndCombineRecords = useCallback(async () => {
+    if (!db || !currentUser || !userProfile || !selectedClienteId) {
+      setUnifiedRecords([]); setLoadingRecords(false); setHasMoreRecords(false); setLastVisibleFirestoreRecord(null);
+      return;
+    }
+    setLoadingRecords(true);
+    try {
+      const pendingRecords = await getPendingRecords();
+      const pendingWithFlag = pendingRecords
+        .filter(p => p.clienteId === selectedClienteId)
+        .map(p => ({ ...p, id: p.localId, isPending: true }));
+
+      const firestoreQuery = query(
+        collection(db, `artifacts/${appId}/public/data/wasteRecords`),
+        where("clienteId", "==", selectedClienteId),
+        orderBy("timestamp", "desc"),
+        limit(REGISTOS_POR_PAGINA)
+      );
+      const firestoreSnap = await getDocs(firestoreQuery);
+      const firestoreRecords = firestoreSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+
+      const pendingLocalIds = new Set(pendingWithFlag.map(p => p.localId));
+      const filteredFirestoreRecords = firestoreRecords.filter(f => !pendingLocalIds.has(f.localId));
       
-      useEffect(() => {
-        if (selectedClienteId) { 
-            fetchInitialRecords();
-        } else { 
-            setWasteRecords([]);
-            setLoadingRecords(false);
-            setHasMoreRecords(false);
-            setLastVisibleRecord(null);
-        }
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      }, [selectedClienteId]);
-    
-      const carregarMaisRegistos = async () => {
-        if (!lastVisibleRecord || !selectedClienteId || loadingMore) return; 
-        setLoadingMore(true);
-        try {
-          const nextBatchQuery = query(
-            collection(db, `artifacts/${appId}/public/data/wasteRecords`),
-            where("clienteId", "==", selectedClienteId),
-            orderBy("timestamp", "desc"),
-            startAfter(lastVisibleRecord),
-            limit(REGISTOS_POR_PAGINA)
-          );
-          const documentSnapshots = await getDocs(nextBatchQuery);
-          const newRecords = documentSnapshots.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-    
-          setWasteRecords(prevRecords => [...prevRecords, ...newRecords]);
-          setLastVisibleRecord(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
-          setHasMoreRecords(documentSnapshots.docs.length === REGISTOS_POR_PAGINA);
-    
-        } catch (error) {
-          console.error("PAGINA LANCAMENTO - Erro ao carregar mais registos:", error);
-          showMessage('Erro ao carregar mais registos.', true);
-        }
-        setLoadingMore(false);
-      };
-    
-      const handleAddWasteRecord = async (formDataFromWasteForm) => {
-        if (!currentUser || !userProfile || !['master', 'gerente', 'operacional'].includes(userProfile.role)) { 
-            showMessage("Ação não permitida.", true);
-            return false; 
-        }
-        if (!selectedClienteId || !selectedClienteData) { 
-            showMessage("Nenhum cliente selecionado para o lançamento.", true);
-            return false; 
-        }
-        
-        const contratosDoCliente = selectedClienteData.contratosColeta || [];
-        const contratoAplicavel = contratosDoCliente.find(c => 
-            c.tiposResiduoColetados?.includes(formDataFromWasteForm.wasteType)
-        );
-    
-        if (!contratoAplicavel || !contratoAplicavel.empresaColetaId) {
-            showMessage(`Nenhum contrato de coleta encontrado para o resíduo do tipo "${formDataFromWasteForm.wasteType}". Verifique o cadastro do cliente.`, true);
-            return false;
-        }
-    
-        try {
-          const dadosParaSalvar = {
-            ...formDataFromWasteForm, 
-            clienteId: selectedClienteId, 
-            empresaColetaId: contratoAplicavel.empresaColetaId,
-            timestamp: Date.now(), 
-            userId: currentUser.uid, 
-            userEmail: currentUser.email,
-          };
-    
-          await addDoc(collection(db, `artifacts/${appId}/public/data/wasteRecords`), dadosParaSalvar);
-          
-          showMessage('Resíduo registado com sucesso!');
-          fetchInitialRecords(); 
-          return true; 
-        } catch (error) { 
-            console.error("Erro ao adicionar registo de resíduo:", error);
-            showMessage('Erro ao registar resíduo. Tente novamente.', true);
-            return false; 
-        }
-      };
-  // Função que abre o modal de exclusão
+      const combined = [...pendingWithFlag, ...filteredFirestoreRecords];
+      combined.sort((a, b) => b.timestamp - a.timestamp);
+
+      setUnifiedRecords(combined);
+      setLastVisibleFirestoreRecord(firestoreSnap.docs[firestoreSnap.docs.length - 1]);
+      setHasMoreRecords(firestoreSnap.docs.length === REGISTOS_POR_PAGINA);
+
+    } catch (error) {
+      console.error("PAGINA LANCAMENTO - Erro ao carregar e combinar registros:", error);
+      showMessage('Erro ao carregar registos.', true);
+      setUnifiedRecords([]);
+      setHasMoreRecords(false);
+    }
+    setLoadingRecords(false);
+  }, [db, currentUser, userProfile, selectedClienteId, appId]);
+  
+  useEffect(() => {
+    if (selectedClienteId) { 
+        loadAndCombineRecords();
+    } else { 
+        setUnifiedRecords([]);
+        setLoadingRecords(false);
+        setHasMoreRecords(false);
+        setLastVisibleFirestoreRecord(null);
+    }
+  }, [selectedClienteId, loadAndCombineRecords]);
+
+  useEffect(() => {
+    // O evento agora é o 'pending-records-updated', que é mais genérico e confiável.
+    // Ele é disparado tanto ao adicionar um novo item quanto após uma sincronização.
+    window.addEventListener('pending-records-updated', loadAndCombineRecords);
+    return () => window.removeEventListener('pending-records-updated', loadAndCombineRecords);
+  }, [loadAndCombineRecords]);
+
+  const carregarMaisRegistos = async () => {
+    if (!lastVisibleFirestoreRecord || !selectedClienteId || loadingMore) return; 
+    setLoadingMore(true);
+    try {
+      const nextBatchQuery = query(
+        collection(db, `artifacts/${appId}/public/data/wasteRecords`),
+        where("clienteId", "==", selectedClienteId),
+        orderBy("timestamp", "desc"),
+        startAfter(lastVisibleFirestoreRecord),
+        limit(REGISTOS_POR_PAGINA)
+      );
+      const documentSnapshots = await getDocs(nextBatchQuery);
+      const newRecords = documentSnapshots.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+
+      const pendingLocalIds = new Set(unifiedRecords.filter(r => r.isPending).map(p => p.localId));
+      const filteredNewRecords = newRecords.filter(f => !pendingLocalIds.has(f.localId));
+      
+      setUnifiedRecords(prevRecords => [...prevRecords, ...filteredNewRecords]);
+      setLastVisibleFirestoreRecord(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
+      setHasMoreRecords(documentSnapshots.docs.length === REGISTOS_POR_PAGINA);
+
+    } catch (error) {
+      console.error("PAGINA LANCAMENTO - Erro ao carregar mais registos:", error);
+      showMessage('Erro ao carregar mais registos.', true);
+    }
+    setLoadingMore(false);
+  };
+
   const handleDeleteRequest = (record) => {
     setRecordToDelete(record);
   };
 
-  // Função que confirma e executa a exclusão
   const handleConfirmDelete = async () => {
     if (!recordToDelete) return;
-
     try {
-      await deleteDoc(doc(db, `artifacts/${appId}/public/data/wasteRecords`, recordToDelete.id));
-      showMessage('Registo excluído com sucesso!');
-      setRecordToDelete(null); // Fecha o modal
-      fetchInitialRecords(); // Atualiza a lista
+      if (recordToDelete.isPending) {
+        await deletePendingRecord(recordToDelete.localId);
+        showMessage('Registo pendente excluído com sucesso!');
+      } else {
+        await deleteDoc(doc(db, `artifacts/${appId}/public/data/wasteRecords`, recordToDelete.id));
+        showMessage('Registo excluído com sucesso!');
+      }
+      setRecordToDelete(null); 
+      // Não precisamos mais chamar loadAndCombineRecords aqui, pois o evento 'pending-records-updated'
+      // disparado por deletePendingRecord já fará isso. Para exclusões do Firestore,
+      // uma atualização manual é necessária.
+      if (!recordToDelete.isPending) {
+        loadAndCombineRecords();
+      }
     } catch (error) { 
       console.error("Erro ao excluir registo:", error);
       showMessage('Erro ao excluir registo. Tente novamente.', true);
-      setRecordToDelete(null); // Fecha o modal mesmo em caso de erro
+      setRecordToDelete(null);
     }
   };
 
   const toggleRecordsVisibility = () => setIsRecordsVisible(!isRecordsVisible);
-  // ... (verificações de loading e perfil permanecem as mesmas) ...
+  
   if (loadingUserClientes && !userProfile) return <div className="text-center text-gray-600 p-8">A carregar dados...</div>;
   if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">A carregar perfil...</div>;
   if (!userProfile || !['master', 'gerente', 'operacional'].includes(userProfile.role)) {
@@ -309,7 +243,6 @@ export default function PaginaLancamento() {
 
   return (
     <div className="space-y-6">
-      {/* O cabeçalho da página permanece o mesmo */}
       <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-x-4 gap-y-2">
         <div className="flex items-center space-x-4 order-2 sm:order-1 justify-center sm:justify-start">
           {selectedClienteData && selectedClienteData.logoUrl && (
@@ -371,7 +304,6 @@ export default function PaginaLancamento() {
 
       <MessageBox message={message} isError={isError} onClose={() => setMessage('')} />
 
-      {/* O resto da página permanece o mesmo */}
       {loadingUserClientes && userAllowedClientes.length === 0 && (
           <div className="text-center text-gray-500 p-8">A carregar lista de clientes...</div>
       )}
@@ -380,7 +312,6 @@ export default function PaginaLancamento() {
         <>
           <div className="bg-white p-6 rounded-lg shadow">
             <WasteForm 
-                onAddWaste={handleAddWasteRecord} 
                 clienteSelecionado={selectedClienteData} 
             />
           </div>
@@ -399,9 +330,9 @@ export default function PaginaLancamento() {
             {isRecordsVisible && (
               <div id="waste-records-list-lancamento" className="p-6 border-t border-gray-200">
                 <WasteRecordsList
-                  records={wasteRecords}
+                  records={unifiedRecords}
                   loading={loadingRecords} 
-                  onDelete={handleDeleteRequest} // Passa a nova função que abre o modal
+                  onDelete={handleDeleteRequest}
                   userRole={userProfile ? userProfile.role : null}
                   hasMoreRecords={hasMoreRecords}
                   onLoadMore={carregarMaisRegistos}
@@ -416,7 +347,6 @@ export default function PaginaLancamento() {
          <div className="text-center text-gray-500 p-8">Por favor, selecione um cliente para continuar.</div>
       ) : null}
 
-      {/* Renderiza os modais */}
       <LogoutConfirmationModal 
         isOpen={isLogoutModalOpen}
         onCancel={() => setIsLogoutModalOpen(false)}

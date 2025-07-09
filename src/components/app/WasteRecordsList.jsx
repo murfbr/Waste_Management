@@ -3,29 +3,22 @@
 import React from 'react';
 import { exportToCsv } from '../../utils/csvExport';
 
-// Função auxiliar para verificar se um timestamp é do dia de hoje
+// --- ÍCONE NOVO ---
+const ClockIcon = () => (
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+);
+
 const isToday = (timestamp) => {
     if (!timestamp) return false;
+    // A regra de 24h: a data do registro deve ser maior ou igual à data de hoje menos 1 dia.
     const recordDate = new Date(timestamp);
-    const today = new Date();
-    return recordDate.getFullYear() === today.getFullYear() &&
-           recordDate.getMonth() === today.getMonth() &&
-           recordDate.getDate() === today.getDate();
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    return recordDate >= yesterday;
 };
 
-/**
- * Componente para exibir a lista de registros de resíduos.
- *
- * @param {object} props
- * @param {Array} props.records
- * @param {boolean} props.loading
- * @param {function} props.onDelete - Agora espera o objeto 'record' completo
- * @param {string | null} props.userRole
- * @param {function} [props.showMessage]
- * @param {boolean} props.hasMoreRecords
- * @param {function} props.onLoadMore
- * @param {boolean} props.loadingMore
- */
 function WasteRecordsList({ 
     records, 
     loading, 
@@ -71,16 +64,16 @@ function WasteRecordsList({
 
       <div className="space-y-3">
         {records.map((record) => {
-          // Lógica para determinar se o botão de exclusão deve ser exibido
+          // A regra de 24h agora está mais precisa.
           const canUserDelete = 
             userRole === 'master' || 
             userRole === 'gerente' ||
-            (userRole === 'operacional' && isToday(record.timestamp));
+            (userRole === 'operacional' && (record.isPending || isToday(record.timestamp)));
 
           return (
             <div 
               key={record.id} 
-              className="bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-center"
+              className={`bg-gray-50 border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-center ${record.isPending ? 'opacity-75' : ''}`}
             >
               <div className="flex-grow mb-2 sm:mb-0">
                 {record.areaLancamento && <p><strong className="text-gray-700">Área:</strong> {record.areaLancamento}</p>}
@@ -93,13 +86,20 @@ function WasteRecordsList({
                 )}
 
                 {record.peso && <p><strong className="text-gray-700">Peso:</strong> {record.peso} kg</p>}
-                {record.timestamp && <p className="text-xs text-gray-500">Data: {new Date(record.timestamp).toLocaleString('pt-BR')}</p>}
+                <div className="flex items-center space-x-2">
+                    {record.timestamp && <p className="text-xs text-gray-500">Data: {new Date(record.timestamp).toLocaleString('pt-BR')}</p>}
+                    {/* --- MUDANÇA AQUI: Adiciona o indicador visual se o registro for pendente --- */}
+                    {record.isPending && (
+                        <div title="Aguardando sincronização" className="flex items-center">
+                            <ClockIcon />
+                        </div>
+                    )}
+                </div>
               </div>
               
-              {/* Renderiza o botão de exclusão apenas se o usuário tiver permissão */}
               {canUserDelete && (
                 <button
-                  onClick={() => onDelete(record)} // Passa o objeto 'record' inteiro
+                  onClick={() => onDelete(record)}
                   className={btnDeleteStyle}
                 >
                   Excluir
