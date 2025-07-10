@@ -24,7 +24,7 @@ export default function IncludedSection() {
                             <ListItem icon={<CheckCircleIcon />} text="Software como Serviço (SaaS) com acesso multiusuário" />
                             <ListItem icon={<CheckCircleIcon />} text="Dashboards em tempo real para monitoramento e análise dos resíduos" />
                             <ListItem icon={<CheckCircleIcon />} text="Emissão automática e personalizada de MTR (Manifesto de Transporte de Resíduos)" />
-                            <ListItem icon={<CheckCircleIcon />} text="Tablet (opcional) configurado para uso direto na área operacional" />
+                            
                         </ul>
                     </div>
                     <div className="p-8 bg-gray-50 rounded-2xl">
@@ -32,9 +32,8 @@ export default function IncludedSection() {
                         <p className="mt-4 text-lg text-gray-600">Para utilizar o Ctrl Waste com total eficiência, sua estrutura deve contar com:</p>
                         <ul className="mt-8 space-y-4 text-lg">
                             <ListItem icon={<CubeTransparentIcon />} text="Tablet ou celular para registro diário das pesagens" />
-                            <ListItem icon={<CubeTransparentIcon />} text="Parede ou superfície para fixação do tablet (caso opte por usá-lo fixo)" />
-                            <ListItem icon={<CubeTransparentIcon />} text="Balança para pesagem dos resíduos (o modelo é de escolha do cliente)" />
-                            <ListItem icon={<CubeTransparentIcon />} text="Equipe operacional treinada para inputar os dados no sistema" />
+                            <ListItem icon={<CubeTransparentIcon />} text="Balança para pesagem dos resíduos" />
+                            <ListItem icon={<CubeTransparentIcon />} text="Acesso operacional: basta que uma pessoa registre o peso no sistema em 3 cliques: simples, rápido e sem complicação." />
                         </ul>
                     </div>
                 </div>

@@ -44,7 +44,7 @@ export default function PlatformSection() {
                     <FeatureDetail title="Lançamento rápido e eficiente" imageUrl={pesagemImg} reverse={true}>
                         <p>Registro de dados simplificado via:</p>
                         <ul className="list-disc list-inside space-y-2">
-                            <li>Tablet, desktop ou celular (tablet opcional fornecido pela Ctrl Waste)</li>
+                            <li>Qualquer dispositivo móvel </li>
                             <li>Balança para pesagem dos resíduos (a ser providenciada pelo cliente)</li>
                             <li>Interface intuitiva com categorias personalizáveis por operação</li>
                         </ul>
@@ -55,7 +55,7 @@ export default function PlatformSection() {
                         <ul className="list-disc list-inside space-y-2">
                             <li>Relatórios técnicos e gerenciais gerados em tempo real, com apenas um clique</li>
                             <li>Exportação CSV automatizada</li>
-                            <li>Emissão instantânea do MTR (Manifesto de Transporte de Resíduos)</li>
+                            <li>Emissão instantânea do <b>MTR</b> (Manifesto de Transporte de Resíduos)</li>
                             <li>Base sólida para auditorias, certificações e ESG</li>
                         </ul>
                         <aside className="mt-6 p-4 bg-green-50 border-l-4 border-green-500">
