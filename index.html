@@ -8,9 +8,20 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="/src/styles/main.css">
+    
+    <link rel="manifest" href="/manifest.json" />
   </head>
   <body>
     <noscript>Você precisa habilitar o JavaScript para rodar este aplicativo.</noscript>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script> </body>
+    <script type="module" src="/src/main.jsx"></script>
+    
+    <script>
+      if ('serviceWorker' in navigator) {
+        window.addEventListener('load', () => {
+          navigator.serviceWorker.register('/sw.js');
+        });
+      }
+    </script>
+  </body>
 </html>
