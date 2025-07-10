@@ -26,7 +26,7 @@ const wasteTypeColors = {
     'default':      { bg: '#6b7280', text: '#FFFFFF' }
 };
 
-export default function WasteForm({ clienteSelecionado, onLimitExceeded, onMinimumLimitExceeded, onSuccessfulSubmit }) { 
+export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSuccessfulSubmit }) { 
   const { currentUser, appId } = useContext(AuthContext);
 
   const [areaLancamento, setAreaLancamento] = useState('');
@@ -157,19 +157,12 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onMinim
         c.tiposResiduoColetados?.includes(selectedMainCategory)
     );
 
-    if (!contratoAplicavel || !contratoAplicavel.empresaColetaId) {
-        setFormError(`Nenhum contrato de coleta encontrado para o resíduo "${selectedMainCategory}".`);
-        setSubmitting(false);
-        clearMessagesAfterDelay();
-        return;
-    }
-
     const recordData = {
       areaLancamento: areaLancamento || (opcoesArea.length === 0 ? "Geral" : "Não especificada"),
       wasteType: selectedMainCategory,
       peso: parsedPeso,
       clienteId: clienteSelecionado.id,
-      empresaColetaId: contratoAplicavel.empresaColetaId,
+      empresaColetaId: contratoAplicavel?.empresaColetaId || null,
       timestamp: Date.now(),
       userId: currentUser.uid,
       userEmail: currentUser.email,
@@ -187,7 +180,6 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onMinim
 
     const limites = clienteSelecionado.limitesPorResiduo || {};
     const limiteDaCategoria = limites[categoriaParaVerificarLimite] || 0;
-    const limiteMinimo = 1;
 
     if (limiteDaCategoria > 0 && parsedPeso > limiteDaCategoria) {
         onLimitExceeded({
@@ -199,16 +191,6 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onMinim
         return;
     }
     
-    if (parsedPeso < limiteMinimo) {
-        onMinimumLimitExceeded({
-            ...recordData,
-            wasteType: tipoParaExibir,
-            limite: limiteMinimo,
-        });
-        setSubmitting(false);
-        return;
-    }
-
     const result = await addPendingRecord(recordData);
 
     if (result.success) {
@@ -287,7 +269,6 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onMinim
       <div className="text-center">
         <label htmlFor="peso" className="sr-only">Peso Total (kg):</label>
         <div className="flex items-baseline justify-center">
-            {/* --- MUDANÇA: O 'readOnly' foi removido para permitir o foco e o teclado em dispositivos móveis --- */}
             <input
                 ref={pesoInputRef} 
                 type="text" 

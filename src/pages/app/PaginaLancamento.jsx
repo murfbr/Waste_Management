@@ -238,24 +238,6 @@ export default function PaginaLancamento() {
     });
   };
 
-  const handleMinimumLimitExceeded = (data) => {
-    const { peso, wasteType } = data;
-    setModalState({
-        isOpen: true,
-        title: 'Atenção: Lançamento Baixo',
-        message: 'Lançamentos abaixo de 1kg podem indicar um erro de digitação. Deseja confirmar mesmo assim?',
-        confirmText: 'Confirmar Mesmo Assim',
-        theme: 'warning',
-        onConfirm: () => handleConfirmLimit(data),
-        content: (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2 mb-6 text-left">
-                <div className="flex justify-between text-lg"><span className="font-medium text-gray-500">Tipo:</span><span className="font-bold text-gray-900">{wasteType}</span></div>
-                <div className="flex justify-between text-2xl"><span className="font-medium text-gray-500">Lançado:</span><span className="font-extrabold text-yellow-600">{peso} kg</span></div>
-            </div>
-        )
-    });
-  };
-
   const handleConfirmLimit = async (limitModalData) => {
     if (!limitModalData) return;
     const { limite, ...recordData } = limitModalData;
@@ -355,7 +337,6 @@ export default function PaginaLancamento() {
             <WasteForm 
                 clienteSelecionado={selectedClienteData} 
                 onLimitExceeded={handleLimitExceeded}
-                onMinimumLimitExceeded={handleMinimumLimitExceeded}
                 onSuccessfulSubmit={loadAndCombineRecords}
             />
           </div>

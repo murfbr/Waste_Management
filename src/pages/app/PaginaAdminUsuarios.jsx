@@ -1,23 +1,23 @@
 // src/pages/app/PaginaAdminUsuarios.jsx
 
-import React, { useState, useEffect, useContext, useMemo } from 'react';
+import React, { useState, useEffect, useContext, useCallback, useMemo } from 'react';
 import AuthContext from '../../context/AuthContext';
-import { collection, onSnapshot, query, orderBy } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import MessageBox from '../../components/app/MessageBox';
 import UserForm from '../../components/app/UserForm';
 
 export default function PaginaAdminUsuarios() {
-  const { db, functions, userProfile, currentUser } = useContext(AuthContext);
+  console.log("PaginaAdminUsuarios: Renderizando a página.");
+  // --- CORREÇÃO: Usando a lista de clientes SEGURA do contexto ---
+  const { functions, userProfile, currentUser, userAllowedClientes, loadingAllowedClientes } = useContext(AuthContext);
   
-  const manageUserPermissions = httpsCallable(functions, 'manageUserPermissions');
+  // --- CORREÇÃO: Memoizando a função para estabilizar a dependência ---
+  const manageUserPermissions = useMemo(() => httpsCallable(functions, 'manageUserPermissions'), [functions]);
+  const getVisibleUsersFunction = useMemo(() => httpsCallable(functions, 'getVisibleUsers'), [functions]);
 
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
   
-  const [clientesList, setClientesList] = useState([]); 
-  const [loadingClientes, setLoadingClientes] = useState(true);
-
   const [editingUser, setEditingUser] = useState(null);
   const [showForm, setShowForm] = useState(false);
 
@@ -30,74 +30,38 @@ export default function PaginaAdminUsuarios() {
     setTimeout(() => setMessage(''), duration);
   };
 
-  useEffect(() => {
-    if (!db) { setLoadingUsers(false); return; }
+  const fetchUsers = useCallback(() => {
+    console.log("PaginaAdminUsuarios: fetchUsers foi chamada.");
+    if (!userProfile) {
+      console.log("PaginaAdminUsuarios: fetchUsers abortada - perfil do usuário ainda não carregado.");
+      return;
+    }
+
+    console.log("PaginaAdminUsuarios: Chamando a Cloud Function 'getVisibleUsers'...");
     setLoadingUsers(true);
-    const qUsers = query(collection(db, "users"), orderBy("email")); 
-    const unsubscribeUsers = onSnapshot(qUsers, (querySnapshot) => {
-      const usersData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setUsers(usersData);
-      setLoadingUsers(false);
-    }, (error) => {
-      console.error("Erro ao carregar utilizadores: ", error);
-      showMessage("Erro ao carregar utilizadores.", true);
-      setLoadingUsers(false);
-    });
-    return () => unsubscribeUsers();
-  }, [db]);
+    getVisibleUsersFunction()
+      .then((result) => {
+        const fetchedUsers = result.data.users || [];
+        console.log(`PaginaAdminUsuarios: Cloud Function retornou ${fetchedUsers.length} usuários.`, fetchedUsers);
+        setUsers(fetchedUsers);
+      })
+      .catch((error) => {
+        console.error("PaginaAdminUsuarios: Erro CRÍTICO ao chamar 'getVisibleUsers': ", error);
+        showMessage("Erro ao carregar a lista de utilizadores.", true);
+      })
+      .finally(() => {
+        console.log("PaginaAdminUsuarios: fetchUsers finalizada.");
+        setLoadingUsers(false);
+      });
+  }, [userProfile, getVisibleUsersFunction]);
 
   useEffect(() => {
-    if (!db) { setLoadingClientes(false); return; }
-    setLoadingClientes(true);
-    const qClientes = query(collection(db, "clientes"), orderBy("nome")); 
-    const unsubscribeClientes = onSnapshot(qClientes, (querySnapshot) => {
-      const clientesData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      setClientesList(clientesData); 
-      setLoadingClientes(false);
-    }, (error) => {
-      console.error("Erro ao carregar clientes para seleção: ", error);
-      setLoadingClientes(false);
-    });
-    return () => unsubscribeClientes();
-  }, [db]);
+    console.log("PaginaAdminUsuarios: useEffect para chamar fetchUsers foi acionado.");
+    fetchUsers();
+  }, [fetchUsers]);
 
-  const visibleUsers = useMemo(() => {
-    if (!userProfile) return [];
-    if (userProfile.role === 'master') {
-      return users;
-    }
-    if (userProfile.role === 'gerente') {
-      const gerentesClientesIds = new Set(userProfile.clientesPermitidos || []);
-      
-      if (gerentesClientesIds.size === 0) {
-        return users.filter(u => u.id === currentUser.uid);
-      }
-
-      return users.filter(u => {
-        if (u.id === currentUser.uid) return true;
-        if (u.role !== 'operacional') return false;
-
-        const operacionaisClientesIds = u.clientesPermitidos || [];
-        const temClienteEmComum = operacionaisClientesIds.some(clienteId => gerentesClientesIds.has(clienteId));
-        
-        return temClienteEmComum;
-      });
-    }
-    return [];
-  }, [users, userProfile, currentUser]);
-
-  const clientesParaFormulario = useMemo(() => {
-    if (!userProfile) return [];
-    if (userProfile.role === 'master') {
-      return clientesList;
-    }
-    if (userProfile.role === 'gerente') {
-      const gerentesClientesPermitidos = userProfile.clientesPermitidos || [];
-      return clientesList.filter(c => gerentesClientesPermitidos.includes(c.id));
-    }
-    return [];
-  }, [clientesList, userProfile]);
-
+  // --- REMOVIDO: O useEffect que buscava a lista de clientes foi removido ---
+  // pois agora usamos a lista segura vinda do AuthContext.
 
   const handleOpenCreateForm = () => {
     setEditingUser(null);
@@ -120,10 +84,11 @@ export default function PaginaAdminUsuarios() {
 
   const handleFormSubmit = async (formData) => {
     const action = editingUser ? 'update' : 'create';
-    
+    console.log(`PaginaAdminUsuarios: Submetendo formulário com ação '${action}'`, formData);
     try {
       const result = await manageUserPermissions({ action, userData: formData });
       showMessage(result.data.message, false);
+      fetchUsers();
       handleCancelForm();
     } catch (error) {
       console.error("Erro ao gerir permissões do utilizador:", error);
@@ -131,10 +96,16 @@ export default function PaginaAdminUsuarios() {
     }
   };
 
-  if (!userProfile && currentUser) return <div className="p-8 text-center">A carregar perfil...</div>;
+  console.log("PaginaAdminUsuarios: Verificando permissões de acesso...");
+  if (!userProfile && currentUser) {
+      console.log("PaginaAdminUsuarios: Acesso pendente, aguardando perfil...");
+      return <div className="p-8 text-center">A carregar perfil...</div>;
+  }
   if (!userProfile || !['master', 'gerente'].includes(userProfile.role)) {
+    console.error(`PaginaAdminUsuarios: ACESSO NEGADO! Role do usuário: '${userProfile?.role}'`);
     return <div className="p-8 text-center text-red-600">Acesso negado.</div>;
   }
+  console.log(`PaginaAdminUsuarios: Acesso PERMITIDO para role '${userProfile.role}'.`);
 
   return (
     <div className="space-y-8">
@@ -158,9 +129,8 @@ export default function PaginaAdminUsuarios() {
           onCancel={handleCancelForm}
           initialData={editingUser}
           isEditing={!!editingUser}
-          clientesList={clientesParaFormulario}
-          loadingClientes={loadingClientes}
-          // --- MUDANÇA AQUI: Passamos o perfil do usuário logado para o formulário ---
+          clientesList={userAllowedClientes}
+          loadingClientes={loadingAllowedClientes}
           currentUserProfile={userProfile}
         />
       )}
@@ -168,7 +138,7 @@ export default function PaginaAdminUsuarios() {
       <div className="bg-white p-6 rounded-xl shadow-lg mt-8">
         <h2 className="text-xl font-semibold text-gray-700 mb-3">Utilizadores Registados</h2>
         {loadingUsers ? ( <p>A carregar utilizadores...</p>
-        ) : visibleUsers.length === 0 ? ( <p>Nenhum utilizador encontrado.</p>
+        ) : users.length === 0 ? ( <p>Nenhum utilizador encontrado.</p>
         ) : (
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200 table-auto">
@@ -181,7 +151,7 @@ export default function PaginaAdminUsuarios() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {visibleUsers.map((user) => (
+                {users.map((user) => (
                   <tr key={user.id}>
                     <td className="td-table font-medium text-gray-900">{user.email || user.nome || user.id}</td>
                     <td className="td-table">{user.role}</td>
@@ -189,7 +159,7 @@ export default function PaginaAdminUsuarios() {
                       {user.role === 'master' 
                         ? 'Todos' 
                         : (user.clientesPermitidos && user.clientesPermitidos.length > 0 
-                            ? user.clientesPermitidos.map(clienteId => clientesList.find(c => c.id === clienteId)?.nome || clienteId.substring(0,6)+'...').join(', ')
+                            ? user.clientesPermitidos.map(clienteId => userAllowedClientes.find(c => c.id === clienteId)?.nome || clienteId.substring(0,6)+'...').join(', ')
                             : 'Nenhum'
                           )
                       }

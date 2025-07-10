@@ -1,6 +1,6 @@
 // src/context/AuthContext.jsx
 
-import React, { createContext, useState, useEffect, useMemo, useRef } from 'react';
+import React, { createContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { doc, getDoc, collection, query, where, documentId, orderBy, getDocs } from 'firebase/firestore'; 
 
@@ -24,126 +24,122 @@ export const AuthProvider = ({ children }) => {
     const [pendingRecordsCount, setPendingRecordsCount] = useState(0);
     const isSyncing = useRef(false);
 
+    const refreshAllowedClientes = useCallback(async () => {
+        if (!auth.currentUser) {
+            setUserAllowedClientes([]);
+            return;
+        }
+        try {
+            setLoadingAllowedClientes(true);
+            const userProfileRef = doc(db, `users/${auth.currentUser.uid}`);
+            const docSnap = await getDoc(userProfileRef);
+            if (docSnap.exists()) {
+                const profileData = docSnap.data();
+                let loadedClientes = [];
+                const clientesPermitidos = profileData.clientesPermitidos || [];
+                if (profileData.role === 'master') {
+                    const q = query(collection(db, "clientes"), where("ativo", "==", true), orderBy("nome"));
+                    const querySnapshot = await getDocs(q);
+                    loadedClientes = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                } else if (clientesPermitidos.length > 0) {
+                    const CHUNK_SIZE = 30;
+                    for (let i = 0; i < clientesPermitidos.length; i += CHUNK_SIZE) {
+                        const chunk = clientesPermitidos.slice(i, i + CHUNK_SIZE);
+                        const q = query(collection(db, "clientes"), where(documentId(), "in", chunk), where("ativo", "==", true), orderBy("nome"));
+                        const querySnapshot = await getDocs(q);
+                        loadedClientes.push(...querySnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+                    }
+                }
+                setUserAllowedClientes(loadedClientes);
+            } else {
+                setUserAllowedClientes([]);
+            }
+        } catch (error) {
+            console.error('Erro CRÍTICO ao buscar clientes:', error);
+            setUserAllowedClientes([]);
+        } finally {
+            setLoadingAllowedClientes(false);
+        }
+    }, []);
+
+    // Lógica de Sincronização
     useEffect(() => {
         const handleSyncAndQueueUpdate = async () => {
             if (isSyncing.current) return;
             isSyncing.current = true;
 
-            // Atualiza o contador primeiro
             const initialCount = await getPendingRecordsCount();
             setPendingRecordsCount(initialCount);
 
             if (navigator.onLine && db && appId && initialCount > 0) {
-                console.log('Tentando sincronizar...');
+                console.log('AuthContext: Tentando sincronizar...');
                 const changesWereMade = await syncPendingRecords(db, appId);
                 
-                // --- CORREÇÃO PRINCIPAL AQUI ---
-                // Se a sincronização removeu itens da fila, disparamos o evento
-                // para que TODAS as partes do app (a lista e o contador) se atualizem.
                 if (changesWereMade) {
-                    console.log('Sincronização concluída, notificando a UI para atualizar.');
+                    console.log('AuthContext: Sincronização concluída, notificando a UI para atualizar.');
+                    // Dispara o mesmo evento para forçar a recontagem e a atualização da lista
                     window.dispatchEvent(new CustomEvent('pending-records-updated'));
                 }
             }
             
             isSyncing.current = false;
         };
-        
-        // Esta função agora apenas atualiza o contador e chama a função principal.
-        const handleQueueChange = async () => {
-            const count = await getPendingRecordsCount();
-            setPendingRecordsCount(count);
-            handleSyncAndQueueUpdate(); // Tenta sincronizar após a mudança
-        };
 
         const handleOnline = () => {
             setIsOnline(true);
+            console.log("AuthContext: Status -> Online");
             handleSyncAndQueueUpdate();
         };
-
         const handleOffline = () => setIsOnline(false);
 
-        // O listener agora chama a função mais simples, que por sua vez chama a de sincronização.
-        window.addEventListener('pending-records-updated', handleQueueChange);
+        // Listeners
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
+        window.addEventListener('pending-records-updated', handleSyncAndQueueUpdate);
 
         // Verificação inicial
-        handleQueueChange();
+        handleSyncAndQueueUpdate();
 
         return () => {
-            window.removeEventListener('pending-records-updated', handleQueueChange);
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
+            window.removeEventListener('pending-records-updated', handleSyncAndQueueUpdate);
         };
-    }, [db, appId]);
+    }, []);
 
-    // useEffect de autenticação (sem mudanças na sua lógica principal)
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setLoadingAuth(true);
-            setLoadingAllowedClientes(true);
-            
-            setCurrentUser(null); 
-            setUserProfile(null);
-            setUserAllowedClientes([]);
-
             if (user) {
-                setCurrentUser(user); 
-                try {
-                    const userProfileRef = doc(db, `users/${user.uid}`); 
-                    const docSnap = await getDoc(userProfileRef);
-
-                    if (docSnap.exists()) {
-                        const newProfileData = { id: docSnap.id, ...docSnap.data() };
-                        setUserProfile(newProfileData);
-
-                        if (navigator.onLine && !isSyncing.current) {
-                           syncPendingRecords(db, appId);
-                        }
-
-                        let loadedClientes = [];
-                        if (newProfileData.role === 'master') {
-                            const q = query(collection(db, "clientes"), where("ativo", "==", true), orderBy("nome"));
-                            const querySnapshot = await getDocs(q);
-                            loadedClientes = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-                        } else if (newProfileData.clientesPermitidos && newProfileData.clientesPermitidos.length > 0) {
-                            const CHUNK_SIZE = 30;
-                            for (let i = 0; i < newProfileData.clientesPermitidos.length; i += CHUNK_SIZE) {
-                                const chunk = newProfileData.clientesPermitidos.slice(i, i + CHUNK_SIZE);
-                                const q = query(collection(db, "clientes"), where(documentId(), "in", chunk), where("ativo", "==", true), orderBy("nome"));
-                                const querySnapshot = await getDocs(q);
-                                loadedClientes.push(...querySnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
-                            }
-                        }
-                        setUserAllowedClientes(loadedClientes);
-                    } else {
-                        setUserProfile(null);
-                        setUserAllowedClientes([]);
-                    }
-                } catch (profileError) {
-                    console.error('AuthContext: Erro ao buscar perfil ou clientes:', profileError);
+                setCurrentUser(user);
+                const userProfileRef = doc(db, `users/${user.uid}`);
+                const docSnap = await getDoc(userProfileRef);
+                if (docSnap.exists()) {
+                    const newProfileData = { id: docSnap.id, ...docSnap.data() };
+                    setUserProfile(newProfileData);
+                    await refreshAllowedClientes(); 
+                } else {
                     setUserProfile(null);
                     setUserAllowedClientes([]);
                 }
+            } else {
+                setCurrentUser(null);
+                setUserProfile(null);
+                setUserAllowedClientes([]);
             }
-            
-            setLoadingAllowedClientes(false); 
             setIsAuthReady(true); 
             setLoadingAuth(false);
         });
-
         return () => unsubscribe();
-    }, [db, appId]);
+    }, [refreshAllowedClientes]);
 
-    const contextValue = useMemo(() => {
-        return {
-            db, auth, functions, appId,
-            currentUser, userProfile, isAuthReady, loadingAuth,
-            userAllowedClientes, loadingAllowedClientes,
-            isOnline, pendingRecordsCount
-        };
-    }, [currentUser, userProfile, isAuthReady, loadingAuth, userAllowedClientes, loadingAllowedClientes, isOnline, pendingRecordsCount]);
+    const contextValue = useMemo(() => ({
+        db, auth, functions, appId,
+        currentUser, userProfile, isAuthReady, loadingAuth,
+        userAllowedClientes, loadingAllowedClientes,
+        isOnline, pendingRecordsCount,
+        refreshAllowedClientes
+    }), [currentUser, userProfile, isAuthReady, loadingAuth, userAllowedClientes, loadingAllowedClientes, isOnline, pendingRecordsCount, refreshAllowedClientes]);
 
     return (
         <AuthContext.Provider value={contextValue}>

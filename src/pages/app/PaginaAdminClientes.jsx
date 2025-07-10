@@ -1,6 +1,7 @@
-// src/pages/PaginaAdminClientes.jsx
+// src/pages/app/PaginaAdminClientes.jsx
 
 import React, { useState, useEffect, useContext } from 'react';
+// MODIFICADO: Importando a função do contexto
 import AuthContext from '../../context/AuthContext';
 import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc, serverTimestamp, orderBy, writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -11,7 +12,8 @@ import Papa from 'papaparse';
 const CATEGORIAS_CLIENTE_INICIAIS = ["Hotel", "Escola", "Condomínio", "Aeroporto"];
 
 export default function PaginaAdminClientes() {
-  const { db, functions, appId, userProfile: masterProfile, currentUser: masterCurrentUser } = useContext(AuthContext);
+  // MODIFICADO: Obtendo a nova função do contexto
+  const { db, functions, appId, userProfile: masterProfile, currentUser: masterCurrentUser, refreshAllowedClientes } = useContext(AuthContext);
 
   const saveIneaCredentials = httpsCallable(functions, 'saveIneaCredentials');
   const testIneaConnection = httpsCallable(functions, 'testIneaConnection');
@@ -33,9 +35,11 @@ export default function PaginaAdminClientes() {
 
   const [testConnectionStatus, setTestConnectionStatus] = useState({ loading: false, message: '', isError: false });
 
+  // ... (restante do estado inalterado) ...
   const [importFile, setImportFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const [clienteParaImportar, setClienteParaImportar] = useState(null);
+
 
   const showMessage = (msg, error = false, duration = 6000) => {
     setMessage(msg); setIsError(error);
@@ -127,6 +131,9 @@ export default function PaginaAdminClientes() {
     if (window.confirm("Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita e removerá também os utilizadores associados.")) {
         try { 
           await deleteDoc(doc(db, "clientes", clienteId)); 
+          // --- ADICIONADO ---
+          // Atualiza o contexto após deletar um cliente também
+          await refreshAllowedClientes();
           showMessage("Cliente excluído com sucesso!"); 
           if (editingClienteId === clienteId) handleCancelForm();
         } catch (e) { 
@@ -136,7 +143,6 @@ export default function PaginaAdminClientes() {
     }
   };
 
-  // --- FUNÇÃO handleFormSubmit ATUALIZADA ---
   const handleFormSubmit = async (formData) => {
     if (!db || !masterCurrentUser || !masterProfile || masterProfile.role !== 'master') {
       return showMessage("Ação não permitida.", true);
@@ -164,14 +170,20 @@ export default function PaginaAdminClientes() {
         showMessage("Cliente adicionado com sucesso!");
       }
 
-      // Lógica simplificada: sempre chama a função de salvar se houver um clienteId e dados INEA
+      // --- ADICIONADO ---
+      // Após a operação de escrita no banco (criar ou editar),
+      // chamamos a função para atualizar a lista de clientes no AuthContext.
+      await refreshAllowedClientes();
+      console.log('AuthContext foi notificado para recarregar os clientes.');
+
+
       if (clienteId && configINEA && (configINEA.login || configINEA.senha || configINEA.cnpj || configINEA.codUnidade)) {
         showMessage("A salvar credenciais da integração INEA...", false, 3000);
         
         await saveIneaCredentials({
           clienteId: clienteId,
           login: configINEA.login,
-          senha: configINEA.senha, // Pode ser uma string vazia, a função de backend lida com isso
+          senha: configINEA.senha,
           cnpj: configINEA.cnpj,
           codUnidade: configINEA.codUnidade,
         });
@@ -186,6 +198,7 @@ export default function PaginaAdminClientes() {
     }
   };
   
+  // ... (restante do código da página, como a lógica de importação CSV, é inalterado) ...
   const handleFileChange = (event) => setImportFile(event.target.files[0]);
   const handleOpenImportModal = (cliente) => { 
     setClienteParaImportar(cliente); 
@@ -282,7 +295,7 @@ export default function PaginaAdminClientes() {
       )}
 
       {clienteParaImportar && !showForm && (
-        <div className="bg-white p-6 rounded-xl shadow-lg mt-8 border border-blue-300">
+          <div className="bg-white p-6 rounded-xl shadow-lg mt-8 border border-blue-300">
           <h2 className="text-xl font-semibold text-gray-800 mb-2">Importar Histórico para: <span className="text-blue-600">{clienteParaImportar.nome}</span></h2>
           <div className="text-sm text-gray-600 mb-4 space-y-1">
             <p><strong>Instruções para o ficheiro CSV:</strong></p>

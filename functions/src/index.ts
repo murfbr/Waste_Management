@@ -7,10 +7,7 @@ import { FieldValue } from "firebase-admin/firestore";
 import * as crypto from "crypto";
 import fetch from "node-fetch";
 
-// Inicializa o Firebase Admin SDK
 admin.initializeApp();
-
-// Define a região global para as funções v2
 setGlobalOptions({ region: "southamerica-east1" });
 
 // --- Seção de Criptografia (Inalterada) ---
@@ -41,8 +38,8 @@ function decrypt(text: string): string {
     const decrypted = Buffer.concat([decipher.update(encrypted), decipher.final()]);
     return decrypted.toString();
 }
-// --- Fim da Seção de Criptografia ---
 
+// --- Interfaces de Tipos ---
 interface IneaCredentialsData {
   clienteId: string;
   login: string;
@@ -51,6 +48,34 @@ interface IneaCredentialsData {
   codUnidade: string;
 }
 
+interface TestConnectionData {
+  clienteId: string;
+}
+
+interface UserData {
+  targetUid?: string;
+  email?: string;
+  password?: string;
+  nome?: string;
+  role?: "master" | "gerente" | "operacional";
+  clientesPermitidos: string[];
+}
+
+interface ManageUserPermissionsData {
+  action: "create" | "update";
+  userData: UserData;
+}
+
+interface UserProfile {
+    id: string;
+    role: "master" | "gerente" | "operacional";
+    clientesPermitidos?: string[];
+    nome?: string;
+    email?: string;
+}
+
+
+// --- Funções Existentes (Inalteradas) ---
 export const saveIneaCredentials = onCall({ region: "southamerica-east1" }, async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "O usuário precisa estar autenticado.");
@@ -78,10 +103,6 @@ export const saveIneaCredentials = onCall({ region: "southamerica-east1" }, asyn
       throw new HttpsError("internal", error.message || "Ocorreu um erro interno ao salvar as credenciais.");
     }
 });
-
-interface TestConnectionData {
-  clienteId: string;
-}
 
 export const testIneaConnection = onCall({ region: "southamerica-east1" }, async (request) => {
     if (!request.auth) {
@@ -118,20 +139,6 @@ export const testIneaConnection = onCall({ region: "southamerica-east1" }, async
     }
 });
 
-interface UserData {
-  targetUid?: string;
-  email?: string;
-  password?: string;
-  nome?: string;
-  role?: "master" | "gerente" | "operacional";
-  clientesPermitidos: string[];
-}
-
-interface ManageUserPermissionsData {
-  action: "create" | "update";
-  userData: UserData;
-}
-
 export const manageUserPermissions = onCall({ region: "southamerica-east1" }, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "A requisição deve ser feita por um usuário autenticado.");
@@ -144,7 +151,7 @@ export const manageUserPermissions = onCall({ region: "southamerica-east1" }, as
   if (!callerProfileSnap.exists) {
     throw new HttpsError("not-found", "Perfil do usuário chamador não encontrado.");
   }
-  const callerProfile = callerProfileSnap.data() as { role: string; clientesPermitidos?: string[] };
+  const callerProfile = callerProfileSnap.data() as UserProfile;
   const callerRole = callerProfile.role;
   const { action, userData } = request.data as ManageUserPermissionsData;
 
@@ -205,4 +212,67 @@ export const manageUserPermissions = onCall({ region: "southamerica-east1" }, as
   }
 
   throw new HttpsError("invalid-argument", "Ação não especificada ou inválida.");
+});
+
+// --- NOVA FUNÇÃO ---
+export const getVisibleUsers = onCall({ region: "southamerica-east1" }, async (request) => {
+    console.log("getVisibleUsers: Função iniciada.");
+    if (!request.auth) {
+        console.error("getVisibleUsers: Erro - Usuário não autenticado.");
+        throw new HttpsError("unauthenticated", "O usuário precisa estar autenticado.");
+    }
+
+    const callerUid = request.auth.uid;
+    const db = admin.firestore();
+    console.log(`getVisibleUsers: Chamada pelo UID: ${callerUid}`);
+
+    try {
+        const callerProfileSnap = await db.collection("users").doc(callerUid).get();
+        if (!callerProfileSnap.exists) {
+            console.error(`getVisibleUsers: Erro - Perfil não encontrado para UID: ${callerUid}`);
+            throw new HttpsError("not-found", "Perfil do usuário chamador não encontrado.");
+        }
+        const callerProfile = callerProfileSnap.data() as UserProfile;
+        console.log("getVisibleUsers: Perfil do chamador:", callerProfile);
+
+        const allUsersSnap = await db.collection("users").orderBy("email").get();
+        const allUsers = allUsersSnap.docs.map((doc) => ({ id: doc.id, ...doc.data() } as UserProfile));
+        console.log(`getVisibleUsers: Total de ${allUsers.length} usuários encontrados no banco.`);
+
+        if (callerProfile.role === "master") {
+            console.log("getVisibleUsers: Chamador é 'master', retornando todos os usuários.");
+            return { users: allUsers };
+        }
+
+        if (callerProfile.role === "gerente") {
+            const gerentesClientesIds = new Set(callerProfile.clientesPermitidos || []);
+            console.log(`getVisibleUsers: Chamador é 'gerente' com ${gerentesClientesIds.size} clientes permitidos.`);
+            
+            if (gerentesClientesIds.size === 0) {
+                const self = allUsers.find((u) => u.id === callerUid);
+                console.log("getVisibleUsers: Gerente não tem clientes, retornando apenas a si mesmo.");
+                return { users: self ? [self] : [] };
+            }
+
+            const visibleUsers = allUsers.filter((user) => {
+                if (user.id === callerUid) return true;
+                if (user.role !== "operacional") return false;
+                
+                const operacionaisClientesIds = user.clientesPermitidos || [];
+                const temClienteEmComum = operacionaisClientesIds.some((clienteId: string) => gerentesClientesIds.has(clienteId));
+                return temClienteEmComum;
+            });
+            
+            console.log(`getVisibleUsers: Filtro para gerente resultou em ${visibleUsers.length} usuários visíveis.`);
+            return { users: visibleUsers };
+        }
+
+        console.log("getVisibleUsers: Chamador não é 'master' nem 'gerente', retornando apenas a si mesmo.");
+        const self = allUsers.find((u) => u.id === callerUid);
+        return { users: self ? [self] : [] };
+
+    } catch (error: any) {
+        console.error("getVisibleUsers: Erro CRÍTICO na execução da função:", error);
+        throw new HttpsError("internal", error.message || "Ocorreu um erro interno ao buscar os usuários.");
+    }
 });
