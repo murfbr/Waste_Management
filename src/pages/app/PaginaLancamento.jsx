@@ -22,6 +22,7 @@ import WasteForm from '../../components/app/WasteForm';
 import WasteRecordsList from '../../components/app/WasteRecordsList';
 import { getPendingRecords, deletePendingRecord, addPendingRecord } from '../../services/offlineSyncService';
 import ConfirmationModal from '../../components/app/ConfirmationModal';
+import SyncStatusIndicator from '../../components/app/SyncStatusIndicator';
 
 const REGISTOS_POR_PAGINA = 20; 
 
@@ -283,9 +284,10 @@ export default function PaginaLancamento() {
         <div className="text-center order-1 sm:order-2">
           <h1 className="text-3xl font-bold text-gray-800">Pesagem</h1>
         </div>
-        <div className="flex justify-center sm:justify-end order-3">
+        <div className="flex justify-center sm:justify-end items-center order-3">
             {userProfile.role === 'operacional' ? (
               <div className="flex items-center space-x-4">
+                <SyncStatusIndicator />
                 {userProfile && (
                   <span className="text-gray-700 font-medium text-right">
                     {userProfile.nome || currentUser.email}
@@ -299,27 +301,30 @@ export default function PaginaLancamento() {
                 </button>
               </div>
             ) : (
-              <div className="w-full sm:w-auto sm:max-w-xs">
-                {userAllowedClientes.length > 0 && (
-                  <>
-                    <label htmlFor="clienteSelectLancamento" className="sr-only">Selecionar Cliente</label>
-                    <select 
-                      id="clienteSelectLancamento" 
-                      value={selectedClienteId} 
-                      onChange={(e) => setSelectedClienteId(e.target.value)}
-                      className="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                      disabled={loadingUserClientes}
-                    >
-                      {loadingUserClientes && <option value="">A carregar clientes...</option>}
-                      {!loadingUserClientes && userAllowedClientes.length === 0 && <option value="">Nenhum cliente disponível</option>}
-                      {!loadingUserClientes && userAllowedClientes.map(cliente => (
-                        <option key={cliente.id} value={cliente.id}>
-                          {cliente.nome} ({cliente.cidade || 'N/A'})
-                        </option>
-                      ))}
-                    </select>
-                  </>
-                )}
+              <div className="flex items-center space-x-4">
+                 <SyncStatusIndicator />
+                <div className="w-full sm:w-auto sm:max-w-xs">
+                  {userAllowedClientes.length > 0 && (
+                    <>
+                      <label htmlFor="clienteSelectLancamento" className="sr-only">Selecionar Cliente</label>
+                      <select 
+                        id="clienteSelectLancamento" 
+                        value={selectedClienteId} 
+                        onChange={(e) => setSelectedClienteId(e.target.value)}
+                        className="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        disabled={loadingUserClientes}
+                      >
+                        {loadingUserClientes && <option value="">A carregar clientes...</option>}
+                        {!loadingUserClientes && userAllowedClientes.length === 0 && <option value="">Nenhum cliente disponível</option>}
+                        {!loadingUserClientes && userAllowedClientes.map(cliente => (
+                          <option key={cliente.id} value={cliente.id}>
+                            {cliente.nome} ({cliente.cidade || 'N/A'})
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  )}
+                </div>
               </div>
             )}
         </div>

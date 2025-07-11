@@ -26,33 +26,31 @@ const NoSignalIcon = () => (
     </svg>
 );
 
-
 export default function SyncStatusIndicator() {
-  // Pega os novos estados do nosso AuthContext
   const { isOnline, pendingRecordsCount } = useContext(AuthContext);
 
   if (!isOnline) {
     return (
-      <div className="flex items-center space-x-2 text-red-500" title="Você está offline. Os lançamentos estão sendo salvos localmente.">
+      <div className="flex items-center text-red-500" title="Você está offline. Os lançamentos estão sendo salvos localmente.">
         <NoSignalIcon />
-        <span className="font-semibold text-sm hidden sm:inline">Offline</span>
       </div>
     );
   }
 
   if (pendingRecordsCount > 0) {
     return (
-      <div className="flex items-center space-x-2 text-yellow-500 animate-pulse" title={`${pendingRecordsCount} lançamento(s) pendente(s) para sincronizar.`}>
+      <div className="relative flex items-center text-yellow-500 animate-pulse" title={`${pendingRecordsCount} lançamento(s) pendente(s) para sincronizar.`}>
         <CloudAlertIcon />
-        <span className="font-semibold text-sm hidden sm:inline">{pendingRecordsCount} pendente(s)</span>
+        <div className="absolute -top-1 -right-2 bg-yellow-400 text-white text-xs font-bold rounded-full h-4 w-4 flex items-center justify-center">
+          {pendingRecordsCount}
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="flex items-center space-x-2 text-green-500" title="Todos os lançamentos estão sincronizados.">
+    <div className="flex items-center text-green-500" title="Todos os lançamentos estão sincronizados.">
       <CloudUpIcon />
-      <span className="font-semibold text-sm hidden sm:inline">Sincronizado</span>
     </div>
   );
 }

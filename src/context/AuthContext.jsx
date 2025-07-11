@@ -62,50 +62,60 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
-    // Lógica de Sincronização
+    // --> NOVO: Função dedicada para atualizar a contagem de pendentes na UI.
+    const updatePendingCount = useCallback(async () => {
+        const count = await getPendingRecordsCount();
+        setPendingRecordsCount(count);
+    }, []);
+
+    // --> MODIFICADO: Lógica de Sincronização refatorada para ser mais segura e eficiente.
     useEffect(() => {
-        const handleSyncAndQueueUpdate = async () => {
-            if (isSyncing.current) return;
+        // Função para lidar apenas com a sincronização de rede
+        const handleSync = async () => {
+            // Não tenta sincronizar se estiver offline, sem as dependências ou se já estiver em progresso
+            if (!navigator.onLine || !db || !appId || isSyncing.current) return;
+
             isSyncing.current = true;
-
-            const initialCount = await getPendingRecordsCount();
-            setPendingRecordsCount(initialCount);
-
-            if (navigator.onLine && db && appId && initialCount > 0) {
-                console.log('AuthContext: Tentando sincronizar...');
-                const changesWereMade = await syncPendingRecords(db, appId);
-                
-                if (changesWereMade) {
-                    console.log('AuthContext: Sincronização concluída, notificando a UI para atualizar.');
-                    // Dispara o mesmo evento para forçar a recontagem e a atualização da lista
-                    window.dispatchEvent(new CustomEvent('pending-records-updated'));
-                }
-            }
+            console.log('AuthContext: Tentando sincronizar...');
             
-            isSyncing.current = false;
+            const changesWereMade = await syncPendingRecords(db, appId);
+            
+            isSyncing.current = false; // Libera a trava após a tentativa de sincronização
+
+            // Se a sincronização fez alterações, chama a atualização da UI diretamente
+            if (changesWereMade) {
+                console.log('AuthContext: Sincronização concluída. Atualizando contagem na UI.');
+                updatePendingCount(); // Chamada direta para atualizar o estado, sem disparar novo evento
+            }
         };
 
         const handleOnline = () => {
             setIsOnline(true);
             console.log("AuthContext: Status -> Online");
-            handleSyncAndQueueUpdate();
+            handleSync(); // Tenta sincronizar assim que fica online
         };
-        const handleOffline = () => setIsOnline(false);
 
-        // Listeners
+        const handleOffline = () => {
+            setIsOnline(false);
+            console.log("AuthContext: Status -> Offline");
+        };
+
+        // Listeners com responsabilidades separadas
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
-        window.addEventListener('pending-records-updated', handleSyncAndQueueUpdate);
+        // Este listener agora só atualiza a contagem, não dispara uma nova sincronização
+        window.addEventListener('pending-records-updated', updatePendingCount);
 
-        // Verificação inicial
-        handleSyncAndQueueUpdate();
+        // Ações Iniciais ao carregar o contexto
+        updatePendingCount(); // Busca a contagem inicial de pendentes
+        handleSync();         // Tenta uma sincronização inicial se estiver online
 
         return () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
-            window.removeEventListener('pending-records-updated', handleSyncAndQueueUpdate);
+            window.removeEventListener('pending-records-updated', updatePendingCount);
         };
-    }, []);
+    }, [updatePendingCount]); // Adiciona a dependência do useCallback
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {

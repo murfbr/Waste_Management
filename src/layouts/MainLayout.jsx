@@ -4,8 +4,6 @@ import React, { useState, useContext } from 'react';
 import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/app/Sidebar'; 
 import AuthContext from '../context/AuthContext'; 
-// --- NOVA IMPORTAÇÃO ---
-import SyncStatusIndicator from '../components/app/SyncStatusIndicator';
 
 const HamburgerIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -54,25 +52,17 @@ export default function MainLayout() {
                   <HamburgerIcon />
                 </button>
               ) : (
-                // --- MUDANÇA AQUI: Adiciona o indicador de status para o operacional no mobile ---
-                <div className="w-1/3">
-                    <SyncStatusIndicator />
-                </div>
+                <div className="w-1/3"></div>
               )}
               <div className="text-xl font-semibold text-gray-700 text-center w-1/3">
                 CtrlWaste
               </div>
-              {/* --- MUDANÇA AQUI: Adiciona um placeholder para alinhar --- */}
               <div className="w-1/3"></div>
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto">
           <div className="container mx-auto px-4 sm:px-6 py-8">
-            {/* --- MUDANÇA AQUI: Adiciona o indicador de status no topo para telas maiores --- */}
-            <div className="hidden md:flex justify-end mb-4">
-                <SyncStatusIndicator />
-            </div>
             <Outlet />
           </div>
         </main>

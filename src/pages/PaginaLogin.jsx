@@ -1,19 +1,14 @@
-// src/pages/PaginaLogin.jsx
-
 import React, { useState, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import AuthContext from '../context/AuthContext';
 import MessageBox from '../components/app/MessageBox';
+import { useInstallPrompt } from '../hooks/useInstallPrompt'; // AQUI ESTÁ A IMPORTAÇÃO DO HOOK!
 
 export default function PaginaLogin() {
     const { auth, isAuthReady } = useContext(AuthContext);
     const navigate = useNavigate();
     const location = useLocation();
-
-    // Determina para onde redirecionar após o login.
-    // Se o usuário foi redirecionado para o login de uma página protegida, 'from' terá essa página.
-    // Caso contrário, o padrão é a página principal da aplicação, '/app'.
     const from = location.state?.from?.pathname || '/app';
 
     const [email, setEmail] = useState('');
@@ -21,6 +16,9 @@ export default function PaginaLogin() {
     const [message, setMessage] = useState('');
     const [isError, setIsError] = useState(false);
     const [loadingLogin, setLoadingLogin] = useState(false);
+
+    // Usando nosso hook customizado para a lógica do PWA
+    const { installPrompt, handleInstallClick } = useInstallPrompt();
 
     const showMessage = (msg, error = false) => {
         setMessage(msg);
@@ -44,7 +42,6 @@ export default function PaginaLogin() {
         setLoadingLogin(true);
         try {
             await signInWithEmailAndPassword(auth, email, password);
-            // Redirecionamento CORRIGIDO para a rota principal da aplicação
             navigate(from, { replace: true });
         } catch (error) {
             console.error('Erro no login:', error);
@@ -61,7 +58,8 @@ export default function PaginaLogin() {
     };
 
     return (
-        <div className="bg-gray-100 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 min-h-full">
+        <div className="bg-gray-100 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 min-h-full">
+            
             <div className="max-w-md w-full space-y-8">
                 <div className="bg-white p-8 rounded-2xl shadow-lg">
                     <div className="text-center">
@@ -120,6 +118,21 @@ export default function PaginaLogin() {
                     </form>
                 </div>
             </div>
+
+            {/* A seção de instalação agora usa os valores retornados pelo nosso hook */}
+            {installPrompt && (
+                <div className="max-w-md w-full text-center mt-8">
+                    <p className="text-sm text-gray-700">
+                        Para uma experiência mais fluida e imersiva, instale nosso aplicativo em seu dispositivo.
+                    </p>
+                    <button
+                        onClick={handleInstallClick}
+                        className="mt-4 w-full sm:w-auto inline-flex justify-center py-2 px-6 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                    >
+                        Instalar Aplicativo
+                    </button>
+                </div>
+            )}
         </div>
     );
 }
