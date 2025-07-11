@@ -72,7 +72,7 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
       <aside
         className={`
           bg-gray-800 text-gray-100 flex flex-col
-          fixed inset-y-0 left-0 z-30 h-screen
+          fixed inset-y-0 left-0 z-30 h-[100dvh]
           transform transition-all duration-300 ease-in-out
           md:relative
           ${isOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0
