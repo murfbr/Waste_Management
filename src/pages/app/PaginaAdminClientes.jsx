@@ -1,7 +1,6 @@
 // src/pages/app/PaginaAdminClientes.jsx
 
 import React, { useState, useEffect, useContext } from 'react';
-// MODIFICADO: Importando a função do contexto
 import AuthContext from '../../context/AuthContext';
 import { collection, addDoc, onSnapshot, query, doc, updateDoc, deleteDoc, serverTimestamp, orderBy, writeBatch } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
@@ -12,38 +11,46 @@ import Papa from 'papaparse';
 const CATEGORIAS_CLIENTE_INICIAIS = ["Hotel", "Escola", "Condomínio", "Aeroporto"];
 
 export default function PaginaAdminClientes() {
-  // MODIFICADO: Obtendo a nova função do contexto
   const { db, functions, appId, userProfile: masterProfile, currentUser: masterCurrentUser, refreshAllowedClientes } = useContext(AuthContext);
 
   const saveIneaCredentials = httpsCallable(functions, 'saveIneaCredentials');
   const testIneaConnection = httpsCallable(functions, 'testIneaConnection');
+  // ADICIONADO: Função de diagnóstico
+  const checkConfigFunction = httpsCallable(functions, 'checkConfig');
 
   const [clientes, setClientes] = useState([]);
   const [loadingClientes, setLoadingClientes] = useState(true);
-  
   const [empresasColetaDisponiveis, setEmpresasColetaDisponiveis] = useState([]);
-  
   const [availableClientCategorias, setAvailableClientCategorias] = useState([...CATEGORIAS_CLIENTE_INICIAIS]);
   const [selectedCategoriaFiltro, setSelectedCategoriaFiltro] = useState('');
-
   const [showForm, setShowForm] = useState(false); 
   const [editingClienteData, setEditingClienteData] = useState(null); 
   const [editingClienteId, setEditingClienteId] = useState(null); 
-
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
-
   const [testConnectionStatus, setTestConnectionStatus] = useState({ loading: false, message: '', isError: false });
-
-  // ... (restante do estado inalterado) ...
   const [importFile, setImportFile] = useState(null);
   const [isImporting, setIsImporting] = useState(false);
   const [clienteParaImportar, setClienteParaImportar] = useState(null);
-
+  
+  // ADICIONADO: Estado para o resultado do diagnóstico
+  const [configCheckResult, setConfigCheckResult] = useState(null);
 
   const showMessage = (msg, error = false, duration = 6000) => {
     setMessage(msg); setIsError(error);
     setTimeout(() => setMessage(''), duration);
+  };
+
+  // ADICIONADO: Handler para o botão de diagnóstico
+  const handleCheckConfig = async () => {
+    setConfigCheckResult('Verificando...');
+    try {
+      const result = await checkConfigFunction();
+      setConfigCheckResult(result.data.message);
+    } catch (error) {
+      console.error("Erro ao verificar configuração:", error);
+      setConfigCheckResult(`Erro ao chamar a função: ${error.message}`);
+    }
   };
   
   const handleTestConnection = async (clienteId) => {
@@ -131,8 +138,6 @@ export default function PaginaAdminClientes() {
     if (window.confirm("Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita e removerá também os utilizadores associados.")) {
         try { 
           await deleteDoc(doc(db, "clientes", clienteId)); 
-          // --- ADICIONADO ---
-          // Atualiza o contexto após deletar um cliente também
           await refreshAllowedClientes();
           showMessage("Cliente excluído com sucesso!"); 
           if (editingClienteId === clienteId) handleCancelForm();
@@ -170,12 +175,8 @@ export default function PaginaAdminClientes() {
         showMessage("Cliente adicionado com sucesso!");
       }
 
-      // --- ADICIONADO ---
-      // Após a operação de escrita no banco (criar ou editar),
-      // chamamos a função para atualizar a lista de clientes no AuthContext.
       await refreshAllowedClientes();
       console.log('AuthContext foi notificado para recarregar os clientes.');
-
 
       if (clienteId && configINEA && (configINEA.login || configINEA.senha || configINEA.cnpj || configINEA.codUnidade)) {
         showMessage("A salvar credenciais da integração INEA...", false, 3000);
@@ -198,7 +199,6 @@ export default function PaginaAdminClientes() {
     }
   };
   
-  // ... (restante do código da página, como a lógica de importação CSV, é inalterado) ...
   const handleFileChange = (event) => setImportFile(event.target.files[0]);
   const handleOpenImportModal = (cliente) => { 
     setClienteParaImportar(cliente); 
@@ -267,6 +267,20 @@ export default function PaginaAdminClientes() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold text-gray-800">Gerir Clientes</h1>
+      
+      {/* ADICIONADO: Bloco de diagnóstico */}
+      <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mt-6 rounded-md shadow-sm" role="alert">
+        <p className="font-bold">Ferramenta de Diagnóstico</p>
+        <p className="text-sm">Se estiver com erros 500 ao salvar, use este botão para verificar se a chave de criptografia está configurada corretamente no ambiente das Cloud Functions.</p>
+        <button
+          onClick={handleCheckConfig}
+          className="mt-2 px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-yellow-400"
+        >
+          Verificar Configuração da Chave
+        </button>
+        {configCheckResult && <p className="mt-2 text-sm font-mono bg-yellow-200 p-2 rounded">{configCheckResult}</p>}
+      </div>
+
       <MessageBox message={message} isError={isError} onClose={() => setMessage('')} />
 
       {!showForm && !clienteParaImportar && (

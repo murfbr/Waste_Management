@@ -1,6 +1,7 @@
 {
   "short_name": "CtrlWaste",
   "name": "Ctrl Waste",
+  "description": "Otimizando a gestão de resíduos de forma eficiente e inovadora.",
   "icons": [
          {
       "src": "logo72.png",
@@ -50,7 +51,8 @@
       "sizes": "512x512"
     }
   ],
-  "start_url": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#000000"

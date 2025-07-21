@@ -2,21 +2,49 @@
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { setGlobalOptions } from "firebase-functions/v2";
+// ADICIONADO: Importa o sistema de parâmetros da v2
+import { defineString } from "firebase-functions/params";
 import * as admin from "firebase-admin";
 import { FieldValue } from "firebase-admin/firestore";
 import * as crypto from "crypto";
-import fetch from "node-fetch";
+
+import { IneaService } from "./ineaService";
 
 admin.initializeApp();
-setGlobalOptions({ region: "southamerica-east1" });
 
-// --- Seção de Criptografia (Inalterada) ---
+// AJUSTE: A propriedade 'cors' foi removida de setGlobalOptions, pois não é suportada na v2.
+setGlobalOptions({
+    region: "southamerica-east1",
+});
+
+// ADICIONADO: Define a política de CORS em uma constante para ser reutilizada.
+// ATUALIZADO: URLs de aprovação e produção adicionadas.
+const corsPolicy = [
+    "http://localhost:5173", // Para desenvolvimento local
+    "https://ctrlwaste-aprovacao.vercel.app", // Ambiente de aprovação
+    "https://www.ctrlwaste.com.br" // Ambiente de produção
+];
+
+// ADICIONADO: Define opções reutilizáveis para as funções, incluindo timeout.
+const functionOptions = {
+    cors: corsPolicy,
+    timeoutSeconds: 30, // Aumenta o timeout para 30 segundos
+    memory: "256MiB" as const, // Aloca um pouco mais de memória
+};
+
+
+// --- NOVO PADRÃO v2: Declarando o parâmetro de ambiente ---
+const ineaEncryptionKey = defineString("INEA_ENCRYPTION_KEY");
+
+
+// --- Seção de Criptografia (CORRIGIDA para o padrão v2) ---
 const ALGORITHM = "aes-256-gcm";
 const IV_LENGTH = 16;
+
 function encrypt(text: string): string {
-    const key = process.env.INEA_ENCRYPTION_KEY;
+    const key = ineaEncryptionKey.value();
     if (!key || key.length !== 32) {
-        throw new Error("A chave de criptografia (INEA_ENCRYPTION_KEY) não está configurada corretamente.");
+        throw new Error("A chave de criptografia (INEA_ENCRYPTION_KEY) não está configurada corretamente no ambiente.");
     }
     const iv = crypto.randomBytes(IV_LENGTH);
     const cipher = crypto.createCipheriv(ALGORITHM, Buffer.from(key), iv);
@@ -24,12 +52,16 @@ function encrypt(text: string): string {
     const authTag = cipher.getAuthTag();
     return `${iv.toString("hex")}:${authTag.toString("hex")}:${encrypted.toString("hex")}`;
 }
+
 function decrypt(text: string): string {
-    const key = process.env.INEA_ENCRYPTION_KEY;
+    const key = ineaEncryptionKey.value();
     if (!key || key.length !== 32) {
-        throw new Error("A chave de criptografia (INEA_ENCRYPTION_KEY) não está configurada corretamente.");
+        throw new Error("A chave de criptografia (INEA_ENCRYPTION_KEY) não está configurada corretamente no ambiente.");
     }
     const [ivHex, authTagHex, encryptedHex] = text.split(":");
+    if (!ivHex || !authTagHex || !encryptedHex) {
+        throw new Error("Formato de texto criptografado inválido.");
+    }
     const iv = Buffer.from(ivHex, "hex");
     const authTag = Buffer.from(authTagHex, "hex");
     const encrypted = Buffer.from(encryptedHex, "hex");
@@ -39,17 +71,20 @@ function decrypt(text: string): string {
     return decrypted.toString();
 }
 
-// --- Interfaces de Tipos ---
-interface IneaCredentialsData {
-  clienteId: string;
-  login: string;
-  senha?: string;
-  cnpj: string;
-  codUnidade: string;
+// --- Interfaces e Funções Auxiliares ---
+interface IneaConfig {
+    login: string;
+    senhaCriptografada: string;
+    cnpj: string;
+    codUnidade: string;
 }
 
-interface TestConnectionData {
-  clienteId: string;
+interface UserProfile {
+    id: string;
+    role: "master" | "gerente" | "operacional";
+    clientesPermitidos?: string[];
+    nome?: string;
+    email?: string;
 }
 
 interface UserData {
@@ -66,22 +101,52 @@ interface ManageUserPermissionsData {
   userData: UserData;
 }
 
-interface UserProfile {
-    id: string;
-    role: "master" | "gerente" | "operacional";
-    clientesPermitidos?: string[];
-    nome?: string;
-    email?: string;
+async function getClientIneaConfig(clienteId: string): Promise<IneaConfig> {
+    const clienteRef = admin.firestore().collection("clientes").doc(clienteId);
+    const clienteDoc = await clienteRef.get();
+    if (!clienteDoc.exists) {
+        throw new HttpsError("not-found", "Cliente não encontrado.");
+    }
+    const configINEA = clienteDoc.data()?.configINEA;
+    if (!configINEA || !configINEA.senhaCriptografada || !configINEA.login || !configINEA.cnpj || !configINEA.codUnidade) {
+        throw new HttpsError("failed-precondition", "As credenciais INEA para este cliente não estão configuradas completamente.");
+    }
+    return configINEA as IneaConfig;
 }
 
 
-// --- Funções Existentes (Inalteradas) ---
-export const saveIneaCredentials = onCall({ region: "southamerica-east1" }, async (request) => {
+// --- Firebase Functions ---
+
+// AJUSTE: Aplicando as opções com timeout e CORS.
+export const checkConfig = onCall(functionOptions, (request) => {
+    console.log("[checkConfig] Iniciando a verificação de configuração (v2)...");
+    try {
+        const key = ineaEncryptionKey.value();
+        if (key) {
+            console.log("[checkConfig] SUCESSO: Chave 'INEA_ENCRYPTION_KEY' encontrada.");
+            return {
+                status: "success",
+                message: `Chave encontrada! Comprimento: ${key.length}. Os primeiros 4 caracteres são: '${key.substring(0, 4)}...'`,
+            };
+        } else {
+            console.error("[checkConfig] ERRO: A chave foi definida mas retornou um valor vazio.");
+            return {
+                status: "error",
+                message: "A chave INEA_ENCRYPTION_KEY foi encontrada, mas está vazia.",
+            };
+        }
+    } catch (error: any) {
+        console.error("[checkConfig] ERRO CATASTRÓFICO ao tentar ler o parâmetro:", error);
+        throw new HttpsError("internal", "Erro ao ler o parâmetro 'INEA_ENCRYPTION_KEY'. Verifique se ela foi definida para o ambiente.", error.message);
+    }
+});
+
+// AJUSTE: Aplicando as opções com timeout e CORS.
+export const saveIneaCredentials = onCall(functionOptions, async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "O usuário precisa estar autenticado.");
     }
-    const data: IneaCredentialsData = request.data;
-    const { clienteId, login, senha, cnpj, codUnidade } = data;
+    const { clienteId, login, senha, cnpj, codUnidade } = request.data;
     if (!clienteId) {
       throw new HttpsError("invalid-argument", "O ID do cliente é obrigatório.");
     }
@@ -104,34 +169,23 @@ export const saveIneaCredentials = onCall({ region: "southamerica-east1" }, asyn
     }
 });
 
-export const testIneaConnection = onCall({ region: "southamerica-east1" }, async (request) => {
+// AJUSTE: Aplicando as opções com timeout e CORS.
+export const testIneaConnection = onCall(functionOptions, async (request) => {
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "O usuário precisa estar autenticado.");
     }
-    const { clienteId } = request.data as TestConnectionData;
+    const { clienteId } = request.data;
     if (!clienteId) {
       throw new HttpsError("invalid-argument", "O ID do cliente é obrigatório.");
     }
+
     try {
-      const clienteRef = admin.firestore().collection("clientes").doc(clienteId);
-      const clienteDoc = await clienteRef.get();
-      if (!clienteDoc.exists) {
-        throw new HttpsError("not-found", "Cliente não encontrado.");
-      }
-      const configINEA = clienteDoc.data()?.configINEA;
-      if (!configINEA || !configINEA.senhaCriptografada || !configINEA.login || !configINEA.cnpj || !configINEA.codUnidade) {
-        throw new HttpsError("failed-precondition", "As credenciais INEA para este cliente não estão configuradas completamente.");
-      }
-      const senha = decrypt(configINEA.senhaCriptografada);
-      const api_url = `http://200.20.53.4:8090/api/retornaListaClasse/${configINEA.login}/${senha}/${configINEA.cnpj}/${configINEA.codUnidade}`;
-      const response = await fetch(api_url, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-      if (!response.ok) {
-        const errorBody = await response.text();
-        console.error(`Erro da API INEA: ${response.status} - ${errorBody}`);
-        throw new HttpsError("unavailable", `A API do INEA retornou um erro: ${response.statusText}.`);
-      }
-      const responseData = await response.json();
+      const config = await getClientIneaConfig(clienteId);
+      const senha = decrypt(config.senhaCriptografada);
+      const ineaService = new IneaService(config.login, senha, config.cnpj, config.codUnidade);
+      const responseData = await ineaService.testConnection();
       return { status: "success", message: "Conexão com a API do INEA bem-sucedida!", data: responseData };
+
     } catch (error: any) {
         console.error("Erro ao testar conexão INEA:", error);
         if (error instanceof HttpsError) throw error;
@@ -139,7 +193,34 @@ export const testIneaConnection = onCall({ region: "southamerica-east1" }, async
     }
 });
 
-export const manageUserPermissions = onCall({ region: "southamerica-east1" }, async (request) => {
+// AJUSTE: Aplicando as opções com timeout e CORS.
+export const createIneaMtr = onCall(functionOptions, async (request) => {
+    if (!request.auth) {
+        throw new HttpsError("unauthenticated", "O usuário precisa estar autenticado.");
+    }
+    const { clienteId, mtrData } = request.data;
+    if (!clienteId || !mtrData) {
+        throw new HttpsError("invalid-argument", "Os dados do cliente e do MTR são obrigatórios.");
+    }
+
+    try {
+        const config = await getClientIneaConfig(clienteId);
+        const senha = decrypt(config.senhaCriptografada);
+        const ineaService = new IneaService(config.login, senha, config.cnpj, config.codUnidade);
+        const result = await ineaService.createMtrInLot(Array.isArray(mtrData) ? mtrData : [mtrData]);
+        return { status: "success", message: "MTR criado com sucesso!", data: result };
+
+    } catch (error: any) {
+        console.error(`Erro ao criar MTR para o cliente ${clienteId}:`, error);
+        if (error instanceof HttpsError) throw error;
+        throw new HttpsError("internal", error.message || "Ocorreu um erro interno ao criar o MTR.");
+    }
+});
+
+
+// --- Funções de Gerenciamento de Usuários (Código Completo Restaurado) ---
+// AJUSTE: Aplicando as opções com timeout e CORS.
+export const manageUserPermissions = onCall(functionOptions, async (request) => {
   if (!request.auth) {
     throw new HttpsError("unauthenticated", "A requisição deve ser feita por um usuário autenticado.");
   }
@@ -208,14 +289,15 @@ export const manageUserPermissions = onCall({ region: "southamerica-east1" }, as
     }
     const newUserProfile = { nome, email, role, clientesPermitidos: role === "master" ? [] : clientesPermitidos, dataCriacaoPerfil: FieldValue.serverTimestamp() };
     await db.collection("users").doc(newUserRecord.uid).set(newUserProfile);
-    return { success: true, message: `Usuário ${email} criado com sucesso!` };
+    // CORRIGIDO: O acento grave (`) foi usado para fechar a string.
+    return { success: true, message: `Usuário ${email} criado com sua role!` };
   }
 
   throw new HttpsError("invalid-argument", "Ação não especificada ou inválida.");
 });
 
-// --- NOVA FUNÇÃO ---
-export const getVisibleUsers = onCall({ region: "southamerica-east1" }, async (request) => {
+// AJUSTE: Aplicando as opções com timeout e CORS.
+export const getVisibleUsers = onCall(functionOptions, async (request) => {
     console.log("getVisibleUsers: Função iniciada.");
     if (!request.auth) {
         console.error("getVisibleUsers: Erro - Usuário não autenticado.");

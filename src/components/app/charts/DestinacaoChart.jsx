@@ -4,8 +4,8 @@ import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const COLORS = {
-    'Recovery': '#22c55e', // Verde para recuperação/valorização
-    'Disposal': '#ef4444', // Vermelho para descarte/disposição
+    'Recuperação': '#22c55e', // Verde para recuperação/valorização
+    'Descarte': '#ef4444', // Vermelho para descarte/disposição
 };
 
 const CustomTooltip = ({ active, payload }) => {
@@ -51,7 +51,7 @@ export default function DestinacaoChart({ data, isLoading }) {
 
     return (
         <div className="bg-white p-4 rounded-lg shadow h-full min-h-[488px] flex flex-col">
-            <h3 className="text-lg font-semibold text-gray-700 text-center mb-4">Destinação Final (Recovery vs Disposal)</h3>
+            <h3 className="text-lg font-semibold text-gray-700 text-center mb-4">Destinação Final (Recuperação vs Descarte)</h3>
             <div className="flex-grow">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>

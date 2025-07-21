@@ -206,7 +206,7 @@ export default function PaginaDashboard() {
 
   const destinacaoData = useMemo(() => {
     if (recordsFullyFiltered.length === 0 || empresasColeta.length === 0) {
-        return [{ name: 'Recovery', value: 0 }, { name: 'Disposal', value: 0 }];
+        return [{ name: 'Recuperação', value: 0 }, { name: 'Descarte', value: 0 }];
     }
 
     const empresasMap = new Map(empresasColeta.map(e => [e.id, e]));
@@ -232,8 +232,8 @@ export default function PaginaDashboard() {
     });
 
     return [
-        { name: 'Recovery', value: parseFloat(recoveryWeight.toFixed(2)) },
-        { name: 'Disposal', value: parseFloat(disposalWeight.toFixed(2)) }
+        { name: 'Recuperação', value: parseFloat(recoveryWeight.toFixed(2)) },
+        { name: 'Descarte', value: parseFloat(disposalWeight.toFixed(2)) }
     ];
   }, [recordsFullyFiltered, empresasColeta]);
 
