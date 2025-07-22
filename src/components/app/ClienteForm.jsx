@@ -6,7 +6,6 @@ const CATEGORIAS_PRINCIPAIS_PADRAO = ["Reciclável", "Orgânico", "Rejeito"];
 const SUBTIPOS_RECICLAVEIS_COMUNS = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
 const SUBTIPOS_ORGANICOS_COMUNS = ["Pré-serviço", "Pós-serviço"];
 const NOVA_CATEGORIA_VALUE = "__NOVA__";
-const CATEGORIAS_CLIENTE_INICIAIS = ["Hotel","Evento", "Escola", "Condomínio", "Aeroporto"];
 
 const LIMITES_PADRAO = {
     "Orgânico": 30,
@@ -20,11 +19,12 @@ export default function ClienteForm({
     onCancel, 
     empresasColetaDisponiveis, 
     isEditing,
-    availableCategorias = CATEGORIAS_CLIENTE_INICIAIS, 
+    availableCategorias = [], 
     onNewCategoriaAdded,
     editingClienteId,
     onTestConnection,
-    testConnectionStatus
+    testConnectionStatus,
+    clientTemplates = []
 }) {
   const [nome, setNome] = useState('');
   const [rede, setRede] = useState('');
@@ -52,13 +52,31 @@ export default function ClienteForm({
   const [ineaCnpj, setIneaCnpj] = useState('');
   const [ineaCodUnidade, setIneaCodUnidade] = useState('');
   const [limitesPorResiduo, setLimitesPorResiduo] = useState({...LIMITES_PADRAO});
+  const [selectedTemplateId, setSelectedTemplateId] = useState('');
 
   const arrayFromString = (str) => str.split(',').map(item => item.trim()).filter(item => item.length > 0);
 
-  useEffect(() => {
-    const categoriasParaDropdown = Array.from(new Set([...CATEGORIAS_CLIENTE_INICIAIS, ...availableCategorias]));
+  const resetForm = () => {
+    setNome(''); setRede(''); setSelectedCategoriaCliente(''); setNovaCategoriaInput(''); 
+    setLogoUrl(''); setCnpj(''); setEndereco(''); setCidade(''); setEstado(''); setAtivo(true);
+    setAreasPersonalizadasInput(''); 
+    setCategoriasPrincipaisSelecionadas([...CATEGORIAS_PRINCIPAIS_PADRAO]);
+    setOutrasCategoriasInput('');
+    setFazSeparacaoReciclaveisCompleta(false);
+    setSubtiposComunsReciclaveisSelecionados([]);
+    setOutrosSubtiposReciclaveisInput('');
+    setFazSeparacaoOrganicosCompleta(false);
+    setSubtiposComunsOrganicosSelecionados([]);
+    setOutrosSubtiposOrganicosInput('');
+    setContratosColetaForm([{ empresaColetaId: '', tiposResiduoColetados: [] }]);
+    setIneaLogin(''); setIneaSenha(''); setIneaCnpj(''); setIneaCodUnidade('');
+    setLimitesPorResiduo({...LIMITES_PADRAO});
+    setSelectedTemplateId('');
+  };
 
+  useEffect(() => {
     if (isEditing && initialData) {
+      const categoriasParaDropdown = availableCategorias;
       setNome(initialData.nome || '');
       setRede(initialData.rede || '');
       if (initialData.categoriaCliente && !categoriasParaDropdown.includes(initialData.categoriaCliente) && initialData.categoriaCliente) {
@@ -75,14 +93,11 @@ export default function ClienteForm({
       setEstado(initialData.estado || '');
       setAtivo(initialData.ativo !== undefined ? initialData.ativo : true);
       setAreasPersonalizadasInput(initialData.areasPersonalizadas ? initialData.areasPersonalizadas.join(', ') : '');
-      
       const categoriasClienteDb = Array.isArray(initialData.categoriasPrincipaisResiduo) ? initialData.categoriasPrincipaisResiduo : [];
       const categoriasPadraoSel = categoriasClienteDb.filter(cat => CATEGORIAS_PRINCIPAIS_PADRAO.includes(cat));
       setCategoriasPrincipaisSelecionadas(categoriasPadraoSel.length > 0 ? categoriasPadraoSel : [...CATEGORIAS_PRINCIPAIS_PADRAO]);
-      
       const outrasCategoriasDb = categoriasClienteDb.filter(cat => !CATEGORIAS_PRINCIPAIS_PADRAO.includes(cat));
       setOutrasCategoriasInput(outrasCategoriasDb.join(', '));
-      
       setFazSeparacaoReciclaveisCompleta(initialData.fazSeparacaoReciclaveisCompleta || false);
       const todosSubtiposReciclaveis = Array.isArray(initialData.tiposReciclaveisPersonalizados) ? initialData.tiposReciclaveisPersonalizados : [];
       setSubtiposComunsReciclaveisSelecionados(todosSubtiposReciclaveis.filter(subtipo => SUBTIPOS_RECICLAVEIS_COMUNS.includes(subtipo)));
@@ -105,28 +120,29 @@ export default function ClienteForm({
       } else {
         setIneaLogin(''); setIneaSenha(''); setIneaCnpj(''); setIneaCodUnidade('');
       }
-
       setLimitesPorResiduo({ ...LIMITES_PADRAO, ...(initialData.limitesPorResiduo || {}) });
-
     } else {
-        // Reseta o formulário para um novo cliente
-        setNome(''); setRede(''); setSelectedCategoriaCliente(''); setNovaCategoriaInput(''); 
-        setLogoUrl(''); setCnpj(''); setEndereco(''); setCidade(''); setEstado(''); setAtivo(true);
-        setAreasPersonalizadasInput(''); 
-        setCategoriasPrincipaisSelecionadas([...CATEGORIAS_PRINCIPAIS_PADRAO]);
-        setOutrasCategoriasInput('');
-        setFazSeparacaoReciclaveisCompleta(false);
-        setSubtiposComunsReciclaveisSelecionados([]);
-        setOutrosSubtiposReciclaveisInput('');
-        setFazSeparacaoOrganicosCompleta(false);
-        setSubtiposComunsOrganicosSelecionados([]);
-        setOutrosSubtiposOrganicosInput('');
-        setContratosColetaForm([{ empresaColetaId: '', tiposResiduoColetados: [] }]);
-        setIneaLogin(''); setIneaSenha(''); setIneaCnpj(''); setIneaCodUnidade('');
-        setLimitesPorResiduo({...LIMITES_PADRAO});
+      resetForm();
     }
   }, [initialData, isEditing, availableCategorias]);
 
+  useEffect(() => {
+    if (isEditing) return;
+    if (selectedTemplateId) {
+      const template = clientTemplates.find(t => t.id === selectedTemplateId);
+      if (template) {
+        setAreasPersonalizadasInput(Array.isArray(template.areas) ? template.areas.join(', ') : '');
+        setSelectedCategoriaCliente(template.category || '');
+      }
+    } else {
+      if (!initialData) {
+          setAreasPersonalizadasInput('');
+          setSelectedCategoriaCliente('');
+      }
+    }
+  }, [selectedTemplateId, clientTemplates, isEditing, initialData]);
+
+  // CORREÇÃO: A variável que estava faltando foi adicionada aqui.
   const categoriasParaLimites = useMemo(() => {
     const outrasCategorias = arrayFromString(outrasCategoriasInput);
     const todasCategorias = new Set([...categoriasPrincipaisSelecionadas, ...outrasCategorias]);
@@ -159,11 +175,12 @@ export default function ClienteForm({
         outrosArray.forEach(outro => { if (!finaisTiposOrganicosPersonalizados.includes(outro)) { finaisTiposOrganicosPersonalizados.push(outro); } });
         if (finaisTiposOrganicosPersonalizados.length === 0) { alert("Se 'Cliente detalha os tipos de orgânicos' está marcado, defina pelo menos um sub-tipo."); setIsSubmitting(false); return; }
     }
+    
     let categoriaFinalCliente = '';
     if (selectedCategoriaCliente === NOVA_CATEGORIA_VALUE) {
         if (!novaCategoriaInput.trim()) { alert("Por favor, insira o nome da nova categoria."); setIsSubmitting(false); return; }
         categoriaFinalCliente = novaCategoriaInput.trim();
-        if (onNewCategoriaAdded && typeof onNewCategoriaAdded === 'function') { onNewCategoriaAdded(categoriaFinalCliente); }
+        if (onNewCategoriaAdded) { onNewCategoriaAdded(categoriaFinalCliente); }
     } else {
         categoriaFinalCliente = selectedCategoriaCliente;
     }
@@ -177,7 +194,7 @@ export default function ClienteForm({
     const clienteData = {
       nome: nome.trim(),
       rede: rede.trim(),
-      categoriaCliente: categoriaFinalCliente, 
+      categoriaCliente: categoriaFinalCliente,
       logoUrl: logoUrl.trim(),
       cnpj: cnpj.trim(),
       endereco: endereco.trim(),
@@ -200,16 +217,13 @@ export default function ClienteForm({
       limitesPorResiduo: limitesNumericos,
     };
 
-    await onSubmit(clienteData); 
+    await onSubmit(clienteData);
     setIsSubmitting(false);
   };
-
+  
   const handleLimiteChange = (categoria, valor) => {
     if (/^[0-9]*[.,]?[0-9]*$/.test(valor)) {
-        setLimitesPorResiduo(prev => ({
-            ...prev,
-            [categoria]: valor,
-        }));
+        setLimitesPorResiduo(prev => ({ ...prev, [categoria]: valor }));
     }
   };
 
@@ -225,12 +239,32 @@ export default function ClienteForm({
   const inputStyle = "mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
   const labelStyle = "block text-sm font-medium text-gray-700";
   const checkboxStyle = "h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500";
-  const dropdownCategorias = Array.from(new Set([...availableCategorias]));
+  const dropdownCategorias = availableCategorias;
 
   return (
     <form onSubmit={handleLocalSubmit} className="bg-white p-6 rounded-xl shadow-lg space-y-6">
       <h2 className="text-2xl font-semibold text-gray-800 mb-4">{isEditing ? "Editar Cliente" : "Adicionar Novo Cliente"}</h2>
       
+      {!isEditing && (
+        <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+          <label htmlFor="template-selector" className={labelStyle}>Usar um modelo (Opcional)</label>
+          <select
+            id="template-selector"
+            value={selectedTemplateId}
+            onChange={(e) => setSelectedTemplateId(e.target.value)}
+            className={inputStyle}
+          >
+            <option value="">Nenhum - Começar do zero</option>
+            {clientTemplates.map(template => (
+              <option key={template.id} value={template.id}>
+                {template.name} ({template.category})
+              </option>
+            ))}
+          </select>
+          <p className="text-xs text-gray-500 mt-1">Selecionar um modelo preencherá os campos de "Categoria do Cliente" e "Áreas Internas" automaticamente.</p>
+        </div>
+      )}
+
       <fieldset className="border border-gray-300 p-4 rounded-lg">
           <legend className="text-lg font-semibold text-indigo-700 px-2">Informações Básicas</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pt-3">
@@ -239,10 +273,21 @@ export default function ClienteForm({
             <div><label htmlFor="form-cliente-rede" className={labelStyle}>Rede / Grupo</label><input type="text" id="form-cliente-rede" value={rede} onChange={(e) => setRede(e.target.value)} className={inputStyle} /></div>
             <div>
               <label htmlFor="form-cliente-categoriaCliente" className={labelStyle}>Categoria do Cliente</label>
-              <select id="form-cliente-categoriaCliente" value={selectedCategoriaCliente} onChange={(e) => { const { value } = e.target; setSelectedCategoriaCliente(value); if (value !== NOVA_CATEGORIA_VALUE) { setNovaCategoriaInput(''); } }} className={inputStyle}>
-                <option value="">Selecione uma categoria</option>
+              <select 
+                id="form-cliente-categoriaCliente" 
+                value={selectedCategoriaCliente} 
+                onChange={(e) => {
+                  const { value } = e.target;
+                  setSelectedCategoriaCliente(value);
+                  if (value !== NOVA_CATEGORIA_VALUE) {
+                    setNovaCategoriaInput('');
+                  }
+                }} 
+                className={inputStyle}
+              >
+                <option value="">Sem Categoria (começar do zero)</option>
                 {dropdownCategorias.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
-                <option value={NOVA_CATEGORIA_VALUE}>Nova Categoria...</option>
+                <option value={NOVA_CATEGORIA_VALUE}>+ Nova Categoria...</option>
               </select>
             </div>
             {selectedCategoriaCliente === NOVA_CATEGORIA_VALUE && (
@@ -265,7 +310,6 @@ export default function ClienteForm({
             <div><label htmlFor="form-cliente-areasPersonalizadasInputForm" className={labelStyle}>Áreas Internas (separadas por vírgula)*</label><input type="text" id="form-cliente-areasPersonalizadasInputForm" value={areasPersonalizadasInput} onChange={(e) => setAreasPersonalizadasInput(e.target.value)} required placeholder="Ex: Cozinha, Recepção" className={inputStyle} /></div>
             <div>
                 <label className={labelStyle}>Categorias Principais de Resíduo Usadas*</label>
-                {/* --- MUDANÇA DE LAYOUT AQUI --- */}
                 <div className="mt-2 space-y-2 sm:space-y-0 sm:flex sm:space-x-4 sm:flex-wrap items-center">
                     {CATEGORIAS_PRINCIPAIS_PADRAO.map(categoria => (<label key={categoria} htmlFor={`form-cliente-cat-${categoria}`} className="flex items-center"><input type="checkbox" id={`form-cliente-cat-${categoria}`} value={categoria} checked={categoriasPrincipaisSelecionadas.includes(categoria)} onChange={() => handleCategoriaPrincipalChange(categoria)} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{categoria}</span></label>))}
                     <div className="flex items-center pt-2 sm:pt-0">
@@ -329,7 +373,7 @@ export default function ClienteForm({
                         </div>
                     </div>
                 ))}
-                <button type="button" onClick={addContratoForm} className="px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"> + Adicionar Contrato </button>
+                <button type="button" onClick={addContratoForm} className="px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"> + Adicionar Contrato </button>
             </div>
         </fieldset>
 
@@ -344,7 +388,7 @@ export default function ClienteForm({
            <p className="text-xs text-gray-500 mt-3">Preencha estes campos para habilitar a emissão automática de MTRs para este cliente. A senha é armazenada de forma segura e criptografada.</p>
           {isEditing && (
             <div className="mt-4 flex items-center space-x-4">
-                <button type="button" onClick={handleTestButtonClick} disabled={testConnectionStatus?.loading} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"> {testConnectionStatus?.loading ? 'A Testar...' : 'Testar Conexão'} </button>
+                <button type="button" onClick={handleTestButtonClick} disabled={testConnectionStatus?.loading} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700 disabled:opacity-50"> {testConnectionStatus?.loading ? 'A Testar...' : 'Testar Conexão'} </button>
                 {testConnectionStatus?.message && (<p className={`text-sm ${testConnectionStatus.isError ? 'text-red-600' : 'text-green-600'}`}>{testConnectionStatus.message}</p>)}
             </div>
           )}
