@@ -1,22 +1,38 @@
 // src/services/offlineSyncService.js
 
 import Dexie from 'dexie';
-import { collection, addDoc } from 'firebase/firestore';
+// IMPORTAÇÕES ADICIONADAS: writeBatch e doc para operações em lote.
+import { collection, writeBatch, doc } from 'firebase/firestore';
 import { v4 as uuidv4 } from 'uuid';
 
+// A inicialização do Dexie permanece a mesma.
 const localDb = new Dexie('ctrlwaste_offline_db');
 
 localDb.version(1).stores({
+  // A chave primária 'id' auto-incrementada é ótima.
+  // O 'localId' indexado permite buscas rápidas, como na exclusão.
   pending_records: '++id, localId',
 });
 
+/**
+ * Adiciona um novo registro de resíduo à fila de sincronização local (IndexedDB).
+ * @param {object} recordData - Os dados do registro a serem salvos.
+ * @returns {{success: boolean, message: string}}
+ */
 export const addPendingRecord = async (recordData) => {
   try {
+    // Gera um ID único universal (UUID) para rastrear este registro
+    // desde a criação local até a confirmação no Firestore.
     const localId = uuidv4();
     const recordWithLocalId = { ...recordData, localId };
+    
     await localDb.pending_records.add(recordWithLocalId);
     console.log('Registro salvo localmente com sucesso!', recordWithLocalId);
+    
+    // Notifica a aplicação que a lista de registros pendentes mudou.
+    // Isso permite que a UI (ex: o contador de status) se atualize imediatamente.
     window.dispatchEvent(new CustomEvent('pending-records-updated'));
+    
     return { success: true, message: 'Lançamento salvo localmente! Sincronizando...' };
   } catch (error) {
     console.error('Erro ao salvar registro localmente:', error);
@@ -24,36 +40,70 @@ export const addPendingRecord = async (recordData) => {
   }
 };
 
+/**
+ * Sincroniza todos os registros pendentes do IndexedDB com o Firestore.
+ * Utiliza uma operação de "WriteBatch" para garantir atomicidade: ou todos os
+ * registros são salvos com sucesso, ou nenhum é. Isso previne duplicatas.
+ * @param {object} firestoreDb - A instância do Firestore.
+ * @param {string} appId - O ID da aplicação para o caminho da coleção.
+ * @returns {Promise<boolean>} - Retorna `true` se alguma alteração foi sincronizada, `false` caso contrário.
+ */
 export const syncPendingRecords = async (firestoreDb, appId) => {
-  if (!firestoreDb || !appId) return false; // Retorna false se não puder sincronizar
+  // Guarda de segurança: não tenta sincronizar sem as dependências necessárias.
+  if (!firestoreDb || !appId) return false;
+
   const pending = await localDb.pending_records.toArray();
   if (pending.length === 0) {
-    return false; // Retorna false pois nenhuma ação foi tomada
+    // Não há nada a fazer.
+    return false;
   }
 
-  console.log(`Sincronizando ${pending.length} registros pendentes...`);
-  let changesMade = false;
-  for (const record of pending) {
-    try {
-      const recordsCollectionRef = collection(firestoreDb, `artifacts/${appId}/public/data/wasteRecords`);
-      const { id, ...dataToUpload } = record;
-      await addDoc(recordsCollectionRef, dataToUpload);
-      await localDb.pending_records.delete(record.id);
-      console.log(`Registro ${record.localId} sincronizado e removido da fila local.`);
-      changesMade = true;
-    } catch (error) {
-      console.error(`Falha ao sincronizar o registro ${record.localId}:`, error);
-      // Se der erro, o loop para e tentará novamente mais tarde.
-      // Retorna o status atual de 'changesMade' para que a UI possa reagir se algo já foi sincronizado.
-      return changesMade; 
-    }
+  console.log(`Sincronizando ${pending.length} registros pendentes em lote...`);
+
+  // Cria um "lote" de escrita. Todas as operações são agrupadas.
+  const batch = writeBatch(firestoreDb);
+  const recordsCollectionRef = collection(firestoreDb, `artifacts/${appId}/public/data/wasteRecords`);
+
+  pending.forEach(record => {
+    // Cria uma referência para um novo documento com ID gerado pelo Firestore.
+    const docRef = doc(recordsCollectionRef);
+    
+    // Remove o 'id' do Dexie antes de enviar para o Firestore.
+    // O 'localId' (uuid) é mantido, o que é crucial para a UI não exibir duplicatas.
+    const { id, ...dataToUpload } = record;
+    batch.set(docRef, dataToUpload);
+  });
+
+  try {
+    // Executa o lote. Esta é uma ÚNICA chamada para o Firestore.
+    // É uma operação atômica: ou tudo funciona, ou nada é salvo.
+    await batch.commit();
+    
+    console.log('Lote sincronizado com sucesso no Firestore. Limpando registros locais...');
+
+    // Se o lote foi salvo com sucesso, remove os registros correspondentes do IndexedDB.
+    const idsToDelete = pending.map(record => record.id);
+    await localDb.pending_records.bulkDelete(idsToDelete);
+
+    console.log('Registros locais limpos com sucesso.');
+    return true; // Indica que a sincronização realizou alterações.
+
+  } catch (error) {
+    console.error('Falha CRÍTICA ao sincronizar o lote de registros:', error);
+    // Se o `commit` falhar, NADA é salvo no Firestore e NADA é removido do
+    // banco local. A integridade dos dados é mantida, e a sincronização
+    // pode ser tentada novamente mais tarde sem risco.
+    return false;
   }
-  
-  // A linha que disparava o evento foi REMOVIDA para quebrar o loop.
-  // Em vez disso, retornamos um booleano para indicar se a sincronização fez alguma alteração.
-  return changesMade;
 };
 
+
+// --- As funções auxiliares abaixo estão corretas e foram mantidas ---
+
+/**
+ * Retorna a contagem de registros na fila de sincronização.
+ * @returns {Promise<number>}
+ */
 export const getPendingRecordsCount = async () => {
     try {
         return await localDb.pending_records.count();
@@ -63,6 +113,10 @@ export const getPendingRecordsCount = async () => {
     }
 };
 
+/**
+ * Retorna todos os registros da fila de sincronização.
+ * @returns {Promise<Array<object>>}
+ */
 export const getPendingRecords = async () => {
     try {
         return await localDb.pending_records.toArray();
@@ -72,12 +126,18 @@ export const getPendingRecords = async () => {
     }
 };
 
+/**
+ * Exclui um registro específico da fila de sincronização local.
+ * @param {string} localId - O UUID do registro a ser excluído.
+ */
 export const deletePendingRecord = async (localId) => {
     try {
+        // Encontra o registro pelo 'localId' para obter sua chave primária 'id'.
         const recordToDelete = await localDb.pending_records.where('localId').equals(localId).first();
         if (recordToDelete) {
             await localDb.pending_records.delete(recordToDelete.id);
             console.log(`Registro pendente ${localId} deletado com sucesso.`);
+            // Notifica a aplicação para atualizar a UI.
             window.dispatchEvent(new CustomEvent('pending-records-updated'));
         }
     } catch (error) {

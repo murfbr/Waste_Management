@@ -7,6 +7,7 @@ import { doc, getDoc, collection, query, where, documentId, orderBy, getDocs } f
 import { app, db, auth, functions } from '../firebase/init'; 
 import { appId } from '../firebase/config'; 
 
+// A importação do serviço de sincronização permanece a mesma.
 import { syncPendingRecords, getPendingRecordsCount } from '../services/offlineSyncService';
 
 const AuthContext = createContext(null);
@@ -20,10 +21,14 @@ export const AuthProvider = ({ children }) => {
     const [userAllowedClientes, setUserAllowedClientes] = useState([]);
     const [loadingAllowedClientes, setLoadingAllowedClientes] = useState(true);
 
+    // Estado para o status da conexão e contagem de registros pendentes.
     const [isOnline, setIsOnline] = useState(navigator.onLine);
     const [pendingRecordsCount, setPendingRecordsCount] = useState(0);
+    
+    // Ref para evitar múltiplas chamadas de sincronização simultâneas.
     const isSyncing = useRef(false);
 
+    // A função de carregar clientes permitidos permanece a mesma.
     const refreshAllowedClientes = useCallback(async () => {
         if (!auth.currentUser) {
             setUserAllowedClientes([]);
@@ -42,13 +47,15 @@ export const AuthProvider = ({ children }) => {
                     const querySnapshot = await getDocs(q);
                     loadedClientes = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 } else if (clientesPermitidos.length > 0) {
-                    const CHUNK_SIZE = 30;
+                    const CHUNK_SIZE = 30; // Firestore 'in' query limit is 30 in v9+
                     for (let i = 0; i < clientesPermitidos.length; i += CHUNK_SIZE) {
                         const chunk = clientesPermitidos.slice(i, i + CHUNK_SIZE);
-                        const q = query(collection(db, "clientes"), where(documentId(), "in", chunk), where("ativo", "==", true), orderBy("nome"));
+                        const q = query(collection(db, "clientes"), where(documentId(), "in", chunk), where("ativo", "==", true));
                         const querySnapshot = await getDocs(q);
                         loadedClientes.push(...querySnapshot.docs.map(d => ({ id: d.id, ...d.data() })));
                     }
+                    // Sort locally since ordering by name isn't possible with 'in' queries
+                    loadedClientes.sort((a, b) => a.nome.localeCompare(b.nome));
                 }
                 setUserAllowedClientes(loadedClientes);
             } else {
@@ -62,61 +69,73 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
-    // --> NOVO: Função dedicada para atualizar a contagem de pendentes na UI.
+    // Função dedicada para atualizar a contagem de pendentes na UI.
     const updatePendingCount = useCallback(async () => {
         const count = await getPendingRecordsCount();
         setPendingRecordsCount(count);
     }, []);
 
-    // --> MODIFICADO: Lógica de Sincronização refatorada para ser mais segura e eficiente.
+    // --- LÓGICA DE SINCRONIZAÇÃO E ORQUESTRAÇÃO (FINAL) ---
     useEffect(() => {
-        // Função para lidar apenas com a sincronização de rede
+        // Função interna para lidar com a tentativa de sincronização.
         const handleSync = async () => {
-            // Não tenta sincronizar se estiver offline, sem as dependências ou se já estiver em progresso
+            // Prevenção de múltiplas execuções: não roda se estiver offline,
+            // sem as dependências ou se uma sincronização já estiver em andamento.
             if (!navigator.onLine || !db || !appId || isSyncing.current) return;
 
-            isSyncing.current = true;
-            console.log('AuthContext: Tentando sincronizar...');
+            isSyncing.current = true; // Trava para evitar nova chamada.
+            console.log('AuthContext: Disparando sincronização...');
             
+            // Chama o serviço e verifica se ele realmente fez alguma alteração.
             const changesWereMade = await syncPendingRecords(db, appId);
             
-            isSyncing.current = false; // Libera a trava após a tentativa de sincronização
+            isSyncing.current = false; // Libera a trava.
 
-            // Se a sincronização fez alterações, chama a atualização da UI diretamente
+            // Se a sincronização resultou em mudanças, notifica a aplicação.
+            // Isso fará com que a PaginaLancamento recarregue os dados e
+            // o contador de pendentes seja atualizado para 0.
             if (changesWereMade) {
-                console.log('AuthContext: Sincronização concluída. Atualizando contagem na UI.');
-                updatePendingCount(); // Chamada direta para atualizar o estado, sem disparar novo evento
+                console.log('AuthContext: Sincronização concluída. Notificando a aplicação.');
+                window.dispatchEvent(new CustomEvent('pending-records-updated'));
             }
         };
 
         const handleOnline = () => {
             setIsOnline(true);
-            console.log("AuthContext: Status -> Online");
-            handleSync(); // Tenta sincronizar assim que fica online
+            console.log("AuthContext: Status -> Online. Tentando sincronizar.");
+            handleSync(); 
         };
 
         const handleOffline = () => {
             setIsOnline(false);
             console.log("AuthContext: Status -> Offline");
         };
+        
+        // CORREÇÃO: Handler para o evento de atualização de pendentes.
+        // Agora, além de atualizar a contagem, ele também TENTA sincronizar.
+        const onPendingRecordsUpdated = () => {
+            updatePendingCount();
+            handleSync(); // <<-- ESTA É A LINHA QUE RESOLVE O BUG
+        };
 
-        // Listeners com responsabilidades separadas
+        // Listeners para o status da rede e para atualizações na fila local.
         window.addEventListener('online', handleOnline);
         window.addEventListener('offline', handleOffline);
-        // Este listener agora só atualiza a contagem, não dispara uma nova sincronização
-        window.addEventListener('pending-records-updated', updatePendingCount);
+        window.addEventListener('pending-records-updated', onPendingRecordsUpdated);
 
-        // Ações Iniciais ao carregar o contexto
-        updatePendingCount(); // Busca a contagem inicial de pendentes
-        handleSync();         // Tenta uma sincronização inicial se estiver online
+        // Ações Iniciais ao carregar o contexto:
+        updatePendingCount(); // Busca a contagem inicial de pendentes.
+        handleSync();         // Tenta uma sincronização inicial se estiver online.
 
+        // Limpeza dos listeners ao desmontar o componente.
         return () => {
             window.removeEventListener('online', handleOnline);
             window.removeEventListener('offline', handleOffline);
-            window.removeEventListener('pending-records-updated', updatePendingCount);
+            window.removeEventListener('pending-records-updated', onPendingRecordsUpdated);
         };
-    }, [updatePendingCount]); // Adiciona a dependência do useCallback
+    }, [db, appId, updatePendingCount]); // Dependências do useEffect.
 
+    // Lógica de autenticação (permanece a mesma).
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, async (user) => {
             setLoadingAuth(true);
@@ -143,13 +162,19 @@ export const AuthProvider = ({ children }) => {
         return () => unsubscribe();
     }, [refreshAllowedClientes]);
 
+    // O valor do contexto fornecido aos componentes filhos.
     const contextValue = useMemo(() => ({
         db, auth, functions, appId,
         currentUser, userProfile, isAuthReady, loadingAuth,
-        userAllowedClientes, loadingAllowedClientes,
+        userAllowedClientes, loadingAllowedClientes: loadingAllowedClientes,
         isOnline, pendingRecordsCount,
         refreshAllowedClientes
-    }), [currentUser, userProfile, isAuthReady, loadingAuth, userAllowedClientes, loadingAllowedClientes, isOnline, pendingRecordsCount, refreshAllowedClientes]);
+    }), [
+        currentUser, userProfile, isAuthReady, loadingAuth, 
+        userAllowedClientes, loadingAllowedClientes, 
+        isOnline, pendingRecordsCount, 
+        refreshAllowedClientes
+    ]);
 
     return (
         <AuthContext.Provider value={contextValue}>
