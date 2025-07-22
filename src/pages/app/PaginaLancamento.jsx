@@ -23,6 +23,8 @@ import WasteRecordsList from '../../components/app/WasteRecordsList';
 import { getPendingRecords, deletePendingRecord, addPendingRecord } from '../../services/offlineSyncService';
 import ConfirmationModal from '../../components/app/ConfirmationModal';
 import SyncStatusIndicator from '../../components/app/SyncStatusIndicator';
+// IMPORTAÇÃO DA NOVA FUNÇÃO DE EXPORTAÇÃO
+import { exportToCsv } from '../../utils/csvExport';
 
 const REGISTOS_POR_PAGINA = 20; 
 
@@ -30,6 +32,7 @@ export default function PaginaLancamento() {
   const { db, auth, currentUser, appId, userProfile, userAllowedClientes, loadingUserClientes } = useContext(AuthContext);
   const navigate = useNavigate();
 
+  // ... (outros estados permanecem os mesmos)
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
   const [unifiedRecords, setUnifiedRecords] = useState([]);
@@ -40,6 +43,9 @@ export default function PaginaLancamento() {
   const [loadingMore, setLoadingMore] = useState(false);
   const [selectedClienteId, setSelectedClienteId] = useState('');
   const [selectedClienteData, setSelectedClienteData] = useState(null);
+  
+  // NOVO ESTADO PARA CONTROLAR O CARREGAMENTO DA EXPORTAÇÃO
+  const [isExporting, setIsExporting] = useState(false);
   
   const [modalState, setModalState] = useState({
     isOpen: false,
@@ -58,6 +64,7 @@ export default function PaginaLancamento() {
     setTimeout(() => setMessage(''), 5000);
   };
 
+  // ... (handleLogout, handleLogoutRequest, useEffects de seleção de cliente permanecem os mesmos)
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -98,7 +105,9 @@ export default function PaginaLancamento() {
     }
   }, [selectedClienteId, userAllowedClientes]);
 
+
   const loadAndCombineRecords = useCallback(async () => {
+    // ... (esta função permanece a mesma, pois lida com a paginação da tela)
     if (!db || !currentUser || !userProfile || !selectedClienteId) {
       setUnifiedRecords([]); setLoadingRecords(false); setHasMoreRecords(false); setLastVisibleFirestoreRecord(null);
       return;
@@ -154,6 +163,70 @@ export default function PaginaLancamento() {
     return () => window.removeEventListener('pending-records-updated', loadAndCombineRecords);
   }, [loadAndCombineRecords]);
 
+  // --- NOVA FUNÇÃO PARA LIDAR COM A EXPORTAÇÃO ---
+  const handleExportRequest = async (period, clienteNome) => {
+    if (!selectedClienteId) {
+        showMessage('Por favor, selecione um cliente primeiro.', true);
+        return;
+    }
+    setIsExporting(true);
+    try {
+        const now = new Date();
+        let startDate;
+
+        switch (period) {
+            case 'today':
+                startDate = new Date(now.setHours(0, 0, 0, 0));
+                break;
+            case '7days':
+                startDate = new Date(now.setDate(now.getDate() - 7));
+                startDate.setHours(0, 0, 0, 0);
+                break;
+            case '30days':
+                startDate = new Date(now.setDate(now.getDate() - 30));
+                startDate.setHours(0, 0, 0, 0);
+                break;
+            default:
+                startDate = new Date(now.setDate(now.getDate() - 7)); // Padrão para 7 dias
+                startDate.setHours(0, 0, 0, 0);
+        }
+
+        // 1. Busca todos os registros pendentes (locais)
+        const allPendingRecords = await getPendingRecords();
+        const pendingRecordsInPeriod = allPendingRecords.filter(p => 
+            p.clienteId === selectedClienteId && p.timestamp >= startDate.getTime()
+        ).map(p => ({ ...p, id: p.localId, isPending: true }));
+
+        // 2. Busca todos os registros do Firestore no período
+        const firestoreQuery = query(
+            collection(db, `artifacts/${appId}/public/data/wasteRecords`),
+            where("clienteId", "==", selectedClienteId),
+            where("timestamp", ">=", startDate.getTime()),
+            orderBy("timestamp", "desc")
+        );
+        const firestoreSnap = await getDocs(firestoreQuery);
+        const firestoreRecords = firestoreSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
+
+        // 3. Combina e remove duplicatas
+        const pendingLocalIds = new Set(pendingRecordsInPeriod.map(p => p.localId));
+        const filteredFirestoreRecords = firestoreRecords.filter(f => !pendingLocalIds.has(f.localId));
+        
+        const combined = [...pendingRecordsInPeriod, ...filteredFirestoreRecords];
+        combined.sort((a, b) => b.timestamp - a.timestamp);
+
+        // 4. Chama a nova função de exportação
+        exportToCsv(combined, clienteNome, showMessage);
+
+    } catch (error) {
+        console.error("Erro ao gerar relatório CSV:", error);
+        showMessage('Falha ao gerar o relatório. Tente novamente.', true);
+    } finally {
+        setIsExporting(false);
+    }
+  };
+
+
+  // ... (outras funções como carregarMaisRegistos, handleDeleteRequest, etc., permanecem as mesmas)
   const carregarMaisRegistos = async () => {
     if (!lastVisibleFirestoreRecord || !selectedClienteId || loadingMore) return; 
     setLoadingMore(true);
@@ -181,7 +254,6 @@ export default function PaginaLancamento() {
     }
     setLoadingMore(false);
   };
-
   const handleDeleteRequest = (record) => {
     setModalState({
         isOpen: true,
@@ -199,7 +271,6 @@ export default function PaginaLancamento() {
         )
     });
   };
-
   const handleConfirmDelete = async (recordToDelete) => {
     if (!recordToDelete) return;
     try {
@@ -219,7 +290,6 @@ export default function PaginaLancamento() {
     }
     setModalState({ isOpen: false });
   };
-
   const handleLimitExceeded = (data) => {
     const { peso, limite, wasteType } = data;
     setModalState({
@@ -238,7 +308,6 @@ export default function PaginaLancamento() {
         )
     });
   };
-
   const handleConfirmLimit = async (limitModalData) => {
     if (!limitModalData) return;
     const { limite, ...recordData } = limitModalData;
@@ -250,9 +319,10 @@ export default function PaginaLancamento() {
     }
     setModalState({ isOpen: false });
   };
-
   const toggleRecordsVisibility = () => setIsRecordsVisible(!isRecordsVisible);
   
+
+  // ... (o retorno do JSX permanece o mesmo, mas agora passamos as novas props para WasteRecordsList)
   if (loadingUserClientes && !userProfile) return <div className="text-center text-gray-600 p-8">A carregar dados...</div>;
   if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">A carregar perfil...</div>;
   if (!userProfile || !['master', 'gerente', 'operacional'].includes(userProfile.role)) {
@@ -367,7 +437,10 @@ export default function PaginaLancamento() {
                   hasMoreRecords={hasMoreRecords}
                   onLoadMore={carregarMaisRegistos}
                   loadingMore={loadingMore}
-                  showMessage={showMessage}
+                  // Passando as novas props para a exportação
+                  onExport={handleExportRequest}
+                  isExporting={isExporting}
+                  clienteNome={selectedClienteData?.nome}
                 />
               </div>
             )}
