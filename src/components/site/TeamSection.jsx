@@ -27,7 +27,7 @@ export default function TeamSection() {
     <section className="bg-white py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-2xl lg:mx-0">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Quem somos</h2>
+          <h2 className="font-lexend text-subtitulo font-bold tracking-tight text-rain-forest">Quem somos</h2>
         </div>
         <ul
           role="list"
@@ -36,9 +36,17 @@ export default function TeamSection() {
           {teamMembers.map((person) => (
             <li key={person.name}>
               <img className="aspect-[3/2] w-full rounded-2xl object-cover" src={person.imageUrl} alt={`Foto de ${person.name}`} />
-              <h3 className="mt-6 text-lg font-semibold leading-8 tracking-tight text-gray-900">{person.name}</h3>
-              <p className="text-base leading-7 text-green-600">{person.role}</p>
-              <p className="mt-4 text-base leading-7 text-gray-600">{person.bio}</p>
+              {/* Nome do Membro */}
+              {/* ANTES: className="mt-6 text-lg ... text-gray-900" */}
+              <h3 className="mt-6 font-lexend text-lg font-semibold leading-8 tracking-tight text-rain-forest">{person.name}</h3>
+              
+              {/* Função do Membro */}
+              {/* ANTES: className="text-base ... text-green-600" */}
+              <p className="font-comfortaa text-base leading-7 text-golden-orange">{person.role}</p>
+              
+              {/* Bio do Membro */}
+              {/* ANTES: className="mt-4 text-base ... text-gray-600" */}
+              <p className="mt-4 font-comfortaa text-corpo leading-7 text-rich-soil">{person.bio}</p>
             </li>
           ))}
         </ul>
