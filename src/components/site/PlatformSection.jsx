@@ -6,8 +6,13 @@ import mtrImg from '../../pages/site/img/mtr.png'
 const FeatureDetail = ({ title, children, imageUrl, reverse = false }) => (
     <div className={`flex items-center gap-8 md:gap-16 ${reverse ? 'md:flex-row-reverse' : 'md:flex-row'} flex-col`}>
         <div className="md:w-1/2">
-            <h3 className="text-3xl font-bold text-gray-900 mb-4">{title}</h3>
-            <div className="space-y-4 text-gray-600 text-lg">
+            {/* Título da Feature */}
+            {/* ANTES: className="text-3xl font-bold text-gray-900 mb-4" */}
+            <h3 className="font-lexend text-subtitulo font-bold text-rain-forest mb-4">{title}</h3>
+            
+            {/* Corpo de Texto da Feature */}
+            {/* ANTES: className="space-y-4 text-gray-600 text-lg" */}
+            <div className="space-y-4 font-comfortaa text-corpo text-rich-soil">
                 {children}
             </div>
         </div>
@@ -19,13 +24,17 @@ const FeatureDetail = ({ title, children, imageUrl, reverse = false }) => (
 
 export default function PlatformSection() {
     return (
-        <section className="text-gray-600 body-font bg-white">
-            {/* Container principal agora usa max-w-7xl e padding responsivo para garantir a centralização */}
+        <section className="body-font bg-white">
             <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
                 <div className="text-center mb-20">
-                    <h2 className="sm:text-4xl text-3xl font-bold title-font text-gray-900 mb-4">A plataforma completa para sua Gestão de Resíduos</h2>
+                    {/* Título da Seção */}
+                    {/* ANTES: className="sm:text-4xl text-3xl font-bold title-font text-gray-900 mb-4" */}
+                    <h2 className="font-lexend text-subtitulo font-bold text-rain-forest mb-4">A plataforma completa para sua Gestão de Resíduos</h2>
+                    
+                    {/* Linha Divisória */}
                     <div className="flex mt-6 justify-center">
-                        <div className="w-20 h-1 rounded-full bg-green-600 inline-flex"></div>
+                        {/* ANTES: className="w-20 h-1 rounded-full bg-green-600 inline-flex" */}
+                        <div className="w-20 h-1 rounded-full bg-golden-orange inline-flex"></div>
                     </div>
                 </div>
 
@@ -58,8 +67,12 @@ export default function PlatformSection() {
                             <li>Emissão instantânea do <b>MTR</b> (Manifesto de Transporte de Resíduos)</li>
                             <li>Base sólida para auditorias, certificações e ESG</li>
                         </ul>
-                        <aside className="mt-6 p-4 bg-green-50 border-l-4 border-green-500">
-                            <p className="text-green-800 font-semibold">
+                        
+                        {/* Box de Destaque (Aside) */}
+                        {/* ANTES: className="mt-6 p-4 bg-green-50 border-l-4 border-green-500" */}
+                        <aside className="mt-6 p-4 bg-golden-orange/10 border-l-4 border-golden-orange">
+                            {/* ANTES: className="text-green-800 font-semibold" */}
+                            <p className="text-rain-forest font-semibold">
                                 💡 Economize até 80% do tempo gasto com tarefas operacionais.
                             </p>
                         </aside>

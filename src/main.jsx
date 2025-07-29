@@ -1,4 +1,3 @@
-// src/main.jsx (ou src/main.js)
 // src/main.jsx
 
 import React from 'react';

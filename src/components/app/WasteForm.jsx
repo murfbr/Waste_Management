@@ -290,10 +290,10 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
               <button
                 key={`type-${tipo}`} type="button" onClick={() => handleSelectMainCategory(tipo)}
                 style={getButtonStyles(tipo, selectedMainCategory === tipo)}
-                className={`flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-bold transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2 
+                className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-bold transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2 
                     ${selectedMainCategory === tipo 
                         ? 'ring-gray-800 shadow-lg' 
-                        : 'ring-transparent hover:scale-105 hover:shadow-md'
+                        : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
                     }`}
               >
                 {tipo}
@@ -309,10 +309,10 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
                   <button
                     key={`subtype-${subtipo}`} type="button" onClick={() => setSelectedSubType(subtipo)}
                     style={getButtonStyles(subtipo, selectedSubType === subtipo)}
-                    className={`flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-bold transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
+                    className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-bold transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
                         ${selectedSubType === subtipo
                             ? 'ring-gray-800 shadow-lg'
-                            : 'ring-transparent hover:scale-105 hover:shadow-md'
+                            : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
                         }`}
                   >
                     {subtipo}
@@ -330,10 +330,10 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
                   <button
                     key={`subtype-${subtipo}`} type="button" onClick={() => setSelectedSubType(subtipo)}
                     style={getButtonStyles(subtipo, selectedSubType === subtipo)}
-                    className={`flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-bold transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
+                    className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-bold transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
                         ${selectedSubType === subtipo
                             ? 'ring-gray-800 shadow-lg'
-                            : 'ring-transparent hover:scale-105 hover:shadow-md'
+                            : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
                         }`}
                   >
                     {subtipo}
@@ -355,10 +355,10 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
               <button
                 key={`area-${areaOption}`} type="button"
                 onClick={() => { setAreaLancamento(areaOption); if (formError) setFormError(''); if (formSuccess) setFormSuccess(''); }}
-                className={`flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-semibold transition-all duration-150 ease-in-out focus:outline-none ring-2 ring-offset-2
+                className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-semibold transition-all duration-150 ease-in-out focus:outline-none
                     ${areaLancamento === areaOption
-                        ? 'bg-teal-600 text-white border-teal-600 ring-teal-500 shadow-lg'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:border-gray-400'
+                        ? 'bg-teal-600 text-white border-teal-600 shadow-lg'
+                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:scale-[1.02] hover:z-10'
                     }`}
               >
                 {areaOption}

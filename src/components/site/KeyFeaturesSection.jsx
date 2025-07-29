@@ -1,7 +1,7 @@
 // src/components/site/KeyFeaturesSection.jsx
 import React from 'react';
 
-// Ícones para cada funcionalidade
+// Os ícones permanecem os mesmos, a cor será aplicada pelo componente FeatureCard.
 const ExportIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>;
 const ChartIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" /></svg>;
 const DocumentIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
@@ -13,12 +13,15 @@ const BoltIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-
 
 const FeatureCard = ({ icon, title, text }) => (
     <div>
-        <div className="flex items-center justify-center h-16 w-16 rounded-xl bg-green-600">
+        {/* ANTES: bg-green-600 */}
+        <div className="flex items-center justify-center h-16 w-16 rounded-xl bg-rain-forest">
             {icon}
         </div>
         <div className="mt-5">
-            <h3 className="text-lg font-semibold leading-6 text-gray-900">{title}</h3>
-            <p className="mt-2 text-base text-gray-600">{text}</p>
+            {/* ANTES: text-lg font-semibold ... text-gray-900 */}
+            <h3 className="font-lexend text-lg font-semibold text-rain-forest">{title}</h3>
+            {/* ANTES: mt-2 text-base text-gray-600 */}
+            <p className="mt-2 font-comfortaa text-corpo text-rich-soil">{text}</p>
         </div>
     </div>
 );
@@ -29,7 +32,7 @@ export default function KeyFeaturesSection() {
         <section className="bg-white py-24 sm:py-32">
             <div className="mx-auto max-w-7xl px-6 lg:px-8">
                 <div className="mx-auto max-w-2xl lg:text-center">
-                    <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">Funcionalidades-chave do Ctrl Waste</h2>
+                    <h2 className="font-lexend text-subtitulo font-bold tracking-tight text-rain-forest">Funcionalidades-chave do Ctrl Waste</h2>
                 </div>
                 <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
                     <div className="grid grid-cols-1 gap-x-8 gap-y-16 lg:grid-cols-3">
@@ -47,4 +50,3 @@ export default function KeyFeaturesSection() {
         </section>
     );
 }
-
