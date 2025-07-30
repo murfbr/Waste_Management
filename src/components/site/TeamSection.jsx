@@ -27,7 +27,7 @@ export default function TeamSection() {
     <section className="bg-white py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-2xl lg:mx-0">
-          <h2 className="font-lexend text-subtitulo font-bold tracking-tight text-rain-forest">Quem somos</h2>
+          <h2 className="font-lexend text-subtitulo font-bold tracking-tight text-blue-coral">Quem somos</h2>
         </div>
         <ul
           role="list"
@@ -38,7 +38,7 @@ export default function TeamSection() {
               <img className="aspect-[3/2] w-full rounded-2xl object-cover" src={person.imageUrl} alt={`Foto de ${person.name}`} />
               {/* Nome do Membro */}
               {/* ANTES: className="mt-6 text-lg ... text-gray-900" */}
-              <h3 className="mt-6 font-lexend text-lg font-semibold leading-8 tracking-tight text-rain-forest">{person.name}</h3>
+              <h3 className="mt-6 font-lexend text-lg font-semibold leading-8 tracking-tight text-blue-coral">{person.name}</h3>
               
               {/* Função do Membro */}
               {/* ANTES: className="text-base ... text-green-600" */}

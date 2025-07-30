@@ -8,7 +8,7 @@ export default function AboutHero() {
         <div className="mx-auto max-w-2xl lg:mx-0">
           {/* Título Principal */}
           {/* ANTES: className="text-4xl font-bold ... text-gray-900 sm:text-6xl" */}
-          <h2 className="font-lexend text-titulo font-bold tracking-tight text-rain-forest">Sobre nós</h2>
+          <h2 className="font-lexend text-titulo font-bold tracking-tight text-blue-coral">Sobre nós</h2>
           
           {/* Subtítulo/Tagline */}
           {/* ANTES: className="mt-6 text-xl ... text-green-600" */}

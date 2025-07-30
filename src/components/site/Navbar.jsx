@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, NavLink } from 'react-router-dom';
+import logo from "../Vertical-Azul-SVG.svg"
 
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -18,8 +19,8 @@ export default function Navbar() {
       <nav className="container mx-auto px-6 py-4 flex justify-between items-center">
         
         {/* Logo */}
-        <Link to="/" onClick={handleLinkClick} className="font-lexend text-acao font-bold text-rain-forest">
-          Ctrl+Waste
+        <Link to="/" onClick={handleLinkClick}>
+          <img src={logo} alt="Ctrl+Waste" className="h-12 w-auto" />
         </Link>
 
         {/* Links do Menu para Desktop */}
@@ -37,7 +38,7 @@ export default function Navbar() {
 
         {/* Botão do Menu Mobile (Hamburger) */}
         <div className="md:hidden">
-          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-rain-forest focus:outline-none">
+          <button onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} className="text-blue-coral focus:outline-none">
             {isMobileMenuOpen ? (
               <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

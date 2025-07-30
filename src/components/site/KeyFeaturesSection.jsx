@@ -14,12 +14,12 @@ const BoltIcon = () => <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-
 const FeatureCard = ({ icon, title, text }) => (
     <div>
         {/* ANTES: bg-green-600 */}
-        <div className="flex items-center justify-center h-16 w-16 rounded-xl bg-rain-forest">
+        <div className="flex items-center justify-center h-16 w-16 rounded-xl bg-blue-coral">
             {icon}
         </div>
         <div className="mt-5">
             {/* ANTES: text-lg font-semibold ... text-gray-900 */}
-            <h3 className="font-lexend text-lg font-semibold text-rain-forest">{title}</h3>
+            <h3 className="font-lexend text-lg font-semibold text-blue-coral">{title}</h3>
             {/* ANTES: mt-2 text-base text-gray-600 */}
             <p className="mt-2 font-comfortaa text-corpo text-rich-soil">{text}</p>
         </div>
@@ -32,7 +32,7 @@ export default function KeyFeaturesSection() {
         <section className="bg-white py-24 sm:py-32">
             <div className="mx-auto max-w-7xl px-6 lg:px-8">
                 <div className="mx-auto max-w-2xl lg:text-center">
-                    <h2 className="font-lexend text-subtitulo font-bold tracking-tight text-rain-forest">Funcionalidades-chave do Ctrl Waste</h2>
+                    <h2 className="font-lexend text-subtitulo font-bold tracking-tight text-blue-coral">Funcionalidades-chave do Ctrl Waste</h2>
                 </div>
                 <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
                     <div className="grid grid-cols-1 gap-x-8 gap-y-16 lg:grid-cols-3">

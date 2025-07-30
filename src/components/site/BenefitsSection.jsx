@@ -4,7 +4,7 @@ const BenefitCard = ({ title, children }) => (
     <div className="p-6 bg-white rounded-lg shadow-md hover:shadow-xl transition-shadow duration-300 h-full">
         {/* Título do Card */}
         {/* ANTES: className="text-xl font-bold text-gray-900 mb-3" */}
-        <h3 className="font-lexend text-acao font-bold text-rain-forest mb-3">{title}</h3>
+        <h3 className="font-lexend text-acao font-bold text-blue-coral mb-3">{title}</h3>
 
         {/* Texto do Card */}
         {/* ANTES: className="text-gray-600 leading-relaxed" */}
@@ -23,7 +23,7 @@ export default function BenefitsSection() {
 
                     {/* Título da Seção */}
                     {/* ANTES: className="sm:text-4xl text-3xl font-bold title-font text-gray-900 mb-4" */}
-                    <h2 className="font-lexend text-subtitulo font-bold text-rain-forest mb-4">
+                    <h2 className="font-lexend text-subtitulo font-bold text-blue-coral mb-4">
                         Por que escolher o Ctrl+Waste?
                     </h2>
 

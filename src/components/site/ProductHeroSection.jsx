@@ -5,7 +5,7 @@ export default function ProductHeroSection() {
   return (
     // ANTES: className="bg-green-600"
     // DEPOIS: Usando a cor primária da marca para o fundo.
-    <div className="bg-rain-forest">
+    <div className="bg-blue-coral">
       <div className="max-w-7xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:px-8 text-center">
         
         {/* ANTES: className="text-4xl font-extrabold text-white sm:text-5xl" */}

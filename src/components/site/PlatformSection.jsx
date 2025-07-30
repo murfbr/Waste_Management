@@ -8,7 +8,7 @@ const FeatureDetail = ({ title, children, imageUrl, reverse = false }) => (
         <div className="md:w-1/2">
             {/* Título da Feature */}
             {/* ANTES: className="text-3xl font-bold text-gray-900 mb-4" */}
-            <h3 className="font-lexend text-subtitulo font-bold text-rain-forest mb-4">{title}</h3>
+            <h3 className="font-lexend text-subtitulo font-bold text-blue-coral mb-4">{title}</h3>
             
             {/* Corpo de Texto da Feature */}
             {/* ANTES: className="space-y-4 text-gray-600 text-lg" */}
@@ -29,7 +29,7 @@ export default function PlatformSection() {
                 <div className="text-center mb-20">
                     {/* Título da Seção */}
                     {/* ANTES: className="sm:text-4xl text-3xl font-bold title-font text-gray-900 mb-4" */}
-                    <h2 className="font-lexend text-subtitulo font-bold text-rain-forest mb-4">A plataforma completa para sua Gestão de Resíduos</h2>
+                    <h2 className="font-lexend text-subtitulo font-bold text-blue-coral mb-4">A plataforma completa para sua Gestão de Resíduos</h2>
                     
                     {/* Linha Divisória */}
                     <div className="flex mt-6 justify-center">
@@ -72,7 +72,7 @@ export default function PlatformSection() {
                         {/* ANTES: className="mt-6 p-4 bg-green-50 border-l-4 border-green-500" */}
                         <aside className="mt-6 p-4 bg-apricot-orange/10 border-l-4 border-apricot-orange">
                             {/* ANTES: className="text-green-800 font-semibold" */}
-                            <p className="text-rain-forest font-semibold">
+                            <p className="text-blue-coral font-semibold">
                                 💡 Economize até 80% do tempo gasto com tarefas operacionais.
                             </p>
                         </aside>

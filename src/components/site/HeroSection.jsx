@@ -12,10 +12,10 @@ export default function HeroSection() {
         <div className="lg:flex-grow md:w-1/2 lg:pr-24 md:pr-16 flex flex-col md:items-start md:text-left mb-16 md:mb-0 items-center text-center">
           
           {/* ELEMENTO: Título Principal
-            REGRA: Deve usar a fonte Lexend, o tamanho 'titulo' (42pt) e a cor primária 'rain-forest'.
+            REGRA: Deve usar a fonte Lexend, o tamanho 'titulo' (42pt) e a cor primária 'blue-coral'.
           */}
           {/* ANTES: className="title-font sm:text-5xl text-4xl mb-4 font-extrabold text-gray-900" */}
-          <h1 className="font-lexend text-titulo font-extrabold text-rain-forest mb-4">
+          <h1 className="font-lexend text-titulo font-extrabold text-blue-coral mb-4">
             <span className="text-apricot-orange">Ctrl+Waste:</span> Tecnologia intuitiva. Resultados mensuráveis.
           </h1>
           
@@ -49,7 +49,7 @@ export default function HeroSection() {
             {/* ANTES: className="... text-lg" */}
             <Link 
               to="/produto" 
-              className="ml-4 inline-flex text-rain-forest bg-early-frost border-0 py-3 px-8 focus:outline-none hover:bg-gray-300 rounded-lg font-lexend text-acao font-semibold transition-colors duration-300"
+              className="ml-4 inline-flex text-blue-coral bg-early-frost border-0 py-3 px-8 focus:outline-none hover:bg-gray-300 rounded-lg font-lexend text-acao font-semibold transition-colors duration-300"
             >
               Saiba Mais
             </Link>

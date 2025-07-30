@@ -11,7 +11,7 @@ const Step = ({ number, title, children }) => (
         </div>
         <div className="ml-4">
             {/* ANTES: text-xl font-semibold text-gray-900 */}
-            <h3 className="font-lexend text-acao font-bold text-rain-forest">{title}</h3>
+            <h3 className="font-lexend text-acao font-bold text-blue-coral">{title}</h3>
             {/* ANTES: mt-2 text-base text-gray-600 */}
             <div className="mt-2 font-comfortaa text-corpo text-rich-soil space-y-2">{children}</div>
         </div>
@@ -23,7 +23,7 @@ export default function HowItWorksSection() {
         <section className="bg-gray-100 py-24 sm:py-32">
             <div className="mx-auto max-w-7xl px-6 lg:px-8">
                 <div className="lg:text-center">
-                    <h2 className="font-lexend text-subtitulo font-bold tracking-tight text-rain-forest">Como funciona na prática?</h2>
+                    <h2 className="font-lexend text-subtitulo font-bold tracking-tight text-blue-coral">Como funciona na prática?</h2>
                     <p className="mt-4 max-w-2xl font-comfortaa text-corpo text-rich-soil lg:mx-auto">
                         Transformar resíduos em dados e dados em economia é simples com o Ctrl Waste. Veja como sua operação funciona em 5 passos:
                     </p>
