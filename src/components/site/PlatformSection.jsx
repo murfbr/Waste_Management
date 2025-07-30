@@ -34,7 +34,7 @@ export default function PlatformSection() {
                     {/* Linha Divisória */}
                     <div className="flex mt-6 justify-center">
                         {/* ANTES: className="w-20 h-1 rounded-full bg-green-600 inline-flex" */}
-                        <div className="w-20 h-1 rounded-full bg-golden-orange inline-flex"></div>
+                        <div className="w-20 h-1 rounded-full bg-apricot-orange inline-flex"></div>
                     </div>
                 </div>
 
@@ -70,7 +70,7 @@ export default function PlatformSection() {
                         
                         {/* Box de Destaque (Aside) */}
                         {/* ANTES: className="mt-6 p-4 bg-green-50 border-l-4 border-green-500" */}
-                        <aside className="mt-6 p-4 bg-golden-orange/10 border-l-4 border-golden-orange">
+                        <aside className="mt-6 p-4 bg-apricot-orange/10 border-l-4 border-apricot-orange">
                             {/* ANTES: className="text-green-800 font-semibold" */}
                             <p className="text-rain-forest font-semibold">
                                 💡 Economize até 80% do tempo gasto com tarefas operacionais.

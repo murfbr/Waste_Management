@@ -42,7 +42,7 @@ export default function TeamSection() {
               
               {/* Função do Membro */}
               {/* ANTES: className="text-base ... text-green-600" */}
-              <p className="font-comfortaa text-base leading-7 text-golden-orange">{person.role}</p>
+              <p className="font-comfortaa text-base leading-7 text-apricot-orange">{person.role}</p>
               
               {/* Bio do Membro */}
               {/* ANTES: className="mt-4 text-base ... text-gray-600" */}

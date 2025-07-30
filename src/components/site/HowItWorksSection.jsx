@@ -5,7 +5,7 @@ const Step = ({ number, title, children }) => (
     <div className="flex">
         <div className="flex-shrink-0">
             {/* ANTES: bg-green-600 */}
-            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-golden-orange text-white font-bold text-xl">
+            <div className="flex items-center justify-center h-12 w-12 rounded-full bg-apricot-orange text-white font-bold text-xl">
                 {number}
             </div>
         </div>

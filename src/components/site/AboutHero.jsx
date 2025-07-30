@@ -12,7 +12,7 @@ export default function AboutHero() {
           
           {/* Subtítulo/Tagline */}
           {/* ANTES: className="mt-6 text-xl ... text-green-600" */}
-          <p className="mt-6 font-lexend text-xl leading-8 text-golden-orange font-semibold">
+          <p className="mt-6 font-lexend text-xl leading-8 text-apricot-orange font-semibold">
             Tecnologia para transformar resíduos em dados e dados em economia.
           </p>
           

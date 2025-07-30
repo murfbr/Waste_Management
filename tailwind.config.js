@@ -9,12 +9,12 @@ export default {
       colors: {
         // Cores Primárias
         'rain-forest': '#0D3520',     // Verde escuro. Uso: Principal, fundos.
-        'golden-orange': '#DB8D37',   // Laranja dourado. Uso: Destaques, acolhimento.
+        'apricot-orange': '#CE603E',  // Outro tom de laranja.
 
         // Cores Secundárias 
         'blue-coral': '#0D4F5F',      // Tom de azul.
         'early-frost': '#BCBCBC',     // Cinza claro e neutro.
-        'apricot-orange': '#CE603E',  // Outro tom de laranja.
+        'golden-orange': '#DB8D37',   // Laranja dourado. Uso: Destaques, acolhimento.
         'rich-soil': '#51321D',      // Marrom escuro.
 
         // Subtons para Texto

@@ -30,7 +30,7 @@ export default function BenefitsSection() {
                     {/* Linha Divisória */}
                     <div className="flex mt-6 justify-center">
                         {/* ANTES: className="w-20 h-1 rounded-full bg-green-600 inline-flex" */}
-                        <div className="w-20 h-1 rounded-full bg-golden-orange inline-flex"></div>
+                        <div className="w-20 h-1 rounded-full bg-apricot-orange inline-flex"></div>
                     </div>
                 </div>
 

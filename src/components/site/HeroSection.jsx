@@ -16,7 +16,7 @@ export default function HeroSection() {
           */}
           {/* ANTES: className="title-font sm:text-5xl text-4xl mb-4 font-extrabold text-gray-900" */}
           <h1 className="font-lexend text-titulo font-extrabold text-rain-forest mb-4">
-            <span className="text-golden-orange">Ctrl+Waste:</span> Tecnologia intuitiva. Resultados mensuráveis.
+            <span className="text-apricot-orange">Ctrl+Waste:</span> Tecnologia intuitiva. Resultados mensuráveis.
           </h1>
           
           {/* ELEMENTO: Parágrafos Descritivos
@@ -38,7 +38,7 @@ export default function HeroSection() {
             {/* ANTES: className="... text-lg" */}
             <Link 
               to="/contato" 
-              className="inline-flex text-white bg-golden-orange border-0 py-3 px-8 focus:outline-none hover:bg-apricot-orange rounded-lg font-lexend text-acao font-semibold shadow-lg transition-colors duration-300"
+              className="inline-flex text-white bg-apricot-orange border-0 py-3 px-8 focus:outline-none hover:bg-apricot-orange rounded-lg font-lexend text-acao font-semibold shadow-lg transition-colors duration-300"
             >
               Peça uma Demonstração
             </Link>

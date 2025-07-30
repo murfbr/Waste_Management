@@ -37,7 +37,7 @@ export default function ValuesSection() {
                 Acreditamos que a tecnologia deve servir a um propósito maior. Nossos valores guiam cada linha de código, cada funcionalidade e cada interação que temos com nossos clientes e com o planeta.
               </p>
               {/* ANTES: text-green-600 */}
-              <h2 className="mt-10 font-lexend text-base font-semibold leading-7 text-golden-orange">Nossos Princípios</h2>
+              <h2 className="mt-10 font-lexend text-base font-semibold leading-7 text-apricot-orange">Nossos Princípios</h2>
             </div>
           </div>
           

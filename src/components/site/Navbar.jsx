@@ -10,8 +10,8 @@ export default function Navbar() {
   };
 
   // Definindo as classes para reutilização e clareza
-  const linkClasses = "font-comfortaa text-rich-soil hover:text-golden-orange transition-colors duration-300";
-  const activeLinkClasses = "text-golden-orange font-semibold";
+  const linkClasses = "font-comfortaa text-rich-soil hover:text-apricot-orange transition-colors duration-300";
+  const activeLinkClasses = "text-apricot-orange font-semibold";
 
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
@@ -31,7 +31,7 @@ export default function Navbar() {
         </div>
 
         {/* Botão de Ação para Desktop */}
-        <Link to="/login" className="hidden md:block bg-golden-orange text-white font-lexend font-semibold text-corpo py-2 px-6 rounded-lg hover:bg-apricot-orange transition-colors duration-300">
+        <Link to="/login" className="hidden md:block bg-apricot-orange text-white font-lexend font-semibold text-corpo py-2 px-6 rounded-lg hover:bg-apricot-orange transition-colors duration-300">
           Acessar Sistema
         </Link>
 
@@ -60,7 +60,7 @@ export default function Navbar() {
             <NavLink to="/sobre" onClick={handleLinkClick} className={({ isActive }) => (isActive ? `${linkClasses} ${activeLinkClasses}` : linkClasses)}>Sobre Nós</NavLink>
             <NavLink to="/contato" onClick={handleLinkClick} className={({ isActive }) => (isActive ? `${linkClasses} ${activeLinkClasses}` : linkClasses)}>Contato</NavLink>
             <hr />
-            <Link to="/login" onClick={handleLinkClick} className="bg-golden-orange text-white font-lexend font-semibold text-corpo py-3 px-4 rounded-lg text-center hover:bg-apricot-orange transition-colors duration-300">
+            <Link to="/login" onClick={handleLinkClick} className="bg-apricot-orange text-white font-lexend font-semibold text-corpo py-3 px-4 rounded-lg text-center hover:bg-apricot-orange transition-colors duration-300">
               Acessar Sistema
             </Link>
           </div>
