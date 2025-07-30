@@ -8,13 +8,13 @@ export default {
     extend: {
       colors: {
         // Cores Primárias
-        'blue-coral': '#0D4F5F',      // Tom de azul.
-        'apricot-orange': '#CE603E',  // Outro tom de laranja.
+        'blue-coral': '#0D4F5F',      // Tom de azul. Uso: Principal, fundos.
+        'apricot-orange': '#CE603E',  // Outro tom de laranja. Uso: Destaques, acolhimento.
 
         // Cores Secundárias 
-        'rain-forest': '#0D3520',     // Verde escuro. Uso: Principal, fundos.
+        'rain-forest': '#0D3520',     // Verde escuro.
         'early-frost': '#BCBCBC',     // Cinza claro e neutro.
-        'golden-orange': '#DB8D37',   // Laranja dourado. Uso: Destaques, acolhimento.
+        'golden-orange': '#DB8D37',   // Laranja dourado. 
         'rich-soil': '#51321D',      // Marrom escuro.
 
         // Subtons para Texto

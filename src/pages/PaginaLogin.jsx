@@ -1,9 +1,11 @@
+// src/pages/PaginaLogin.jsx
+
 import React, { useState, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import AuthContext from '../context/AuthContext';
 import MessageBox from '../components/app/MessageBox';
-import { useInstallPrompt } from '../hooks/useInstallPrompt'; // AQUI ESTÁ A IMPORTAÇÃO DO HOOK!
+import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 export default function PaginaLogin() {
     const { auth, isAuthReady } = useContext(AuthContext);
@@ -17,7 +19,6 @@ export default function PaginaLogin() {
     const [isError, setIsError] = useState(false);
     const [loadingLogin, setLoadingLogin] = useState(false);
 
-    // Usando nosso hook customizado para a lógica do PWA
     const { installPrompt, handleInstallClick } = useInstallPrompt();
 
     const showMessage = (msg, error = false) => {
@@ -57,14 +58,19 @@ export default function PaginaLogin() {
         }
     };
 
+    // Estilos atualizados com o tema
+    const inputStyle = "appearance-none relative block w-full px-3 py-3 border border-early-frost placeholder-gray-500 text-rich-soil focus:outline-none focus:ring-apricot-orange focus:border-apricot-orange focus:z-10 sm:text-sm font-comfortaa";
+
     return (
-        <div className="bg-gray-100 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 min-h-full">
+        <div className="bg-gray-50 flex flex-col items-center justify-center py-12 px-4 sm:px-6 lg:px-8 min-h-full">
             
             <div className="max-w-md w-full space-y-8">
                 <div className="bg-white p-8 rounded-2xl shadow-lg">
                     <div className="text-center">
-                        <h2 className="text-3xl font-extrabold text-gray-900">Acessar Sistema</h2>
-                        <p className="mt-2 text-sm text-gray-600">
+                        {/* Título com a fonte e cor do tema */}
+                        <h2 className="font-lexend text-subtitulo text-rain-forest">Acessar Sistema</h2>
+                        {/* Texto de apoio com a fonte e cor do tema */}
+                        <p className="mt-2 font-comfortaa text-corpo text-rich-soil">
                             Bem-vindo de volta!
                         </p>
                     </div>
@@ -84,7 +90,7 @@ export default function PaginaLogin() {
                                     type="email"
                                     autoComplete="email"
                                     required
-                                    className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-t-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                    className={`${inputStyle} rounded-t-md`}
                                     placeholder="Endereço de e-mail"
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
@@ -98,7 +104,7 @@ export default function PaginaLogin() {
                                     type="password"
                                     autoComplete="current-password"
                                     required
-                                    className="appearance-none rounded-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-b-md focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 focus:z-10 sm:text-sm"
+                                    className={`${inputStyle} rounded-b-md`}
                                     placeholder="Senha"
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
@@ -107,9 +113,10 @@ export default function PaginaLogin() {
                         </div>
 
                         <div>
+                             {/* Botão principal com as cores de ação do tema */}
                             <button
                                 type="submit"
-                                className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50"
+                                className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-base font-medium rounded-md text-white bg-apricot-orange hover:bg-golden-orange focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-apricot-orange disabled:bg-early-frost disabled:cursor-not-allowed font-lexend"
                                 disabled={!isAuthReady || loadingLogin}
                             >
                                 {loadingLogin ? 'Entrando...' : 'Entrar'}
@@ -119,15 +126,16 @@ export default function PaginaLogin() {
                 </div>
             </div>
 
-            {/* A seção de instalação agora usa os valores retornados pelo nosso hook */}
             {installPrompt && (
-                <div className="max-w-md w-full text-center mt-8">
-                    <p className="text-sm text-gray-700">
+                <div className="max-w-md w-full text-center mt-8 bg-white p-6 rounded-2xl shadow-lg">
+                     {/* Textos da seção de PWA com as fontes do tema */}
+                    <p className="font-comfortaa text-sm text-rich-soil">
                         Para uma experiência mais fluida e imersiva, instale nosso aplicativo em seu dispositivo.
                     </p>
+                     {/* Botão de instalação com cores do tema */}
                     <button
                         onClick={handleInstallClick}
-                        className="mt-4 w-full sm:w-auto inline-flex justify-center py-2 px-6 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        className="mt-4 w-full sm:w-auto inline-flex justify-center py-2 px-6 border border-transparent text-sm font-medium rounded-md text-white bg-rain-forest hover:bg-abundant-green focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rain-forest font-lexend"
                     >
                         Instalar Aplicativo
                     </button>

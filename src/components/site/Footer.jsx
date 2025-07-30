@@ -19,7 +19,7 @@ export default function Footer() {
             <Link to="/contato" className={linkClasses}>Contato</Link>
           </div>
         </div>
-        <hr className="my-6 border-gray-700" />
+        
         <p className="text-center text-gray-400 text-sm">
           &copy; {currentYear} Ctrl+Waste. Todos os direitos reservados.
         </p>
