@@ -17,7 +17,72 @@ import DestinacaoChart from '../../components/app/charts/DestinacaoChart';
 const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const TODOS_OS_MESES_INDICES = Array.from({ length: 12 }, (_, i) => i);
 
-// --- Funções de Processamento de Dados (Exemplo) ---
+// --- Funções de Processamento de Dados ---
+
+// FUNÇÃO ATUALIZADA: Lógica de agregação mais robusta
+const processDataForAggregatedPieChart = (records) => {
+  if (!Array.isArray(records) || records.length === 0) return [];
+
+  const aggregation = records.reduce((acc, record) => {
+    if (!record || !record.wasteType) return acc;
+
+    let mainType = record.wasteType;
+    let subType = record.wasteSubType;
+    const weight = parseFloat(record.peso || 0);
+    if (isNaN(weight)) return acc;
+
+    // Normaliza a categoria principal para garantir o agrupamento correto
+    if (mainType.startsWith('Reciclável')) {
+      if (!subType) {
+        const match = mainType.match(/\((.*)\)/);
+        if (match) subType = match[1];
+      }
+      mainType = 'Reciclável';
+    } else if (mainType.startsWith('Orgânico')) {
+      if (!subType) {
+        const match = mainType.match(/\((.*)\)/);
+        if (match) subType = match[1];
+      }
+      mainType = 'Orgânico';
+    }
+    
+    if (!acc[mainType]) {
+      acc[mainType] = { name: mainType, value: 0, subtypes: {} };
+    }
+
+    acc[mainType].value += weight;
+
+    const subTypeNameForList = subType || mainType;
+    
+    if (!acc[mainType].subtypes[subTypeNameForList]) {
+        acc[mainType].subtypes[subTypeNameForList] = { name: subTypeNameForList, value: 0 };
+    }
+    acc[mainType].subtypes[subTypeNameForList].value += weight;
+
+    return acc;
+  }, {});
+
+  // PÓS-PROCESSAMENTO: Remove a entrada genérica (ex: "Orgânico") do detalhe do tooltip se houver subtipos específicos.
+  for (const mainType in aggregation) {
+      const subtypes = aggregation[mainType].subtypes;
+      const subtypeKeys = Object.keys(subtypes);
+      // Se há mais de um subtipo e um deles tem o mesmo nome da categoria principal, remove-o.
+      if (subtypeKeys.length > 1 && subtypes[mainType]) {
+          delete subtypes[mainType];
+      }
+  }
+
+  return Object.values(aggregation).map(mainCategory => ({
+    ...mainCategory,
+    value: parseFloat(mainCategory.value.toFixed(2)),
+    subtypes: Object.values(mainCategory.subtypes).map(sub => ({
+        ...sub,
+        value: parseFloat(sub.value.toFixed(2))
+    })).sort((a, b) => b.value - a.value)
+  }));
+};
+
+
 const processDataForPieChartByWeight = (records, groupByField) => {
   if (!Array.isArray(records) || records.length === 0) return { pieData: [], totalWeight: 0 };
   let totalWeight = 0;
@@ -96,8 +161,9 @@ const processDataForMonthlyYearlyComparison = (records, year1, year2) => {
   if (year1 !== year2 && chartData.some(d => d[year2.toString()] !== undefined)) actualYearsInData.push(year2.toString());
   return { data: chartData, years: actualYearsInData };
 };
+
 const processDataForSummaryCards = (records) => {
-  let totalGeralKg = 0, totalCompostavelKg = 0, totalReciclavelKg = 0, totalNaoReciclavelKg = 0;
+  let totalGeralKg = 0, totalCompostavelKg = 0, totalReciclavelKg = 0, totalRejeitoKg = 0;
   records.forEach(record => {
     const weight = parseFloat(record.peso || 0);
     if (isNaN(weight)) return;
@@ -106,28 +172,35 @@ const processDataForSummaryCards = (records) => {
     if (type.includes('orgânico') || type.includes('compostavel')) {
         totalCompostavelKg += weight;
     } else if (type.includes('rejeito')) {
-        totalNaoReciclavelKg += weight;
+        totalRejeitoKg += weight;
     } else {
         totalReciclavelKg += weight;
     }
   });
   const percentCompostavel = totalGeralKg > 0 ? (totalCompostavelKg / totalGeralKg) * 100 : 0;
   const percentReciclavel = totalGeralKg > 0 ? (totalReciclavelKg / totalGeralKg) * 100 : 0;
-  const percentNaoReciclavel = totalGeralKg > 0 ? (totalNaoReciclavelKg / totalGeralKg) * 100 : 0;
+  const percentRejeito = totalGeralKg > 0 ? (totalRejeitoKg / totalGeralKg) * 100 : 0;
+
   return {
     totalGeralKg: parseFloat(totalGeralKg.toFixed(2)),
     compostavel: { kg: parseFloat(totalCompostavelKg.toFixed(2)), percent: parseFloat(percentCompostavel.toFixed(2)) },
     reciclavel: { kg: parseFloat(totalReciclavelKg.toFixed(2)), percent: parseFloat(percentReciclavel.toFixed(2)) },
-    naoReciclavel: { kg: parseFloat(totalNaoReciclavelKg.toFixed(2)), percent: parseFloat(percentNaoReciclavel.toFixed(2)) },
+    rejeito: { kg: parseFloat(totalRejeitoKg.toFixed(2)), percent: parseFloat(percentRejeito.toFixed(2)) },
   };
 };
 
-const SectionTitle = ({ title }) => (
-  <div className="bg-green-500 text-white py-2 px-4 rounded-t-lg text-center mb-0">
-    <h2 className="text-xl font-semibold">{title}</h2>
-  </div>
+const SectionTitle = ({ title, isExpanded, onClick }) => (
+    <button
+      onClick={onClick}
+      className={`w-full flex justify-between items-center bg-rain-forest text-white py-2 px-4 rounded-t-lg text-left focus:outline-none ${!isExpanded ? 'rounded-b-lg' : ''}`}
+      aria-expanded={isExpanded}
+    >
+        <h2 className="font-lexend text-acao font-semibold">{title}</h2>
+        <span className="text-2xl transform transition-transform duration-200">
+            {isExpanded ? '▲' : '▼'}
+        </span>
+    </button>
 );
-// --- Fim das Funções de Processamento ---
 
 export default function PaginaDashboard() {
   const { db, userProfile, userAllowedClientes, loadingAuth, loadingAllowedClientes } = useContext(AuthContext);
@@ -135,7 +208,6 @@ export default function PaginaDashboard() {
   const now = new Date();
   const [selectedClienteIds, setSelectedClienteIds] = useState([]);
   const [selectAllClientesToggle, setSelectAllClientesToggle] = useState(false);
-  // ESTADO INICIAL CORRIGIDO: Define o ano e mês atuais como padrão.
   const [selectedYears, setSelectedYears] = useState([now.getFullYear()]);
   const [selectedMonths, setSelectedMonths] = useState([now.getMonth()]);
   const [selectedAreas, setSelectedAreas] = useState([]);
@@ -146,6 +218,17 @@ export default function PaginaDashboard() {
   const [empresasColeta, setEmpresasColeta] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const { allWasteRecords, loadingRecords } = useWasteData(selectedClienteIds);
+
+  const [sectionsVisibility, setSectionsVisibility] = useState({
+    summary: true,
+    monthlyComparison: true,
+    composition: true,
+    destination: true,
+  });
+
+  const toggleSection = (section) => {
+    setSectionsVisibility(prev => ({ ...prev, [section]: !prev[section] }));
+  };
 
   useEffect(() => {
     if (!db) return;
@@ -186,7 +269,6 @@ export default function PaginaDashboard() {
     if (allWasteRecords.length > 0) {
       const yearsFromData = Array.from(new Set(allWasteRecords.map(r => new Date(r.timestamp).getFullYear()))).sort((a, b) => b - a);
       setAvailableYears(yearsFromData);
-      // Lógica de inicialização de ano removida daqui, pois já é feita no useState
     }
   }, [allWasteRecords]);
 
@@ -256,7 +338,6 @@ export default function PaginaDashboard() {
   const handleYearToggle = (year) => {
     setSelectedYears(prev => {
       const newSelection = prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year];
-      // Garante que pelo menos um ano esteja sempre selecionado
       return newSelection.length === 0 ? prev : newSelection;
     });
   };
@@ -298,7 +379,7 @@ export default function PaginaDashboard() {
   };
 
   const summaryData = useMemo(() => processDataForSummaryCards(recordsFullyFiltered), [recordsFullyFiltered]);
-  const { pieData: wasteTypePieData } = useMemo(() => processDataForPieChartByWeight(recordsFullyFiltered, 'wasteType'), [recordsFullyFiltered]);
+  const wasteTypePieData = useMemo(() => processDataForAggregatedPieChart(recordsFullyFiltered), [recordsFullyFiltered]);
   const { pieData: areaPieData } = useMemo(() => processDataForPieChartByWeight(recordsFullyFiltered, 'areaLancamento'), [recordsFullyFiltered]);
   const desvioDeAterroData = useMemo(() => processDataForDesvioDeAterro(recordsFullyFiltered, "Rejeito"), [recordsFullyFiltered]);
   const comparisonYears = useMemo(() => {
@@ -312,12 +393,14 @@ export default function PaginaDashboard() {
   }, [allWasteRecords, comparisonYears]);
 
   if (loadingAuth || loadingAllowedClientes) {
-      return <div className="p-8 text-center text-gray-700">A carregar...</div>;
+      return <div className="p-8 text-center text-rich-soil">A carregar...</div>;
   }
     
   return (
-    <div className="bg-gray-100 min-h-screen p-4 md:p-6 space-y-6">
-      <div className="bg-slate-700 text-white py-3 px-6 rounded-md shadow-lg"><h1 className="text-2xl md:text-3xl font-bold text-center">DASHBOARD</h1></div>
+    <div className="bg-gray-50 font-comfortaa min-h-screen p-4 md:p-6 space-y-6">
+      <div className="bg-blue-coral text-white py-3 px-6 rounded-md shadow-lg">
+        <h1 className="font-lexend text-subtitulo font-bold text-center">DASHBOARD</h1>
+      </div>
       
       <ClienteSelectorDropdown 
           userAllowedClientes={userAllowedClientes} 
@@ -342,38 +425,64 @@ export default function PaginaDashboard() {
         isLoading={loadingRecords || selectedYears.length === 0} 
       />
       
-      <div className="mt-8 space-y-8">
-        {loadingRecords || loadingEmpresas ? (<div className="text-center p-8 text-gray-600">A carregar dados...</div>) :
-         !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center">Por favor, selecione um cliente para visualizar os dados.</div>) :
-         !allWasteRecords.length ? (<div className="p-6 bg-white rounded-lg shadow text-center">Nenhum dado de resíduo registado para os clientes selecionados.</div>) : (
+      <div className="mt-8 space-y-6">
+        {loadingRecords || loadingEmpresas ? (<div className="text-center p-8 text-rich-soil">A carregar dados...</div>) :
+         !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">Por favor, selecione um cliente para visualizar os dados.</div>) :
+         !allWasteRecords.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">Nenhum dado de resíduo registado para os clientes selecionados.</div>) : (
           <>
             <section>
-                <SectionTitle title="VISÃO GERAL" />
-                {recordsFullyFiltered.length > 0 ? <SummaryCards summaryData={summaryData} isLoading={loadingRecords} /> : <div className="p-6 bg-white rounded-b-lg shadow text-center">Nenhum dado encontrado para os filtros selecionados.</div>}
+                <SectionTitle 
+                    title="VISÃO GERAL"
+                    isExpanded={sectionsVisibility.summary}
+                    onClick={() => toggleSection('summary')}
+                />
+                {sectionsVisibility.summary && (
+                    recordsFullyFiltered.length > 0 
+                        ? <SummaryCards summaryData={summaryData} isLoading={loadingRecords} /> 
+                        : <div className="p-6 bg-white rounded-b-lg shadow text-center text-rich-soil">Nenhum dado encontrado para os filtros selecionados.</div>
+                )}
             </section>
             <section>
-                <SectionTitle title="GERAÇÃO POR MÊS (COMPARATIVO ANUAL)" />
-                <MonthlyComparison chartData={monthlyComparisonChartData} yearsToCompare={actualYearsInComparisonData} isLoading={loadingRecords} />
+                <SectionTitle 
+                    title="GERAÇÃO POR MÊS (COMPARATIVO ANUAL)" 
+                    isExpanded={sectionsVisibility.monthlyComparison}
+                    onClick={() => toggleSection('monthlyComparison')}
+                />
+                {sectionsVisibility.monthlyComparison && (
+                    <MonthlyComparison chartData={monthlyComparisonChartData} yearsToCompare={actualYearsInComparisonData} isLoading={loadingRecords} />
+                )}
             </section>
             <section>
-                <SectionTitle title="COMPOSIÇÃO DA GERAÇÃO" />
-                {recordsFullyFiltered.length > 0 ? (
-                    <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-8">
-                        <WasteTypePieChart data={wasteTypePieData} isLoading={loadingRecords} />
-                        <AreaPieChart data={areaPieData} isLoading={loadingRecords} />
+                <SectionTitle 
+                    title="COMPOSIÇÃO DA GERAÇÃO" 
+                    isExpanded={sectionsVisibility.composition}
+                    onClick={() => toggleSection('composition')}
+                />
+                {sectionsVisibility.composition && (
+                    recordsFullyFiltered.length > 0 ? (
+                        <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <WasteTypePieChart data={wasteTypePieData} isLoading={loadingRecords} />
+                            <AreaPieChart data={areaPieData} isLoading={loadingRecords} />
+                        </div>
+                    ) : (<div className="p-6 bg-white rounded-b-lg shadow text-center text-rich-soil">Sem dados de composição para o período selecionado.</div>)
+                )}
+            </section>
+            <section>
+                <SectionTitle 
+                    title="COMPOSIÇÃO DA DESTINAÇÃO" 
+                    isExpanded={sectionsVisibility.destination}
+                    onClick={() => toggleSection('destination')}
+                />
+                {sectionsVisibility.destination && (
+                    <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-6">
+                        {recordsFullyFiltered.length > 0 ? <DesvioDeAterro data={desvioDeAterroData} isLoading={loadingRecords} /> : <div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil min-h-[488px] flex items-center justify-center">Sem dados de desvio para o período selecionado.</div>}
+                        
+                        <DestinacaoChart 
+                            data={destinacaoData} 
+                            isLoading={loadingRecords || loadingEmpresas} 
+                        />
                     </div>
-                ) : (<div className="p-6 bg-white rounded-b-lg shadow text-center">Sem dados de composição para o período selecionado.</div>)}
-            </section>
-            <section>
-                <SectionTitle title="COMPOSIÇÃO DA DESTINAÇÃO" />
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-0">
-                    {recordsFullyFiltered.length > 0 ? <DesvioDeAterro data={desvioDeAterroData} isLoading={loadingRecords} /> : <div className="p-6 bg-white rounded-lg shadow text-center min-h-[488px] flex items-center justify-center">Sem dados de desvio para o período selecionado.</div>}
-                    
-                    <DestinacaoChart 
-                        data={destinacaoData} 
-                        isLoading={loadingRecords || loadingEmpresas} 
-                    />
-                </div>
+                )}
             </section>
           </>
         )}

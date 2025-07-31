@@ -1,42 +1,63 @@
-// src/components/charts/WasteTypePieChart.jsx
-import React, { useMemo } from 'react';
+// src/components/app/charts/WasteTypePieChart.jsx
+import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { wasteTypeColors } from '../../../utils/wasteTypeColors';
 
-// Cores temáticas para os tipos de resíduo
-const WASTE_TYPE_COLORS = {
-    'Reciclável': '#007bff',
-    'Orgânico': '#A52A2A',
-    'Rejeito': '#808080',
-    'default': '#6b7280'
-};
-
-// Função auxiliar para formatar números com 1 casa decimal
-const formatNumberBR = (number) => {
+// Função auxiliar para formatar números
+const formatNumberBR = (number, decimals = 1) => {
   if (typeof number !== 'number' || isNaN(number)) {
     return '0,0';
   }
-  return number.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return number.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 };
 
-// RÓTULO CUSTOMIZADO: Posição, alinhamento e fonte ajustados.
-const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, fill }) => {
-    if (percent < 0.05) { // Oculta o rótulo para fatias muito pequenas
-        return null;
+// Tooltip customizado com bolinhas coloridas
+const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        const mainValue = data.value;
+        const mainName = data.name;
+        const subtypes = data.subtypes || [];
+
+        return (
+            <div className="p-3 bg-white bg-opacity-95 border border-early-frost rounded-lg shadow-lg font-comfortaa text-rich-soil">
+                <p className="font-lexend text-base mb-2 border-b border-early-frost pb-1">
+                    {mainName}: <span className="font-bold">{formatNumberBR(mainValue)} kg</span>
+                </p>
+                {/* Mostra a lista apenas se houver mais de um subtipo, ou se o único subtipo for diferente da categoria principal */}
+                {(subtypes.length > 1 || (subtypes.length === 1 && subtypes[0].name !== mainName)) && (
+                     <ul className="list-none p-0 m-0 text-sm space-y-1">
+                        {subtypes.map((sub, index) => {
+                            const percentage = mainValue > 0 ? (sub.value / mainValue) * 100 : 0;
+                            const color = wasteTypeColors[sub.name]?.bg || wasteTypeColors.default.bg;
+                            return (
+                                <li key={index} className="flex justify-between items-center">
+                                    <div className="flex items-center">
+                                        <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: color }}></span>
+                                        <span>{sub.name}:</span>
+                                    </div>
+                                    <span className="font-bold ml-3">{formatNumberBR(sub.value)} kg ({formatNumberBR(percentage)}%)</span>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+            </div>
+        );
     }
+    return null;
+};
+
+// Rótulo customizado
+const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, fill }) => {
+    if (percent < 0.05) return null;
     const RADIAN = Math.PI / 180;
-    const radius = outerRadius + 40; 
+    const radius = outerRadius + 30; 
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
     return (
-        <text
-            x={x}
-            y={y}
-            fill={fill} 
-            textAnchor="middle"
-            dominantBaseline="central"
-            className="text-sm font-bold" 
-        >
+        <text x={x} y={y} fill={fill} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="font-comfortaa text-sm">
             <tspan x={x} dy="0">{formatNumberBR(value)} kg</tspan>
             <tspan x={x} dy="1.2em">{`(${(percent * 100).toFixed(1)}%)`}</tspan>
         </text>
@@ -44,32 +65,21 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, 
 };
 
 
-export default function WasteTypePieChart({
-  data,
-  isLoading,
-  titleContext = ""
-}) {
-  const chartTitle = `Composição por Tipo de Resíduo (Peso)${titleContext}`;
+export default function WasteTypePieChart({ data, isLoading }) {
+  const chartTitle = `Composição por Tipo de Resíduo`;
 
   if (isLoading) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow h-[500px] flex flex-col">
-        <h3 className="text-md md:text-lg font-semibold text-gray-700 mb-3 text-center">{chartTitle}</h3>
-        <div className="flex-grow flex items-center justify-center">
-          <p className="text-center text-gray-500">Carregando dados...</p>
-        </div>
+      <div className="h-[400px] flex flex-col items-center justify-center">
+        <h3 className="text-lg font-lexend text-rich-soil mb-3 text-center">{chartTitle}</h3>
+        <p className="text-center text-rich-soil font-comfortaa">Carregando dados...</p>
       </div>
     );
   }
 
-  const totalValue = useMemo(() => {
-    if (!data || data.length === 0) return 0;
-    return data.reduce((sum, entry) => sum + (entry.value || 0), 0);
-  }, [data]);
-
   return (
-    <div className="bg-white p-4 rounded-lg shadow h-[500px] flex flex-col">
-      <h3 className="text-md md:text-lg font-semibold text-gray-700 mb-3 text-center">
+    <div className="h-[400px] flex flex-col">
+      <h3 className="text-lg font-lexend text-rich-soil mb-3 text-center">
         {chartTitle}
       </h3>
       {data && data.length > 0 ? (
@@ -78,35 +88,28 @@ export default function WasteTypePieChart({
             <Pie
               data={data}
               cx="50%"
-              cy="45%"
+              cy="50%"
               labelLine={false} 
               label={renderCustomizedLabel}
-              outerRadius="70%"
+              outerRadius="80%"
               fill="#8884d8"
               dataKey="value"
             >
-              {data.map((entry, index) => (
-                <Cell key={`cell-type-${index}`} fill={WASTE_TYPE_COLORS[entry.name] || WASTE_TYPE_COLORS.default} />
-              ))}
+              {data.map((entry, index) => {
+                const color = wasteTypeColors[entry.name]?.bg || wasteTypeColors.default.bg;
+                return <Cell key={`cell-type-${index}`} fill={color} />;
+              })}
             </Pie>
-            <Tooltip
-              formatter={(value, name) => [
-                  `${formatNumberBR(value)} kg (${(value / totalValue * 100).toFixed(1)}%)`,
-                  name
-              ]}
-              labelStyle={{ fontWeight: 'bold' }}
-              wrapperClassName="rounded-md border-gray-300 shadow-lg"
+            <Tooltip content={<CustomTooltip />} />
+            <Legend
+              verticalAlign="bottom"
+              wrapperStyle={{ paddingTop: "20px", fontFamily: 'Comfortaa', color: '#51321D' }}
             />
-            {/* AJUSTE DE ESPAÇAMENTO DA LEGENDA:
-              A propriedade wrapperStyle aplica um espaçamento no topo do contêiner da legenda,
-              forçando-a para baixo e evitando a sobreposição com os rótulos do gráfico.
-            */}
-            <Legend verticalAlign="bottom" wrapperStyle={{ paddingTop: "40px" }} />
           </PieChart>
         </ResponsiveContainer>
       ) : (
         <div className="flex-grow flex items-center justify-center">
-          <p className="text-center text-gray-500">Sem dados para o gráfico de tipo de resíduo.</p>
+          <p className="text-center text-rich-soil font-comfortaa">Sem dados para exibir.</p>
         </div>
       )}
     </div>
