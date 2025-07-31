@@ -2,9 +2,8 @@
 
 import React, { useState } from 'react';
 
-// Ícones para uma UI mais clara
 const ClockIcon = () => (
-    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-yellow-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 text-golden-orange" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
         <path strokeLinecap="round" strokeLinejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
     </svg>
 );
@@ -34,7 +33,6 @@ function WasteRecordsList({
     clienteNome
 }) {
   const [exportPeriod, setExportPeriod] = useState('7days');
-  // NOVO ESTADO: controla a visibilidade da seção de exportação
   const [isExportVisible, setIsExportVisible] = useState(false);
 
   const handleExportClick = () => {
@@ -43,45 +41,41 @@ function WasteRecordsList({
     }
   };
 
-  const btnDeleteStyle = "px-3 py-1 bg-red-500 text-white text-xs font-medium rounded-md shadow-sm hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500";
-  const btnLoadMoreStyle = "w-full mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50";
-
   if (loading && records.length === 0) { 
-    return <div className="text-center text-gray-500 py-4">Carregando registos...</div>;
+    return <div className="text-center text-rich-soil py-4 font-comfortaa">Carregando registros...</div>;
   }
 
   if (!loading && records.length === 0) {
-    return <p className="text-center text-gray-500 py-4">Nenhum registo encontrado para a seleção atual.</p>;
+    return <p className="text-center text-rich-soil py-4 font-comfortaa">Nenhum registro encontrado para a seleção atual.</p>;
   }
 
   return (
     <>
-      {/* --- SEÇÃO DE EXPORTAÇÃO COLAPSÁVEL E ALINHADA --- */}
-      <div className="bg-gray-100 rounded-lg border border-gray-200 mb-6">
+      <div className="bg-white rounded-lg border border-early-frost mb-6">
         <button
             onClick={() => setIsExportVisible(!isExportVisible)}
             className="w-full flex justify-between items-center p-4 text-left focus:outline-none"
             aria-expanded={isExportVisible}
         >
-            <h3 className="text-lg font-semibold text-gray-800 flex items-center">
+            <h3 className="text-lg font-lexend text-rain-forest flex items-center">
                 <ExportIcon />
                 Exportar Relatório
             </h3>
-            <span className="text-xl text-gray-600 transform transition-transform duration-200">
+            <span className="text-xl text-exotic-plume transform transition-transform duration-200">
                 {isExportVisible ? '▲' : '▼'}
             </span>
         </button>
 
         {isExportVisible && (
-            <div className="p-4 border-t border-gray-200">
+            <div className="p-4 border-t border-early-frost">
                 <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
                     <div className="flex-grow">
-                        <label htmlFor="exportPeriod" className="block text-sm font-medium text-gray-700 mb-1">Período:</label>
+                        <label htmlFor="exportPeriod" className="block text-sm font-comfortaa text-rich-soil mb-1">Período:</label>
                         <select 
                             id="exportPeriod" 
                             value={exportPeriod}
                             onChange={(e) => setExportPeriod(e.target.value)}
-                            className="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500"
+                            className="block w-full p-2 border border-early-frost rounded-md shadow-sm focus:ring-blue-coral focus:border-blue-coral font-comfortaa"
                         >
                             <option value="today">Hoje</option>
                             <option value="7days">Últimos 7 dias</option>
@@ -92,7 +86,7 @@ function WasteRecordsList({
                         <button 
                           onClick={handleExportClick} 
                           disabled={isExporting}
-                          className="w-full sm:w-auto px-4 py-2 bg-green-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 disabled:bg-green-300 flex items-center justify-center"
+                          className="w-full sm:w-auto px-4 py-2 bg-abundant-green border border-transparent rounded-md shadow-sm text-sm font-lexend text-white hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-abundant-green disabled:opacity-50 flex items-center justify-center"
                         >
                           <ExportIcon />
                           {isExporting ? 'A exportar...' : 'Gerar CSV'}
@@ -102,10 +96,8 @@ function WasteRecordsList({
             </div>
         )}
       </div>
-      {/* --- FIM DA SEÇÃO DE EXPORTAÇÃO --- */}
 
-
-      <div className="space-y-3">
+      <div className="space-y-3 font-comfortaa text-corpo">
         {records.map((record) => {
           const canUserDelete = 
             userRole === 'master' || 
@@ -115,19 +107,19 @@ function WasteRecordsList({
           return (
             <div 
               key={record.id} 
-              className={`bg-white border border-gray-200 rounded-lg p-4 shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-center ${record.isPending ? 'opacity-75 border-l-4 border-yellow-400' : ''}`}
+              className={`bg-white border border-early-frost rounded-lg p-4 shadow-sm flex flex-col sm:flex-row sm:justify-between sm:items-center ${record.isPending ? 'opacity-75 border-l-4 border-golden-orange' : ''}`}
             >
               <div className="flex-grow mb-2 sm:mb-0">
-                {record.areaLancamento && <p><strong className="text-gray-700">Área:</strong> {record.areaLancamento}</p>}
+                {record.areaLancamento && <p><strong className="text-rich-soil">Área:</strong> {record.areaLancamento}</p>}
                 
                 <p>
-                  <strong className="text-gray-700">Tipo:</strong> {record.wasteType}
-                  {record.wasteSubType && <span className="text-gray-600"> ({record.wasteSubType})</span>}
+                  <strong className="text-rich-soil">Tipo:</strong> {record.wasteType}
+                  {record.wasteSubType && <span className="text-exotic-plume"> ({record.wasteSubType})</span>}
                 </p>
 
-                <p><strong className="text-gray-700">Peso:</strong> {record.peso} kg</p>
+                <p><strong className="text-rich-soil">Peso:</strong> {record.peso} kg</p>
                 <div className="flex items-center space-x-2">
-                    <p className="text-xs text-gray-500">Data: {new Date(record.timestamp).toLocaleString('pt-BR')}</p>
+                    <p className="text-xs text-early-frost">Data: {new Date(record.timestamp).toLocaleString('pt-BR')}</p>
                     {record.isPending && (
                         <div title="Aguardando sincronização" className="flex items-center">
                             <ClockIcon />
@@ -139,7 +131,7 @@ function WasteRecordsList({
               {canUserDelete && (
                 <button
                   onClick={() => onDelete(record)}
-                  className={btnDeleteStyle}
+                  className="px-3 py-1 bg-apricot-orange text-white text-xs font-lexend rounded-md shadow-sm hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-apricot-orange"
                 >
                   Excluir
                 </button>
@@ -154,9 +146,9 @@ function WasteRecordsList({
           <button
             onClick={onLoadMore}
             disabled={loadingMore || loading}
-            className={btnLoadMoreStyle}
+            className="w-full mt-4 px-4 py-2 bg-blue-coral hover:opacity-90 text-white font-lexend text-corpo rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-coral disabled:opacity-50"
           >
-            {loadingMore ? 'A Carregar...' : 'Carregar Mais Registos'}
+            {loadingMore ? 'A Carregar...' : 'Carregar Mais Registros'}
           </button>
         </div>
       )}

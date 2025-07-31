@@ -3,28 +3,10 @@
 import React, { useState, useEffect, useRef, useContext } from 'react';
 import AuthContext from '../../context/AuthContext'; 
 import { addPendingRecord } from '../../services/offlineSyncService';
+import { wasteTypeColors } from '../../utils/wasteTypeColors'; 
 
 const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
 const SUBTIPOS_ORGANICOS_FALLBACK = ["Pré-serviço", "Pós-serviço"];
-
-const wasteTypeColors = {
-    'Reciclável':   { bg: '#3f7fff', text: '#FFFFFF' },
-    'Orgânico':     { bg: '#704729', text: '#FFFFFF' },
-    'Rejeito':      { bg: '#757575', text: '#FFFFFF' },
-    'Não Reciclável': { bg: '#808080', text: '#FFFFFF' },
-    'Papel':        { bg: '#0000FF', text: '#FFFFFF' },
-    'Papel/Papelão':{ bg: '#0000FF', text: '#FFFFFF' },
-    'Plástico':     { bg: '#FF0000', text: '#FFFFFF' },
-    'Vidro':        { bg: '#008000', text: '#FFFFFF' },
-    'Metal':        { bg: '#FFFF00', text: '#000000' },
-    'Madeira':      { bg: '#000000', text: '#FFFFFF' },
-    'Perigosos':    { bg: '#FFA500', text: '#FFFFFF' },
-    'Baterias':     { bg: '#FFA500', text: '#FFFFFF' },
-    'Eletrônicos':  { bg: '#333333', text: '#FFFFFF' },
-    'Pré-serviço':  { bg: '#d4a373', text: '#FFFFFF' },
-    'Pós-serviço':  { bg: '#6f4e37', text: '#FFFFFF' },
-    'default':      { bg: '#6b7280', text: '#FFFFFF' }
-};
 
 export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSuccessfulSubmit }) { 
   const { currentUser, appId } = useContext(AuthContext);
@@ -254,11 +236,11 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     };
   };
 
-  const labelStyle = "block text-sm font-medium text-gray-700 text-center text-lg mb-3";
-  const subLabelStyle = "block text-sm font-medium text-gray-600 text-center text-md mb-3";
+  const labelStyle = "block font-lexend text-corpo text-rich-soil text-center mb-3";
+  const subLabelStyle = "block font-lexend text-corpo text-exotic-plume text-center mb-3";
 
   if (!clienteSelecionado) {
-    return <p className="text-center text-gray-500">Selecione um cliente para iniciar o lançamento.</p>;
+    return <p className="text-center text-rich-soil">Selecione um cliente para iniciar o lançamento.</p>;
   }
   
   const showRecyclableSubTypes = selectedMainCategory === 'Reciclável' && opcoesSubtipoReciclavel.length > 0;
@@ -276,9 +258,10 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
                 id="peso" 
                 value={formatPesoForDisplay(peso)}
                 onKeyDown={handlePesoKeyDown}
-                className="w-auto max-w-[200px] p-2 border-2 border-gray-300 rounded-xl text-7xl font-bold text-center text-gray-700 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 appearance-none"
+                readOnly 
+                className="w-auto max-w-[200px] p-2 border-2 border-early-frost rounded-xl text-7xl font-bold text-center text-rich-soil focus:ring-2 focus:ring-blue-coral focus:border-blue-coral appearance-none"
             />
-            <span className="text-4xl font-semibold text-gray-600 ml-2">kg</span>
+            <span className="text-4xl font-semibold text-rich-soil ml-2">kg</span>
         </div>
       </div>
 
@@ -290,9 +273,9 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
               <button
                 key={`type-${tipo}`} type="button" onClick={() => handleSelectMainCategory(tipo)}
                 style={getButtonStyles(tipo, selectedMainCategory === tipo)}
-                className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-bold transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2 
+                className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl font-lexend text-corpo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2 
                     ${selectedMainCategory === tipo 
-                        ? 'ring-gray-800 shadow-lg' 
+                        ? 'ring-rich-soil shadow-lg' 
                         : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
                     }`}
               >
@@ -302,16 +285,16 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
           </div>
 
           {showRecyclableSubTypes && (
-             <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+             <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-early-frost">
               <label className={subLabelStyle}>Especifique o Reciclável*</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {opcoesSubtipoReciclavel.map((subtipo) => (
                   <button
                     key={`subtype-${subtipo}`} type="button" onClick={() => setSelectedSubType(subtipo)}
                     style={getButtonStyles(subtipo, selectedSubType === subtipo)}
-                    className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-bold transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
+                    className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl font-lexend text-corpo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
                         ${selectedSubType === subtipo
-                            ? 'ring-gray-800 shadow-lg'
+                            ? 'ring-rich-soil shadow-lg'
                             : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
                         }`}
                   >
@@ -323,16 +306,16 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
           )}
 
           {showOrganicSubTypes && (
-             <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-gray-200">
+             <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-early-frost">
               <label className={subLabelStyle}>Especifique o Orgânico*</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 {opcoesSubtipoOrganico.map((subtipo) => (
                   <button
                     key={`subtype-${subtipo}`} type="button" onClick={() => setSelectedSubType(subtipo)}
                     style={getButtonStyles(subtipo, selectedSubType === subtipo)}
-                    className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-bold transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
+                    className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl font-lexend text-corpo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
                         ${selectedSubType === subtipo
-                            ? 'ring-gray-800 shadow-lg'
+                            ? 'ring-rich-soil shadow-lg'
                             : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
                         }`}
                   >
@@ -344,7 +327,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
           )}
         </div>
       ) : (
-        <p className="text-center text-gray-500">Este cliente não possui tipos de resíduo para lançamento.</p>
+        <p className="text-center text-rich-soil">Este cliente não possui tipos de resíduo para lançamento.</p>
       )}
 
       {opcoesArea.length > 0 && (
@@ -355,10 +338,10 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
               <button
                 key={`area-${areaOption}`} type="button"
                 onClick={() => { setAreaLancamento(areaOption); if (formError) setFormError(''); if (formSuccess) setFormSuccess(''); }}
-                className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl text-base font-semibold transition-all duration-150 ease-in-out focus:outline-none
+                className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl font-lexend text-corpo transition-all duration-150 ease-in-out focus:outline-none
                     ${areaLancamento === areaOption
-                        ? 'bg-teal-600 text-white border-teal-600 shadow-lg'
-                        : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50 hover:scale-[1.02] hover:z-10'
+                        ? 'bg-blue-coral text-white border-blue-coral shadow-lg'
+                        : 'bg-white text-rich-soil border-early-frost hover:bg-gray-50 hover:scale-[1.02] hover:z-10'
                     }`}
               >
                 {areaOption}
@@ -369,22 +352,22 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
       )}
 
       {formError && (
-        <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-center">
+        <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md text-center font-comfortaa text-corpo">
           {formError}
         </div>
       )}
       {formSuccess && (
-        <div className="mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-md text-center">
+        <div className="mt-4 p-3 bg-green-100 border border-green-400 text-green-700 rounded-md text-center font-comfortaa text-corpo">
           {formSuccess}
         </div>
       )}
       <div className="pt-2">
         <button
             type="submit"
-            className="w-full bg-blue-500 hover:bg-blue-600 text-white text-xl font-bold py-4 px-6 rounded-xl shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-70"
+            className="w-full bg-apricot-orange hover:opacity-90 text-white font-lexend text-acao py-4 px-6 rounded-xl shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-coral focus:ring-offset-2 disabled:opacity-70"
             disabled={submitting || peso === 0 || !selectedMainCategory || (!areaLancamento && opcoesArea.length > 0) || (showRecyclableSubTypes && !selectedSubType) || (showOrganicSubTypes && !selectedSubType)}
         >
-            {submitting ? 'A Registar...' : 'Registar Pesagem'}
+            {submitting ? 'A Registrar...' : 'Registrar Pesagem'}
         </button>
       </div>
     </form>

@@ -23,16 +23,14 @@ import WasteRecordsList from '../../components/app/WasteRecordsList';
 import { getPendingRecords, deletePendingRecord, addPendingRecord } from '../../services/offlineSyncService';
 import ConfirmationModal from '../../components/app/ConfirmationModal';
 import SyncStatusIndicator from '../../components/app/SyncStatusIndicator';
-// IMPORTAÇÃO DA NOVA FUNÇÃO DE EXPORTAÇÃO
 import { exportToCsv } from '../../utils/csvExport';
 
-const REGISTOS_POR_PAGINA = 20; 
+const REGISTROS_POR_PAGINA = 10; 
 
 export default function PaginaLancamento() {
   const { db, auth, currentUser, appId, userProfile, userAllowedClientes, loadingUserClientes } = useContext(AuthContext);
   const navigate = useNavigate();
 
-  // ... (outros estados permanecem os mesmos)
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
   const [unifiedRecords, setUnifiedRecords] = useState([]);
@@ -44,7 +42,6 @@ export default function PaginaLancamento() {
   const [selectedClienteId, setSelectedClienteId] = useState('');
   const [selectedClienteData, setSelectedClienteData] = useState(null);
   
-  // NOVO ESTADO PARA CONTROLAR O CARREGAMENTO DA EXPORTAÇÃO
   const [isExporting, setIsExporting] = useState(false);
   
   const [modalState, setModalState] = useState({
@@ -64,7 +61,6 @@ export default function PaginaLancamento() {
     setTimeout(() => setMessage(''), 5000);
   };
 
-  // ... (handleLogout, handleLogoutRequest, useEffects de seleção de cliente permanecem os mesmos)
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -107,7 +103,6 @@ export default function PaginaLancamento() {
 
 
   const loadAndCombineRecords = useCallback(async () => {
-    // ... (esta função permanece a mesma, pois lida com a paginação da tela)
     if (!db || !currentUser || !userProfile || !selectedClienteId) {
       setUnifiedRecords([]); setLoadingRecords(false); setHasMoreRecords(false); setLastVisibleFirestoreRecord(null);
       return;
@@ -123,7 +118,7 @@ export default function PaginaLancamento() {
         collection(db, `artifacts/${appId}/public/data/wasteRecords`),
         where("clienteId", "==", selectedClienteId),
         orderBy("timestamp", "desc"),
-        limit(REGISTOS_POR_PAGINA)
+        limit(REGISTROS_POR_PAGINA)
       );
       const firestoreSnap = await getDocs(firestoreQuery);
       const firestoreRecords = firestoreSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
@@ -136,11 +131,11 @@ export default function PaginaLancamento() {
 
       setUnifiedRecords(combined);
       setLastVisibleFirestoreRecord(firestoreSnap.docs[firestoreSnap.docs.length - 1]);
-      setHasMoreRecords(firestoreSnap.docs.length === REGISTOS_POR_PAGINA);
+      setHasMoreRecords(firestoreSnap.docs.length === REGISTROS_POR_PAGINA);
 
     } catch (error) {
       console.error("PAGINA LANCAMENTO - Erro ao carregar e combinar registros:", error);
-      showMessage('Erro ao carregar registos.', true);
+      showMessage('Erro ao carregar registros.', true);
       setUnifiedRecords([]);
       setHasMoreRecords(false);
     }
@@ -163,7 +158,6 @@ export default function PaginaLancamento() {
     return () => window.removeEventListener('pending-records-updated', loadAndCombineRecords);
   }, [loadAndCombineRecords]);
 
-  // --- NOVA FUNÇÃO PARA LIDAR COM A EXPORTAÇÃO ---
   const handleExportRequest = async (period, clienteNome) => {
     if (!selectedClienteId) {
         showMessage('Por favor, selecione um cliente primeiro.', true);
@@ -187,17 +181,15 @@ export default function PaginaLancamento() {
                 startDate.setHours(0, 0, 0, 0);
                 break;
             default:
-                startDate = new Date(now.setDate(now.getDate() - 7)); // Padrão para 7 dias
+                startDate = new Date(now.setDate(now.getDate() - 7));
                 startDate.setHours(0, 0, 0, 0);
         }
 
-        // 1. Busca todos os registros pendentes (locais)
         const allPendingRecords = await getPendingRecords();
         const pendingRecordsInPeriod = allPendingRecords.filter(p => 
             p.clienteId === selectedClienteId && p.timestamp >= startDate.getTime()
         ).map(p => ({ ...p, id: p.localId, isPending: true }));
 
-        // 2. Busca todos os registros do Firestore no período
         const firestoreQuery = query(
             collection(db, `artifacts/${appId}/public/data/wasteRecords`),
             where("clienteId", "==", selectedClienteId),
@@ -207,14 +199,12 @@ export default function PaginaLancamento() {
         const firestoreSnap = await getDocs(firestoreQuery);
         const firestoreRecords = firestoreSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
 
-        // 3. Combina e remove duplicatas
         const pendingLocalIds = new Set(pendingRecordsInPeriod.map(p => p.localId));
         const filteredFirestoreRecords = firestoreRecords.filter(f => !pendingLocalIds.has(f.localId));
         
         const combined = [...pendingRecordsInPeriod, ...filteredFirestoreRecords];
         combined.sort((a, b) => b.timestamp - a.timestamp);
 
-        // 4. Chama a nova função de exportação
         exportToCsv(combined, clienteNome, showMessage);
 
     } catch (error) {
@@ -225,9 +215,7 @@ export default function PaginaLancamento() {
     }
   };
 
-
-  // ... (outras funções como carregarMaisRegistos, handleDeleteRequest, etc., permanecem as mesmas)
-  const carregarMaisRegistos = async () => {
+  const carregarMaisRegistros = async () => {
     if (!lastVisibleFirestoreRecord || !selectedClienteId || loadingMore) return; 
     setLoadingMore(true);
     try {
@@ -236,7 +224,7 @@ export default function PaginaLancamento() {
         where("clienteId", "==", selectedClienteId),
         orderBy("timestamp", "desc"),
         startAfter(lastVisibleFirestoreRecord),
-        limit(REGISTOS_POR_PAGINA)
+        limit(REGISTROS_POR_PAGINA)
       );
       const documentSnapshots = await getDocs(nextBatchQuery);
       const newRecords = documentSnapshots.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
@@ -246,19 +234,20 @@ export default function PaginaLancamento() {
       
       setUnifiedRecords(prevRecords => [...prevRecords, ...filteredNewRecords]);
       setLastVisibleFirestoreRecord(documentSnapshots.docs[documentSnapshots.docs.length - 1]);
-      setHasMoreRecords(documentSnapshots.docs.length === REGISTOS_POR_PAGINA);
+      setHasMoreRecords(documentSnapshots.docs.length === REGISTROS_POR_PAGINA);
 
     } catch (error) {
-      console.error("PAGINA LANCAMENTO - Erro ao carregar mais registos:", error);
-      showMessage('Erro ao carregar mais registos.', true);
+      console.error("PAGINA LANCAMENTO - Erro ao carregar mais registros:", error);
+      showMessage('Erro ao carregar mais registros.', true);
     }
     setLoadingMore(false);
   };
+
   const handleDeleteRequest = (record) => {
     setModalState({
         isOpen: true,
         title: 'Confirmar Exclusão',
-        message: 'Tem certeza de que deseja excluir permanentemente este registo?',
+        message: 'Tem certeza de que deseja excluir permanentemente este registro?',
         confirmText: 'Sim, Excluir',
         theme: 'danger',
         onConfirm: () => handleConfirmDelete(record),
@@ -271,25 +260,27 @@ export default function PaginaLancamento() {
         )
     });
   };
+
   const handleConfirmDelete = async (recordToDelete) => {
     if (!recordToDelete) return;
     try {
       if (recordToDelete.isPending) {
         await deletePendingRecord(recordToDelete.localId);
-        showMessage('Registo pendente excluído com sucesso!');
+        showMessage('Registro pendente excluído com sucesso!');
       } else {
         await deleteDoc(doc(db, `artifacts/${appId}/public/data/wasteRecords`, recordToDelete.id));
-        showMessage('Registo excluído com sucesso!');
+        showMessage('Registro excluído com sucesso!');
       }
       if (!recordToDelete.isPending) {
         loadAndCombineRecords();
       }
     } catch (error) { 
-      console.error("Erro ao excluir registo:", error);
-      showMessage('Erro ao excluir registo. Tente novamente.', true);
+      console.error("Erro ao excluir registro:", error);
+      showMessage('Erro ao excluir registro. Tente novamente.', true);
     }
     setModalState({ isOpen: false });
   };
+
   const handleLimitExceeded = (data) => {
     const { peso, limite, wasteType } = data;
     setModalState({
@@ -308,6 +299,7 @@ export default function PaginaLancamento() {
         )
     });
   };
+
   const handleConfirmLimit = async (limitModalData) => {
     if (!limitModalData) return;
     const { limite, ...recordData } = limitModalData;
@@ -319,10 +311,10 @@ export default function PaginaLancamento() {
     }
     setModalState({ isOpen: false });
   };
+
   const toggleRecordsVisibility = () => setIsRecordsVisible(!isRecordsVisible);
   
 
-  // ... (o retorno do JSX permanece o mesmo, mas agora passamos as novas props para WasteRecordsList)
   if (loadingUserClientes && !userProfile) return <div className="text-center text-gray-600 p-8">A carregar dados...</div>;
   if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">A carregar perfil...</div>;
   if (!userProfile || !['master', 'gerente', 'operacional'].includes(userProfile.role)) {
@@ -336,7 +328,7 @@ export default function PaginaLancamento() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 font-comfortaa">
       <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-x-4 gap-y-2">
         <div className="flex items-center space-x-4 order-2 sm:order-1 justify-center sm:justify-start">
           {selectedClienteData && selectedClienteData.logoUrl && (
@@ -348,24 +340,24 @@ export default function PaginaLancamento() {
             />
           )}
           {selectedClienteData && (
-            <span className="text-xl font-bold text-gray-700">{selectedClienteData.nome}</span>
+            <span className="text-xl font-lexend text-rich-soil">{selectedClienteData.nome}</span>
           )}
         </div>
         <div className="text-center order-1 sm:order-2">
-          <h1 className="text-3xl font-bold text-gray-800">Pesagem</h1>
+          <h1 className="font-lexend text-subtitulo text-rain-forest">Pesagem</h1>
         </div>
         <div className="flex justify-center sm:justify-end items-center order-3">
             {userProfile.role === 'operacional' ? (
               <div className="flex items-center space-x-4">
                 <SyncStatusIndicator />
                 {userProfile && (
-                  <span className="text-gray-700 font-medium text-right">
+                  <span className="text-rich-soil font-medium text-right">
                     {userProfile.nome || currentUser.email}
                   </span>
                 )}
                 <button 
                   onClick={handleLogoutRequest}
-                  className="w-auto px-4 py-2 bg-red-500 text-white font-semibold rounded-lg shadow-md hover:bg-red-600 transition duration-150 flex-shrink-0"
+                  className="w-auto px-4 py-2 bg-apricot-orange text-white font-lexend rounded-lg shadow-md hover:opacity-90 transition duration-150 flex-shrink-0"
                 >
                   Sair
                 </button>
@@ -381,7 +373,7 @@ export default function PaginaLancamento() {
                         id="clienteSelectLancamento" 
                         value={selectedClienteId} 
                         onChange={(e) => setSelectedClienteId(e.target.value)}
-                        className="block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                        className="block w-full p-2 border border-early-frost rounded-md shadow-sm focus:ring-blue-coral focus:border-blue-coral font-comfortaa text-corpo"
                         disabled={loadingUserClientes}
                       >
                         {loadingUserClientes && <option value="">A carregar clientes...</option>}
@@ -403,7 +395,7 @@ export default function PaginaLancamento() {
       <MessageBox message={message} isError={isError} onClose={() => setMessage('')} />
 
       {loadingUserClientes && userAllowedClientes.length === 0 && (
-          <div className="text-center text-gray-500 p-8">A carregar lista de clientes...</div>
+          <div className="text-center text-rich-soil p-8">A carregar lista de clientes...</div>
       )}
 
       {!loadingUserClientes && selectedClienteId && selectedClienteData ? (
@@ -422,22 +414,21 @@ export default function PaginaLancamento() {
               aria-expanded={isRecordsVisible} 
               aria-controls="waste-records-list-lancamento"
             >
-              <h2 className="text-2xl font-semibold text-gray-700">
-                Registos Recentes de: <span className="text-indigo-600">{selectedClienteData?.nome || 'Cliente Selecionado'}</span>
+              <h2 className="font-lexend text-acao text-rain-forest">
+                Registros Recentes de: <span className="text-blue-coral">{selectedClienteData?.nome || 'Cliente Selecionado'}</span>
               </h2>
-              <span className="text-2xl text-gray-600 transform transition-transform duration-200">{isRecordsVisible ? '▲' : '▼'}</span>
+              <span className="text-2xl text-exotic-plume transform transition-transform duration-200">{isRecordsVisible ? '▲' : '▼'}</span>
             </button>
             {isRecordsVisible && (
-              <div id="waste-records-list-lancamento" className="p-6 border-t border-gray-200">
+              <div id="waste-records-list-lancamento" className="p-6 border-t border-early-frost">
                 <WasteRecordsList
                   records={unifiedRecords}
                   loading={loadingRecords} 
                   onDelete={handleDeleteRequest}
                   userRole={userProfile ? userProfile.role : null}
                   hasMoreRecords={hasMoreRecords}
-                  onLoadMore={carregarMaisRegistos}
+                  onLoadMore={carregarMaisRegistros}
                   loadingMore={loadingMore}
-                  // Passando as novas props para a exportação
                   onExport={handleExportRequest}
                   isExporting={isExporting}
                   clienteNome={selectedClienteData?.nome}
@@ -447,7 +438,7 @@ export default function PaginaLancamento() {
           </div>
         </>
       ) : !loadingUserClientes && userAllowedClientes.length > 0 && !selectedClienteId ? (
-         <div className="text-center text-gray-500 p-8">Por favor, selecione um cliente para continuar.</div>
+         <div className="text-center text-rich-soil p-8">Por favor, selecione um cliente para continuar.</div>
       ) : null}
 
       <ConfirmationModal

@@ -21,13 +21,16 @@ const CloseIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColo
 
 
 const NavItem = ({ to, icon, text, isCollapsed, onClick }) => {
-  const activeStyle = { backgroundColor: '#4338ca', color: 'white' };
   return (
     <NavLink 
       to={to} 
-      style={({ isActive }) => isActive ? activeStyle : undefined}
       onClick={onClick}
-      className="flex items-center p-2.5 rounded-md transition duration-200 hover:bg-gray-700 space-x-4"
+      className={({ isActive }) =>
+        `flex items-center p-2.5 rounded-md transition duration-200 space-x-4 font-lexend text-corpo ` +
+        (isActive
+          ? 'bg-apricot-orange text-white' // Estilo para link ativo
+          : 'text-white hover:bg-white/10') // Estilo para link inativo
+      }
       title={isCollapsed ? text : ""}
     >
       {icon}
@@ -71,7 +74,7 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
 
       <aside
         className={`
-          bg-gray-800 text-gray-100 flex flex-col
+          bg-blue-coral text-white flex flex-col
           fixed inset-y-0 left-0 z-30 h-[100dvh]
           transform transition-all duration-300 ease-in-out
           md:relative
@@ -80,14 +83,14 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
         `}
         aria-label="Sidebar principal"
       >
-        <div className={`p-4 flex items-center border-b border-gray-700 flex-shrink-0 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-          <h1 className={`text-2xl font-bold text-white transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'inline-block'}`}>
+        <div className={`p-4 flex items-center border-b border-white/20 flex-shrink-0 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
+          <h1 className={`font-lexend text-acao text-white transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'inline-block'}`}>
             CtrlWaste
           </h1>
-           <span className={`text-2xl font-bold text-white transition-opacity duration-200 ${isCollapsed ? 'inline-block' : 'hidden'}`}>
+           <span className={`font-lexend text-acao text-white transition-opacity duration-200 ${isCollapsed ? 'inline-block' : 'hidden'}`}>
             CW
            </span>
-          <button onClick={toggleSidebar} className="md:hidden p-1 text-gray-300 hover:text-white" aria-label="Fechar menu">
+          <button onClick={toggleSidebar} className="md:hidden p-1 text-white/80 hover:text-white" aria-label="Fechar menu">
             <CloseIcon />
           </button>
         </div>
@@ -104,24 +107,24 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
               
               {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
                 <>
-                  <hr className={`my-2 border-gray-600 ${isCollapsed && 'mx-4'}`} />
-                  {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs text-gray-400 uppercase">Informativos</p>}
+                  <hr className={`my-2 border-white/20 ${isCollapsed && 'mx-4'}`} />
+                  {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs font-lexend text-white/70 uppercase">Informativos</p>}
                   <NavItem to="/app/documentacao" icon={<DocsIcon />} text="Documentação" isCollapsed={isCollapsed} onClick={handleLinkClick} />
                   <NavItem to="/app/economia-circular" icon={<EconomiaIcon />} text="Economia Circular" isCollapsed={isCollapsed} onClick={handleLinkClick} />
                   <NavItem to="/app/glossario" icon={<GlossarioIcon />} text="Glossário" isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}
               
-              {/* --- MUDANÇA AQUI: Agora 'gerente' também vê esta seção --- */}
+              
               {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
                 <>
-                  <hr className={`my-2 border-gray-600 ${isCollapsed && 'mx-4'}`} />
-                  {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs text-gray-400 uppercase">Administração</p>}
+                  <hr className={`my-2 border-white/20 ${isCollapsed && 'mx-4'}`} />
+                  {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs font-lexend text-white/70 uppercase">Administração</p>}
                   <NavItem to="/app/admin/usuarios" icon={<AdminUsersIcon />} text="Usuários" isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}
 
-              {/* --- MUDANÇA AQUI: Seção separada apenas para 'master' --- */}
+              
               {userProfile.role === 'master' && (
                 <>
                   <NavItem to="/app/admin/clientes" icon={<AdminClientesIcon />} text="Clientes" isCollapsed={isCollapsed} onClick={handleLinkClick} />
@@ -130,34 +133,34 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
               )}
             </>
           ) : (
-            <div className="p-4 text-gray-400">...</div>
+            <div className="p-4 text-white/60">...</div>
           )}
         </nav>
 
-        <div className="p-2 border-t border-gray-700 flex-shrink-0">
+        <div className="p-2 border-t border-white/20 flex-shrink-0">
           <button
             onClick={onToggleCollapse}
-            className="hidden md:flex items-center justify-center w-full p-2.5 rounded-md transition duration-200 hover:bg-gray-700 mb-2"
+            className="hidden md:flex items-center justify-center w-full p-2.5 rounded-md transition duration-200 hover:bg-white/10 mb-2"
             title={isCollapsed ? "Expandir menu" : "Recolher menu"}
           >
             {isCollapsed ? <ChevronDoubleRightIcon className="w-6 h-6" /> : <ChevronDoubleLeftIcon className="w-6 h-6" />}
           </button>
         
-          <div className={isCollapsed ? 'hidden' : 'block'}>
+          <div className={`font-comfortaa ${isCollapsed ? 'hidden' : 'block'}`}>
             {userProfile && userProfile.role && (
-              <p className="text-xs text-gray-400 text-center mb-1">
+              <p className="text-xs text-white/70 text-center mb-1">
                 Nível: {userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)}
               </p>
             )}
             {currentUser && currentUser.email && (
-              <p className="text-xs text-gray-500 text-center break-all mb-2 truncate" title={currentUser.email}>
+              <p className="text-xs text-white/60 text-center break-all mb-2 truncate" title={currentUser.email}>
                 {currentUser.email}
               </p>
             )}
           </div>
           <button
             onClick={handleLogoutRequest}
-            className={`w-full flex items-center font-semibold py-2 px-4 rounded-lg text-sm transition duration-200 bg-red-500 hover:bg-red-600 ${isCollapsed ? 'justify-center' : ''}`}
+            className={`w-full flex items-center font-lexend py-2 px-4 rounded-lg text-sm transition duration-200 bg-apricot-orange hover:opacity-90 ${isCollapsed ? 'justify-center' : ''}`}
           >
             <LogoutIcon />
             <span className={isCollapsed ? 'hidden' : 'ml-2'}>Sair</span>
