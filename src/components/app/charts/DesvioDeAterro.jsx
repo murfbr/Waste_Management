@@ -4,42 +4,44 @@ import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
 
-/**
- * Renderiza um gráfico de linha para a "Taxa de Desvio de Aterro".
- * Exibe a taxa de desvio diária e a média móvel, com uma linha de referência para a meta de 90%.
- */
+// Cores definidas localmente, baseadas na sua identidade visual
+const chartColors = {
+  taxaDesvio: '#156172',      // exotic-plume
+  mediaTaxaDesvio: '#DB8D37', // golden-orange
+  meta: '#174C2F',           // abundant-green
+};
+
 export default function DesvioDeAterro({
   data,
   isLoading,
   noDataMessageDetails = ""
 }) {
-  // Título do gráfico conforme solicitado
-  const chartTitle = "TAXA DE DESVIO DE ATERRO";
-
+  const chartTitle = "Taxa de desvio de aterro";
   const baseNoDataMessage = `Sem dados para o gráfico Taxa de Desvio de Aterro.`;
 
   if (isLoading) {
     return (
-      <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-        <h2 className="text-lg md:text-xl font-semibold text-gray-700 mb-4">{chartTitle}</h2>
-        <p className="text-center text-gray-500 py-4">Carregando dados...</p>
+      <div className="bg-white p-4 md:p-6 rounded-lg shadow font-comfortaa">
+        <h2 className="text-acao font-lexend text-blue-coral text-center mb-4">{chartTitle}</h2>
+        <p className="text-center text-blue-coral py-4">Carregando dados...</p>
       </div>
     );
   }
 
   return (
     <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-      <h2 className="text-lg md:text-xl font-semibold text-gray-700 mb-4">
+      <h2 className="text-acao font-lexend text-blue-coral text-center mb-4">
         {chartTitle}
       </h2>
       {data && data.length > 0 ? (
         <ResponsiveContainer width="100%" height={400}>
-          <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" />
-            <XAxis dataKey="name" />
+          <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 20 }}>
+            <CartesianGrid stroke="#BCBCBC" strokeDasharray="3 3" />
+            <XAxis dataKey="name" tick={{ fill: '#0D4F5F', fontFamily: 'Comfortaa' }} />
             <YAxis 
-              label={{ value: '% Desvio de Aterro', angle: -90, position: 'insideLeft', offset: -10 }} 
-              domain={[0, 100]} // Eixo Y vai de 0 a 100%
+              tick={{ fill: '#0D4F5F', fontFamily: 'Comfortaa' }}
+              label={{ value: '% Desvio', angle: -90, position: 'insideLeft', fill: '#0D4F5F', fontFamily: 'Lexend', offset: -5 }} 
+              domain={[0, 100]}
               tickFormatter={(tick) => `${tick}%`}
               allowDataOverflow 
             />
@@ -51,35 +53,40 @@ export default function DesvioDeAterro({
                 return [value, name];
               }}
               labelFormatter={(label) => `Dia: ${label}`}
+              contentStyle={{ fontFamily: 'Comfortaa', borderColor: '#BCBCBC', borderRadius: '0.5rem' }}
+              labelStyle={{ fontFamily: 'Lexend', color: '#0D4F5F' }}
             />
-            <Legend />
+            <Legend wrapperStyle={{ fontFamily: 'Comfortaa', color: '#0D4F5F', paddingTop: '20px' }} />
             <Line 
               type="monotone" 
-              dataKey="taxaDesvio" // Chave de dados para a taxa de desvio
-              stroke="#8884d8" // Cor roxa para a taxa de desvio
-              name="Taxa de Desvio" // Nome da linha
-              activeDot={{ r: 6 }} 
+              dataKey="taxaDesvio"
+              stroke={chartColors.taxaDesvio}
+              strokeWidth={2}
+              name="Taxa de Desvio"
+              activeDot={{ r: 6, fill: chartColors.taxaDesvio }} 
             />
             <Line 
               type="monotone" 
-              dataKey="mediaTaxaDesvio" // Chave de dados para a média da taxa de desvio
-              stroke="#82ca9d" // Cor verde para a média
-              name="Média de Desvio" // Nome da linha de média
+              dataKey="mediaTaxaDesvio"
+              stroke={chartColors.mediaTaxaDesvio}
+              strokeWidth={2}
+              name="Média de Desvio"
               strokeDasharray="5 5" 
               dot={false} 
             />
             <ReferenceLine 
-              y={90} // Meta de 90%
-              label={{ value: "Meta 90%", position: "insideTopRight", fill: "#d946ef", dy: -5 }} 
-              stroke="#d946ef" // Cor magenta para a linha de meta
+              y={90}
+              label={{ value: "Meta 90%", position: "insideTopRight", fill: chartColors.meta, dy: -10, fontFamily: 'Lexend' }} 
+              stroke={chartColors.meta}
+              strokeWidth={2}
               strokeDasharray="3 3" 
               ifOverflow="extendDomain"
             />
           </LineChart>
         </ResponsiveContainer>
       ) : (
-        <div className="h-[400px] flex items-center justify-center">
-          <p className="text-center text-gray-500 py-4">{baseNoDataMessage}{noDataMessageDetails}</p>
+        <div className="h-[400px] flex items-center justify-center font-comfortaa">
+          <p className="text-center text-blue-coral py-4">{baseNoDataMessage}{noDataMessageDetails}</p>
         </div>
       )}
     </div>

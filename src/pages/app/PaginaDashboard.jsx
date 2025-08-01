@@ -19,84 +19,68 @@ const TODOS_OS_MESES_INDICES = Array.from({ length: 12 }, (_, i) => i);
 
 // --- Funções de Processamento de Dados ---
 
-// FUNÇÃO ATUALIZADA: Lógica de agregação mais robusta
 const processDataForAggregatedPieChart = (records) => {
   if (!Array.isArray(records) || records.length === 0) return [];
-
   const aggregation = records.reduce((acc, record) => {
     if (!record || !record.wasteType) return acc;
-
     let mainType = record.wasteType;
     let subType = record.wasteSubType;
     const weight = parseFloat(record.peso || 0);
     if (isNaN(weight)) return acc;
-
-    // Normaliza a categoria principal para garantir o agrupamento correto
     if (mainType.startsWith('Reciclável')) {
-      if (!subType) {
-        const match = mainType.match(/\((.*)\)/);
-        if (match) subType = match[1];
-      }
+      if (!subType) { const match = mainType.match(/\((.*)\)/); if (match) subType = match[1]; }
       mainType = 'Reciclável';
     } else if (mainType.startsWith('Orgânico')) {
-      if (!subType) {
-        const match = mainType.match(/\((.*)\)/);
-        if (match) subType = match[1];
-      }
+      if (!subType) { const match = mainType.match(/\((.*)\)/); if (match) subType = match[1]; }
       mainType = 'Orgânico';
     }
-    
     if (!acc[mainType]) {
       acc[mainType] = { name: mainType, value: 0, subtypes: {} };
     }
-
     acc[mainType].value += weight;
-
     const subTypeNameForList = subType || mainType;
-    
     if (!acc[mainType].subtypes[subTypeNameForList]) {
-        acc[mainType].subtypes[subTypeNameForList] = { name: subTypeNameForList, value: 0 };
+      acc[mainType].subtypes[subTypeNameForList] = { name: subTypeNameForList, value: 0 };
     }
     acc[mainType].subtypes[subTypeNameForList].value += weight;
-
     return acc;
   }, {});
-
-  // PÓS-PROCESSAMENTO: Remove a entrada genérica (ex: "Orgânico") do detalhe do tooltip se houver subtipos específicos.
   for (const mainType in aggregation) {
       const subtypes = aggregation[mainType].subtypes;
       const subtypeKeys = Object.keys(subtypes);
-      // Se há mais de um subtipo e um deles tem o mesmo nome da categoria principal, remove-o.
       if (subtypeKeys.length > 1 && subtypes[mainType]) {
           delete subtypes[mainType];
       }
   }
-
   return Object.values(aggregation).map(mainCategory => ({
     ...mainCategory,
     value: parseFloat(mainCategory.value.toFixed(2)),
-    subtypes: Object.values(mainCategory.subtypes).map(sub => ({
-        ...sub,
-        value: parseFloat(sub.value.toFixed(2))
-    })).sort((a, b) => b.value - a.value)
+    subtypes: Object.values(mainCategory.subtypes).map(sub => ({ ...sub, value: parseFloat(sub.value.toFixed(2)) })).sort((a, b) => b.value - a.value)
   }));
 };
 
 
-const processDataForPieChartByWeight = (records, groupByField) => {
-  if (!Array.isArray(records) || records.length === 0) return { pieData: [], totalWeight: 0 };
-  let totalWeight = 0;
-  const counts = records.reduce((acc, record) => {
-    if (!record) return acc;
-    const key = record[groupByField] || 'Não especificado';
-    const weight = parseFloat(record.peso || 0);
-    if (isNaN(weight)) return acc;
-    acc[key] = (acc[key] || 0) + weight;
-    totalWeight += weight;
-    return acc;
-  }, {});
-  const pieData = Object.entries(counts).map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }));
-  return { pieData, totalWeight: parseFloat(totalWeight.toFixed(2)) };
+const processDataForAreaChartWithBreakdown = (records) => {
+    if (!Array.isArray(records) || records.length === 0) return [];
+    const aggregation = records.reduce((acc, record) => {
+        if (!record || !record.areaLancamento || !record.wasteType) return acc;
+        const areaName = record.areaLancamento;
+        const weight = parseFloat(record.peso || 0);
+        if (isNaN(weight)) return acc;
+        let mainWasteType = record.wasteType;
+        if (mainWasteType.startsWith('Reciclável')) { mainWasteType = 'Reciclável'; } 
+        else if (mainWasteType.startsWith('Orgânico')) { mainWasteType = 'Orgânico'; }
+        if (!acc[areaName]) { acc[areaName] = { name: areaName, value: 0, breakdown: {} }; }
+        acc[areaName].value += weight;
+        if (!acc[areaName].breakdown[mainWasteType]) { acc[areaName].breakdown[mainWasteType] = { name: mainWasteType, value: 0 }; }
+        acc[areaName].breakdown[mainWasteType].value += weight;
+        return acc;
+    }, {});
+    return Object.values(aggregation).map(areaData => ({
+        ...areaData,
+        value: parseFloat(areaData.value.toFixed(2)),
+        breakdown: Object.values(areaData.breakdown).map(b => ({ ...b, value: parseFloat(b.value.toFixed(2)) })).filter(b => b.value > 0).sort((a, b) => b.value - a.value)
+    }));
 };
 
 const processDataForDesvioDeAterro = (records, rejectCategoryName = "Rejeito") => {
@@ -110,9 +94,7 @@ const processDataForDesvioDeAterro = (records, rejectCategoryName = "Rejeito") =
         if (isNaN(weight)) return acc;
         acc[dateKey] = acc[dateKey] || { total: 0, rejeito: 0 };
         acc[dateKey].total += weight;
-        if (record.wasteType === rejectCategoryName) {
-            acc[dateKey].rejeito += weight;
-        }
+        if (record.wasteType === rejectCategoryName) { acc[dateKey].rejeito += weight; }
         return acc;
     }, {});
     const sortedDailyData = Object.entries(dailyDataAggregated).map(([dateKey, data]) => {
@@ -120,7 +102,7 @@ const processDataForDesvioDeAterro = (records, rejectCategoryName = "Rejeito") =
         const taxaDesvio = 100 - percentualRejeito;
         return {
             dateKey,
-            name: new Date(dateKey + 'T00:00:00Z').toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' }),
+            name: new Date(dateKey).toLocaleDateString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit' }),
             taxaDesvio: parseFloat(taxaDesvio.toFixed(2)),
         };
     }).sort((a, b) => new Date(a.dateKey) - new Date(b.dateKey));
@@ -143,8 +125,8 @@ const processDataForMonthlyYearlyComparison = (records, year1, year2) => {
     const weight = parseFloat(record.peso || 0);
     if (isNaN(weight)) return;
     if (recordYear === year1 || recordYear === year2) {
-      if (!monthlyData[recordMonth]) monthlyData[recordMonth] = {};
-      if (!monthlyData[recordMonth][recordYear]) monthlyData[recordMonth][recordYear] = 0;
+      if (!monthlyData[recordMonth]) { monthlyData[recordMonth] = {}; }
+      if (!monthlyData[recordMonth][recordYear]) { monthlyData[recordMonth][recordYear] = 0; }
       monthlyData[recordMonth][recordYear] += weight;
     }
   });
@@ -169,18 +151,13 @@ const processDataForSummaryCards = (records) => {
     if (isNaN(weight)) return;
     totalGeralKg += weight;
     const type = record.wasteType ? record.wasteType.toLowerCase() : '';
-    if (type.includes('orgânico') || type.includes('compostavel')) {
-        totalCompostavelKg += weight;
-    } else if (type.includes('rejeito')) {
-        totalRejeitoKg += weight;
-    } else {
-        totalReciclavelKg += weight;
-    }
+    if (type.includes('orgânico') || type.includes('compostavel')) { totalCompostavelKg += weight; } 
+    else if (type.includes('rejeito')) { totalRejeitoKg += weight; } 
+    else { totalReciclavelKg += weight; }
   });
   const percentCompostavel = totalGeralKg > 0 ? (totalCompostavelKg / totalGeralKg) * 100 : 0;
   const percentReciclavel = totalGeralKg > 0 ? (totalReciclavelKg / totalGeralKg) * 100 : 0;
   const percentRejeito = totalGeralKg > 0 ? (totalRejeitoKg / totalGeralKg) * 100 : 0;
-
   return {
     totalGeralKg: parseFloat(totalGeralKg.toFixed(2)),
     compostavel: { kg: parseFloat(totalCompostavelKg.toFixed(2)), percent: parseFloat(percentCompostavel.toFixed(2)) },
@@ -190,15 +167,9 @@ const processDataForSummaryCards = (records) => {
 };
 
 const SectionTitle = ({ title, isExpanded, onClick }) => (
-    <button
-      onClick={onClick}
-      className={`w-full flex justify-between items-center bg-rain-forest text-white py-2 px-4 rounded-t-lg text-left focus:outline-none ${!isExpanded ? 'rounded-b-lg' : ''}`}
-      aria-expanded={isExpanded}
-    >
+    <button onClick={onClick} className={`w-full flex justify-between items-center bg-rain-forest text-white py-2 px-4 rounded-t-lg text-left focus:outline-none ${!isExpanded ? 'rounded-b-lg' : ''}`} aria-expanded={isExpanded}>
         <h2 className="font-lexend text-acao font-semibold">{title}</h2>
-        <span className="text-2xl transform transition-transform duration-200">
-            {isExpanded ? '▲' : '▼'}
-        </span>
+        <span className="text-2xl transform transition-transform duration-200">{isExpanded ? '▲' : '▼'}</span>
     </button>
 );
 
@@ -219,16 +190,8 @@ export default function PaginaDashboard() {
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
   const { allWasteRecords, loadingRecords } = useWasteData(selectedClienteIds);
 
-  const [sectionsVisibility, setSectionsVisibility] = useState({
-    summary: true,
-    monthlyComparison: true,
-    composition: true,
-    destination: true,
-  });
-
-  const toggleSection = (section) => {
-    setSectionsVisibility(prev => ({ ...prev, [section]: !prev[section] }));
-  };
+  const [sectionsVisibility, setSectionsVisibility] = useState({ summary: true, monthlyComparison: true, composition: true, destination: true });
+  const toggleSection = (section) => setSectionsVisibility(prev => ({ ...prev, [section]: !prev[section] }));
 
   useEffect(() => {
     if (!db) return;
@@ -236,11 +199,8 @@ export default function PaginaDashboard() {
         setLoadingEmpresas(true);
         try {
             const querySnapshot = await getDocs(collection(db, "empresasColeta"));
-            const empresasData = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            setEmpresasColeta(empresasData);
-        } catch (error) {
-            console.error("Erro ao buscar empresas de coleta:", error);
-        }
+            setEmpresasColeta(querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+        } catch (error) { console.error("Erro ao buscar empresas de coleta:", error); }
         setLoadingEmpresas(false);
     };
     fetchEmpresasColeta();
@@ -288,35 +248,58 @@ export default function PaginaDashboard() {
 
   const destinacaoData = useMemo(() => {
     if (recordsFullyFiltered.length === 0 || empresasColeta.length === 0) {
-        return [{ name: 'Recuperação', value: 0 }, { name: 'Descarte', value: 0 }];
+        return [];
     }
 
     const empresasMap = new Map(empresasColeta.map(e => [e.id, e]));
-    let recoveryWeight = 0;
-    let disposalWeight = 0;
     const disposalDestinations = ['Aterro Sanitário', 'Incineração'];
 
-    recordsFullyFiltered.forEach(record => {
-        const empresaId = record.empresaColetaId;
-        if (!empresaId) return;
+    const recoveryData = { value: 0, breakdown: {} };
+    const disposalData = { value: 0, breakdown: {} };
 
-        const empresa = empresasMap.get(empresaId);
+    recordsFullyFiltered.forEach(record => {
+        const empresa = empresasMap.get(record.empresaColetaId);
         if (!empresa?.destinacoes) return;
 
         const destinacoesDoTipo = empresa.destinacoes[record.wasteType] || [];
+        // Assumimos que a lista de destinações para um tipo de resíduo é consistente (ou todas de recuperação, ou todas de descarte)
         const isDisposal = destinacoesDoTipo.some(dest => disposalDestinations.includes(dest));
+        const destinationName = destinacoesDoTipo[0] || 'Não especificado'; // Pega o primeiro destino como representativo
+
+        const weight = record.peso;
 
         if (isDisposal) {
-            disposalWeight += record.peso;
+            disposalData.value += weight;
+            disposalData.breakdown[destinationName] = (disposalData.breakdown[destinationName] || 0) + weight;
         } else {
-            recoveryWeight += record.peso;
+            recoveryData.value += weight;
+            recoveryData.breakdown[destinationName] = (recoveryData.breakdown[destinationName] || 0) + weight;
         }
     });
+    
+    const formatBreakdown = (breakdown) => {
+        return Object.entries(breakdown)
+            .map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
+            .sort((a, b) => b.value - a.value);
+    };
 
-    return [
-        { name: 'Recuperação', value: parseFloat(recoveryWeight.toFixed(2)) },
-        { name: 'Descarte', value: parseFloat(disposalWeight.toFixed(2)) }
-    ];
+    const result = [];
+    if (recoveryData.value > 0) {
+        result.push({
+            name: 'Recuperação',
+            value: parseFloat(recoveryData.value.toFixed(2)),
+            breakdown: formatBreakdown(recoveryData.breakdown)
+        });
+    }
+    if (disposalData.value > 0) {
+        result.push({
+            name: 'Descarte',
+            value: parseFloat(disposalData.value.toFixed(2)),
+            breakdown: formatBreakdown(disposalData.breakdown)
+        });
+    }
+
+    return result;
   }, [recordsFullyFiltered, empresasColeta]);
 
 
@@ -380,7 +363,7 @@ export default function PaginaDashboard() {
 
   const summaryData = useMemo(() => processDataForSummaryCards(recordsFullyFiltered), [recordsFullyFiltered]);
   const wasteTypePieData = useMemo(() => processDataForAggregatedPieChart(recordsFullyFiltered), [recordsFullyFiltered]);
-  const { pieData: areaPieData } = useMemo(() => processDataForPieChartByWeight(recordsFullyFiltered, 'areaLancamento'), [recordsFullyFiltered]);
+  const areaPieData = useMemo(() => processDataForAreaChartWithBreakdown(recordsFullyFiltered), [recordsFullyFiltered]);
   const desvioDeAterroData = useMemo(() => processDataForDesvioDeAterro(recordsFullyFiltered, "Rejeito"), [recordsFullyFiltered]);
   const comparisonYears = useMemo(() => {
     const sortedYears = [...availableYears].sort((a, b) => b - a);
@@ -392,9 +375,7 @@ export default function PaginaDashboard() {
     return processDataForMonthlyYearlyComparison(allWasteRecords, comparisonYears[0], comparisonYears[1] || comparisonYears[0]);
   }, [allWasteRecords, comparisonYears]);
 
-  if (loadingAuth || loadingAllowedClientes) {
-      return <div className="p-8 text-center text-rich-soil">A carregar...</div>;
-  }
+  if (loadingAuth || loadingAllowedClientes) { return <div className="p-8 text-center text-rich-soil">A carregar...</div>; }
     
   return (
     <div className="bg-gray-50 font-comfortaa min-h-screen p-4 md:p-6 space-y-6">
@@ -431,56 +412,28 @@ export default function PaginaDashboard() {
          !allWasteRecords.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">Nenhum dado de resíduo registado para os clientes selecionados.</div>) : (
           <>
             <section>
-                <SectionTitle 
-                    title="VISÃO GERAL"
-                    isExpanded={sectionsVisibility.summary}
-                    onClick={() => toggleSection('summary')}
-                />
-                {sectionsVisibility.summary && (
-                    recordsFullyFiltered.length > 0 
-                        ? <SummaryCards summaryData={summaryData} isLoading={loadingRecords} /> 
-                        : <div className="p-6 bg-white rounded-b-lg shadow text-center text-rich-soil">Nenhum dado encontrado para os filtros selecionados.</div>
-                )}
+                <SectionTitle title="VISÃO GERAL" isExpanded={sectionsVisibility.summary} onClick={() => toggleSection('summary')} />
+                {sectionsVisibility.summary && <SummaryCards summaryData={summaryData} isLoading={loadingRecords} />}
             </section>
             <section>
-                <SectionTitle 
-                    title="GERAÇÃO POR MÊS (COMPARATIVO ANUAL)" 
-                    isExpanded={sectionsVisibility.monthlyComparison}
-                    onClick={() => toggleSection('monthlyComparison')}
-                />
-                {sectionsVisibility.monthlyComparison && (
-                    <MonthlyComparison chartData={monthlyComparisonChartData} yearsToCompare={actualYearsInComparisonData} isLoading={loadingRecords} />
-                )}
+                <SectionTitle title="GERAÇÃO POR MÊS (COMPARATIVO ANUAL)" isExpanded={sectionsVisibility.monthlyComparison} onClick={() => toggleSection('monthlyComparison')} />
+                {sectionsVisibility.monthlyComparison && <MonthlyComparison chartData={monthlyComparisonChartData} yearsToCompare={actualYearsInComparisonData} isLoading={loadingRecords} />}
             </section>
             <section>
-                <SectionTitle 
-                    title="COMPOSIÇÃO DA GERAÇÃO" 
-                    isExpanded={sectionsVisibility.composition}
-                    onClick={() => toggleSection('composition')}
-                />
+                <SectionTitle title="COMPOSIÇÃO DA GERAÇÃO" isExpanded={sectionsVisibility.composition} onClick={() => toggleSection('composition')} />
                 {sectionsVisibility.composition && (
-                    recordsFullyFiltered.length > 0 ? (
-                        <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-8">
-                            <WasteTypePieChart data={wasteTypePieData} isLoading={loadingRecords} />
-                            <AreaPieChart data={areaPieData} isLoading={loadingRecords} />
-                        </div>
-                    ) : (<div className="p-6 bg-white rounded-b-lg shadow text-center text-rich-soil">Sem dados de composição para o período selecionado.</div>)
+                    <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <WasteTypePieChart data={wasteTypePieData} isLoading={loadingRecords} />
+                        <AreaPieChart data={areaPieData} isLoading={loadingRecords} />
+                    </div>
                 )}
             </section>
             <section>
-                <SectionTitle 
-                    title="COMPOSIÇÃO DA DESTINAÇÃO" 
-                    isExpanded={sectionsVisibility.destination}
-                    onClick={() => toggleSection('destination')}
-                />
+                <SectionTitle title="COMPOSIÇÃO DA DESTINAÇÃO" isExpanded={sectionsVisibility.destination} onClick={() => toggleSection('destination')} />
                 {sectionsVisibility.destination && (
                     <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-6">
-                        {recordsFullyFiltered.length > 0 ? <DesvioDeAterro data={desvioDeAterroData} isLoading={loadingRecords} /> : <div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil min-h-[488px] flex items-center justify-center">Sem dados de desvio para o período selecionado.</div>}
-                        
-                        <DestinacaoChart 
-                            data={destinacaoData} 
-                            isLoading={loadingRecords || loadingEmpresas} 
-                        />
+                        <DesvioDeAterro data={desvioDeAterroData} isLoading={loadingRecords} />
+                        <DestinacaoChart data={destinacaoData} isLoading={loadingRecords || loadingEmpresas} />
                     </div>
                 )}
             </section>

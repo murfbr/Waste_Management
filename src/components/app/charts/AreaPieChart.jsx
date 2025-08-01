@@ -1,25 +1,60 @@
-// src/components/charts/AreaPieChart.jsx
-import React, { useMemo } from 'react';
+// src/components/app/charts/AreaPieChart.jsx
+import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { wasteTypeColors } from '../../../utils/wasteTypeColors'; // Importado
 
-const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#AA336A', '#3D9140', '#FF5733', '#8333FF'];
+// Paleta de cores para as áreas
+const CHART_COLORS = ['#0D4F5F', '#CE603E', '#DB8D37', '#174C2F', '#156172', '#51321D', '#BCBCBC'];
 
 // Função auxiliar para formatar números
-const formatNumberBR = (number) => {
+const formatNumberBR = (number, decimals = 1) => {
   if (typeof number !== 'number' || isNaN(number)) {
     return '0,0';
   }
-  // AJUSTADO: Agora formata com 1 casa decimal
-  return number.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 1 });
+  return number.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 };
 
-// RÓTULO CUSTOMIZADO: Posição, alinhamento e fonte ajustados.
-const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, fill }) => {
-    if (percent < 0.05) { // Oculta o rótulo para fatias muito pequenas
-        return null;
+// NOVO: Tooltip customizado para exibir o detalhamento por tipo de resíduo
+const CustomTooltip = ({ active, payload }) => {
+    if (active && payload && payload.length) {
+        const data = payload[0].payload;
+        const totalValue = data.value;
+        const areaName = data.name;
+        const breakdown = data.breakdown || [];
+
+        return (
+            <div className="p-3 bg-white bg-opacity-95 border border-early-frost rounded-lg shadow-lg font-comfortaa text-rich-soil">
+                <p className="font-lexend text-base mb-2 border-b border-early-frost pb-1">
+                    {areaName}: <span className="font-bold">{formatNumberBR(totalValue)} kg</span>
+                </p>
+                {breakdown.length > 0 && (
+                     <ul className="list-none p-0 m-0 text-sm space-y-1">
+                        {breakdown.map((item, index) => {
+                            const percentage = totalValue > 0 ? (item.value / totalValue) * 100 : 0;
+                            const color = wasteTypeColors[item.name]?.bg || wasteTypeColors.default.bg;
+                            return (
+                                <li key={index} className="flex justify-between items-center">
+                                    <div className="flex items-center">
+                                        <span className="w-3 h-3 rounded-full mr-2" style={{ backgroundColor: color }}></span>
+                                        <span>{item.name}:</span>
+                                    </div>
+                                    <span className="font-bold ml-3">{formatNumberBR(item.value)} kg ({formatNumberBR(percentage)}%)</span>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
+            </div>
+        );
     }
+    return null;
+};
+
+// Rótulo customizado
+const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, fill }) => {
+    if (percent < 0.05) return null;
     const RADIAN = Math.PI / 180;
-    const radius = outerRadius + 40;
+    const radius = outerRadius + 30;
     const x = cx + radius * Math.cos(-midAngle * RADIAN);
     const y = cy + radius * Math.sin(-midAngle * RADIAN);
 
@@ -28,44 +63,32 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, 
             x={x}
             y={y}
             fill={fill}
-            textAnchor="middle"
+            textAnchor={x > cx ? 'start' : 'end'}
             dominantBaseline="central"
-            className="text-sm font-bold"
+            className="font-comfortaa text-sm"
         >
             <tspan x={x} dy="0">{formatNumberBR(value)} kg</tspan>
-            {/* AJUSTADO: Percentual com 1 casa decimal */}
             <tspan x={x} dy="1.2em">{`(${(percent * 100).toFixed(1)}%)`}</tspan>
         </text>
     );
 };
 
 
-export default function AreaPieChart({
-  data,
-  isLoading,
-  titleContext = ""
-}) {
-  const chartTitle = `Composição por Área (Peso)${titleContext}`;
+export default function AreaPieChart({ data, isLoading }) {
+  const chartTitle = `Composição por Área`;
 
   if (isLoading) {
     return (
-      <div className="bg-white p-4 rounded-lg shadow h-[500px] flex flex-col">
-        <h3 className="text-md md:text-lg font-semibold text-gray-700 mb-3 text-center">{chartTitle}</h3>
-        <div className="flex-grow flex items-center justify-center">
-          <p className="text-center text-gray-500">Carregando dados...</p>
-        </div>
+      <div className="h-[400px] flex flex-col items-center justify-center">
+        <h3 className="text-lg font-lexend text-rich-soil mb-3 text-center">{chartTitle}</h3>
+        <p className="text-center text-rich-soil font-comfortaa">Carregando dados...</p>
       </div>
     );
   }
 
-  const totalValue = useMemo(() => {
-    if (!data || data.length === 0) return 0;
-    return data.reduce((sum, entry) => sum + (entry.value || 0), 0);
-  }, [data]);
-
   return (
-    <div className="bg-white p-4 rounded-lg shadow h-[500px] flex flex-col">
-      <h3 className="text-md md:text-lg font-semibold text-gray-700 mb-3 text-center">
+    <div className="h-[400px] flex flex-col">
+      <h3 className="text-lg font-lexend text-rich-soil mb-3 text-center">
         {chartTitle}
       </h3>
       {data && data.length > 0 ? (
@@ -74,34 +97,28 @@ export default function AreaPieChart({
             <Pie
               data={data}
               cx="50%"
-              // AJUSTE DE ESPAÇAMENTO: O valor 'cy' move o centro do gráfico para cima.
-              // Diminua o valor (ex: "40%") para subir mais e dar mais espaço para a legenda.
-              cy="45%"
+              cy="50%"
               labelLine={false}
               label={renderCustomizedLabel}
-              outerRadius="65%"
+              outerRadius="80%"
               fill="#82ca9d"
               dataKey="value"
             >
               {data.map((entry, index) => (
-                <Cell key={`cell-area-${index}`} fill={COLORS[index % COLORS.length]} />
+                <Cell key={`cell-area-${index}`} fill={CHART_COLORS[index % CHART_COLORS.length]} />
               ))}
             </Pie>
-            <Tooltip
-              formatter={(value, name) => [
-                  // AJUSTADO: Percentual com 1 casa decimal no tooltip
-                  `${formatNumberBR(value)} kg (${(value / totalValue * 100).toFixed(1)}%)`,
-                  name
-              ]}
-              labelStyle={{ fontWeight: 'bold' }}
-              wrapperClassName="rounded-md border-gray-300 shadow-lg"
+            {/* ATUALIZADO: Usa o novo tooltip customizado */}
+            <Tooltip content={<CustomTooltip />} />
+            <Legend 
+              verticalAlign="bottom"
+              wrapperStyle={{ paddingTop: "20px", fontFamily: 'Comfortaa', color: '#51321D' }}
             />
-            <Legend verticalAlign="bottom" />
           </PieChart>
         </ResponsiveContainer>
       ) : (
         <div className="flex-grow flex items-center justify-center">
-          <p className="text-center text-gray-500">Sem dados para o gráfico de área do cliente.</p>
+          <p className="text-center text-rich-soil font-comfortaa">Sem dados para exibir.</p>
         </div>
       )}
     </div>

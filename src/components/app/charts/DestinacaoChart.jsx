@@ -3,21 +3,45 @@
 import React from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
+// Cores definidas localmente, baseadas na sua identidade visual
 const COLORS = {
-    'Recuperação': '#22c55e', // Verde para recuperação/valorização
-    'Descarte': '#ef4444', // Vermelho para descarte/disposição
+    'Recuperação': '#174C2F', // abundant-green (sucesso)
+    'Descarte': '#CE603E',    // apricot-orange (alerta/descarte)
+};
+
+// Função auxiliar para formatar números
+const formatNumberBR = (number, decimals = 1) => {
+  if (typeof number !== 'number' || isNaN(number)) {
+    return '0,0';
+  }
+  return number.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 };
 
 const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
         const data = payload[0].payload;
-        // O peso total é passado em cada fatia do gráfico para o cálculo da porcentagem
-        const total = data.totalWeight;
-        const percent = total > 0 ? ((payload[0].value / total) * 100).toFixed(2) : 0;
+        const mainValue = data.value;
+        const mainName = data.name;
+        const breakdown = data.breakdown || [];
+
         return (
-            <div className="p-2 bg-white border border-gray-300 rounded-md shadow-lg">
-                <p className="font-bold text-gray-800">{data.name}</p>
-                <p className="text-sm text-gray-600">Peso: {payload[0].value.toLocaleString('pt-BR')} kg ({percent}%)</p>
+            <div className="p-3 bg-white bg-opacity-95 border border-early-frost rounded-lg shadow-lg font-comfortaa text-blue-coral">
+                <p className="font-lexend text-base mb-2 border-b border-early-frost pb-1">
+                    {mainName}: <span className="font-bold">{formatNumberBR(mainValue, 2)} kg</span>
+                </p>
+                {breakdown.length > 0 && (
+                     <ul className="list-none p-0 m-0 text-sm space-y-1">
+                        {breakdown.map((item, index) => {
+                            const percentage = mainValue > 0 ? (item.value / mainValue) * 100 : 0;
+                            return (
+                                <li key={index} className="flex justify-between items-center">
+                                    <span>{item.name}:</span>
+                                    <span className="font-bold ml-3">{formatNumberBR(item.value, 2)} kg ({formatNumberBR(percentage, 1)}%)</span>
+                                </li>
+                            );
+                        })}
+                    </ul>
+                )}
             </div>
         );
     }
@@ -27,50 +51,50 @@ const CustomTooltip = ({ active, payload }) => {
 export default function DestinacaoChart({ data, isLoading }) {
     if (isLoading) {
         return (
-            <div className="flex justify-center items-center h-full min-h-[400px] bg-white rounded-lg shadow">
-                <p className="text-gray-500">Calculando dados de destinação...</p>
+            <div className="flex justify-center items-center h-full min-h-[400px] bg-white rounded-lg shadow font-comfortaa">
+                <p className="text-blue-coral">Calculando dados de destinação...</p>
             </div>
         );
     }
 
-    if (!data || data.every(d => d.value === 0)) {
+    if (!data || data.length === 0 || data.every(d => d.value === 0)) {
         return (
-            <div className="flex justify-center items-center h-full min-h-[400px] bg-white rounded-lg shadow">
-                <p className="text-gray-500 text-center">
+            <div className="flex justify-center items-center h-full min-h-[400px] bg-white rounded-lg shadow font-comfortaa">
+                <p className="text-blue-coral text-center">
                     Sem dados suficientes para calcular a destinação.
                     <br />
-                    <span className="text-xs">Verifique os contratos dos clientes e as destinações das empresas de coleta.</span>
+                    <span className="text-xs">Verifique os contratos e destinações.</span>
                 </p>
             </div>
         );
     }
     
-    // Calcula o peso total para passar ao tooltip para o cálculo de porcentagem
-    const totalWeight = data.reduce((sum, entry) => sum + entry.value, 0);
-    const chartData = data.map(entry => ({ ...entry, totalWeight }));
-
     return (
         <div className="bg-white p-4 rounded-lg shadow h-full min-h-[488px] flex flex-col">
-            <h3 className="text-lg font-semibold text-gray-700 text-center mb-4">Destinação Final (Recuperação vs Descarte)</h3>
+            <h3 className="text-subtitulo font-lexend text-blue-coral text-center mb-4">
+                Destinação Final
+            </h3>
             <div className="flex-grow">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie
-                            data={chartData}
+                            data={data}
                             cx="50%"
                             cy="50%"
                             labelLine={false}
                             outerRadius="80%"
-                            fill="#8884d8"
+                            fill="#8884d8" // Cor padrão (não será usada por causa das Cells)
                             dataKey="value"
                             nameKey="name"
                         >
-                            {chartData.map((entry, index) => (
+                            {data.map((entry, index) => (
                                 <Cell key={`cell-${index}`} fill={COLORS[entry.name]} />
                             ))}
                         </Pie>
                         <Tooltip content={<CustomTooltip />} />
-                        <Legend formatter={(value) => <span className="text-gray-600">{value}</span>} />
+                        <Legend 
+                            formatter={(value) => <span className="text-blue-coral font-comfortaa">{value}</span>} 
+                        />
                     </PieChart>
                 </ResponsiveContainer>
             </div>
