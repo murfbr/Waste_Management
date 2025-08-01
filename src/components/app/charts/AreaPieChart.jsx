@@ -4,7 +4,7 @@ import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recha
 import { wasteTypeColors } from '../../../utils/wasteTypeColors'; // Importado
 
 // Paleta de cores para as áreas
-const CHART_COLORS = ['#0D4F5F', '#CE603E', '#DB8D37', '#174C2F', '#156172', '#51321D', '#BCBCBC'];
+const CHART_COLORS = ['#0D4F5F', '#CE603E', '#0D3520', '#BCBCBC', '#DB8D37', '#51321D', '#174C2F'];
 
 // Função auxiliar para formatar números
 const formatNumberBR = (number, decimals = 1) => {
@@ -80,15 +80,15 @@ export default function AreaPieChart({ data, isLoading }) {
   if (isLoading) {
     return (
       <div className="h-[400px] flex flex-col items-center justify-center">
-        <h3 className="text-lg font-lexend text-rich-soil mb-3 text-center">{chartTitle}</h3>
-        <p className="text-center text-rich-soil font-comfortaa">Carregando dados...</p>
+        <h3 className="text-acao font-lexend text-rain-forest mb-3 text-center">{chartTitle}</h3>
+        <p className="text-center text-rain-forest font-comfortaa">Carregando dados...</p>
       </div>
     );
   }
 
   return (
     <div className="h-[400px] flex flex-col">
-      <h3 className="text-lg font-lexend text-rich-soil mb-3 text-center">
+      <h3 className="text-acao font-lexend text-rain-forest mb-3 text-center">
         {chartTitle}
       </h3>
       {data && data.length > 0 ? (

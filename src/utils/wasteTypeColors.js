@@ -6,15 +6,15 @@
 
 export const wasteTypeColors = {
   Reciclável: {
-    bg: '#3f7fff',  
+    bg: '#0D4F5F',  // rain-forest
     text: '#FFFFFF'
   },
   Orgânico: {
-    bg: '#704729',   // Marrom escuro
+    bg: '#51321D',   // rich-soil
     text: '#FFFFFF'
   },
   Rejeito: {
-    bg: '#757575',   // Cinza médio
+    bg: '#BCBCBC',   // early-frost
     text: '#FFFFFF'
   },
   Papel: {
@@ -46,7 +46,7 @@ export const wasteTypeColors = {
     text: '#FFFFFF'
   },
   Eletrônicos: {
-    bg: '#333333',   // Cinza escuro
+    bg: '#f26c22',   // 
     text: '#FFFFFF'
   },
   'Pré-serviço': {

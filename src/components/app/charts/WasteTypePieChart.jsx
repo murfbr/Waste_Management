@@ -20,7 +20,7 @@ const CustomTooltip = ({ active, payload }) => {
         const subtypes = data.subtypes || [];
 
         return (
-            <div className="p-3 bg-white bg-opacity-95 border border-early-frost rounded-lg shadow-lg font-comfortaa text-rich-soil">
+            <div className="p-3 bg-white bg-opacity-95 border border-early-frost rounded-lg shadow-lg font-comfortaa text-rain-forest">
                 <p className="font-lexend text-base mb-2 border-b border-early-frost pb-1">
                     {mainName}: <span className="font-bold">{formatNumberBR(mainValue)} kg</span>
                 </p>
@@ -71,15 +71,15 @@ export default function WasteTypePieChart({ data, isLoading }) {
   if (isLoading) {
     return (
       <div className="h-[400px] flex flex-col items-center justify-center">
-        <h3 className="text-lg font-lexend text-rich-soil mb-3 text-center">{chartTitle}</h3>
-        <p className="text-center text-rich-soil font-comfortaa">Carregando dados...</p>
+        <h3 className="text-acao font-lexend text-rain-forest mb-3 text-center">{chartTitle}</h3>
+        <p className="text-center text-rain-forest font-comfortaa">Carregando dados...</p>
       </div>
     );
   }
 
   return (
     <div className="h-[400px] flex flex-col">
-      <h3 className="text-lg font-lexend text-rich-soil mb-3 text-center">
+      <h3 className="text-acao font-lexend text-rain-forest mb-3 text-center">
         {chartTitle}
       </h3>
       {data && data.length > 0 ? (

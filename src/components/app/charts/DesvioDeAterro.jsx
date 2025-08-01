@@ -22,15 +22,15 @@ export default function DesvioDeAterro({
   if (isLoading) {
     return (
       <div className="bg-white p-4 md:p-6 rounded-lg shadow font-comfortaa">
-        <h2 className="text-acao font-lexend text-blue-coral text-center mb-4">{chartTitle}</h2>
-        <p className="text-center text-blue-coral py-4">Carregando dados...</p>
+        <h2 className="text-acao font-lexend text-rain-forest text-center mb-4">{chartTitle}</h2>
+        <p className="text-center text-rain-forest py-4">Carregando dados...</p>
       </div>
     );
   }
 
   return (
     <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-      <h2 className="text-acao font-lexend text-blue-coral text-center mb-4">
+      <h2 className="text-acao font-lexend text-rain-forest text-center mb-4">
         {chartTitle}
       </h2>
       {data && data.length > 0 ? (
@@ -86,7 +86,7 @@ export default function DesvioDeAterro({
         </ResponsiveContainer>
       ) : (
         <div className="h-[400px] flex items-center justify-center font-comfortaa">
-          <p className="text-center text-blue-coral py-4">{baseNoDataMessage}{noDataMessageDetails}</p>
+          <p className="text-center text-rain-forest py-4">{baseNoDataMessage}{noDataMessageDetails}</p>
         </div>
       )}
     </div>
