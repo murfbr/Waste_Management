@@ -8,7 +8,7 @@ import { wasteTypeColors } from '../../utils/wasteTypeColors';
 const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
 const SUBTIPOS_ORGANICOS_FALLBACK = ["Pré-serviço", "Pós-serviço"];
 
-export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSuccessfulSubmit }) { 
+export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSuccessfulSubmit, formResetKey }) { 
   const { currentUser, appId } = useContext(AuthContext);
 
   const [areaLancamento, setAreaLancamento] = useState('');
@@ -72,7 +72,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
       setFormSuccess('');
       setPeso(0);
     }
-  }, [clienteSelecionado]);
+  }, [clienteSelecionado, formResetKey]);
 
   const formatPesoForDisplay = (valor) => {
     const valorString = String(valor).padStart(3, '0');
@@ -251,15 +251,15 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
       <div className="text-center">
         <label htmlFor="peso" className="sr-only">Peso Total (kg):</label>
         <div className="flex items-baseline justify-center">
+            {/* BUG FIX: Atributo 'pattern' removido para evitar conflito com o valor formatado (ex: "0,15") */}
             <input
                 ref={pesoInputRef} 
-                type="text" 
-                inputMode="numeric" 
+                type="tel" 
+                inputMode="numeric"
                 id="peso" 
                 value={formatPesoForDisplay(peso)}
                 onKeyDown={handlePesoKeyDown}
-                readOnly 
-                className="w-auto max-w-[200px] p-2 border-2 border-early-frost rounded-xl text-7xl font-bold text-center text-rich-soil focus:ring-2 focus:ring-blue-coral focus:border-blue-coral appearance-none"
+                className="w-auto max-w-[200px] p-2 border-2 border-early-frost rounded-xl text-7xl font-bold text-center text-rich-soil focus:ring-2 focus:ring-blue-coral focus:border-blue-coral appearance-none bg-white"
             />
             <span className="text-4xl font-semibold text-rich-soil ml-2">kg</span>
         </div>

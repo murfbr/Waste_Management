@@ -145,22 +145,31 @@ const processDataForMonthlyYearlyComparison = (records, year1, year2) => {
 };
 
 const processDataForSummaryCards = (records) => {
-  let totalGeralKg = 0, totalCompostavelKg = 0, totalReciclavelKg = 0, totalRejeitoKg = 0;
+  let totalGeralKg = 0, totalOrganicoKg = 0, totalReciclavelKg = 0, totalRejeitoKg = 0;
   records.forEach(record => {
     const weight = parseFloat(record.peso || 0);
     if (isNaN(weight)) return;
     totalGeralKg += weight;
     const type = record.wasteType ? record.wasteType.toLowerCase() : '';
-    if (type.includes('orgânico') || type.includes('compostavel')) { totalCompostavelKg += weight; } 
-    else if (type.includes('rejeito')) { totalRejeitoKg += weight; } 
-    else { totalReciclavelKg += weight; }
+    // Unifica a contagem sob 'orgânico'
+    if (type.includes('orgânico') || type.includes('compostavel')) {
+        totalOrganicoKg += weight;
+    } 
+    else if (type.includes('rejeito')) {
+        totalRejeitoKg += weight;
+    } 
+    else { // Assume que o resto é reciclável
+        totalReciclavelKg += weight;
+    }
   });
-  const percentCompostavel = totalGeralKg > 0 ? (totalCompostavelKg / totalGeralKg) * 100 : 0;
+
+  const percentOrganico = totalGeralKg > 0 ? (totalOrganicoKg / totalGeralKg) * 100 : 0;
   const percentReciclavel = totalGeralKg > 0 ? (totalReciclavelKg / totalGeralKg) * 100 : 0;
   const percentRejeito = totalGeralKg > 0 ? (totalRejeitoKg / totalGeralKg) * 100 : 0;
+
   return {
     totalGeralKg: parseFloat(totalGeralKg.toFixed(2)),
-    compostavel: { kg: parseFloat(totalCompostavelKg.toFixed(2)), percent: parseFloat(percentCompostavel.toFixed(2)) },
+    organico: { kg: parseFloat(totalOrganicoKg.toFixed(2)), percent: parseFloat(percentOrganico.toFixed(2)) },
     reciclavel: { kg: parseFloat(totalReciclavelKg.toFixed(2)), percent: parseFloat(percentReciclavel.toFixed(2)) },
     rejeito: { kg: parseFloat(totalRejeitoKg.toFixed(2)), percent: parseFloat(percentRejeito.toFixed(2)) },
   };
@@ -259,12 +268,21 @@ export default function PaginaDashboard() {
 
     recordsFullyFiltered.forEach(record => {
         const empresa = empresasMap.get(record.empresaColetaId);
-        if (!empresa?.destinacoes) return;
+        // BUG FIX: Adicionado 'record.wasteType' para garantir que o registro tenha um tipo de resíduo.
+        if (!empresa?.destinacoes || !record.wasteType) return;
 
-        const destinacoesDoTipo = empresa.destinacoes[record.wasteType] || [];
-        // Assumimos que a lista de destinações para um tipo de resíduo é consistente (ou todas de recuperação, ou todas de descarte)
+        // BUG FIX: Normaliza o 'wasteType' para garantir que a categoria principal seja usada na busca da destinação.
+        // Isso garante que sub-tipos como "Pós-serviço" sejam corretamente associados a "Orgânico".
+        let mainWasteType = record.wasteType;
+        if (mainWasteType.startsWith('Reciclável')) {
+            mainWasteType = 'Reciclável';
+        } else if (mainWasteType.startsWith('Orgânico')) {
+            mainWasteType = 'Orgânico';
+        }
+
+        const destinacoesDoTipo = empresa.destinacoes[mainWasteType] || [];
         const isDisposal = destinacoesDoTipo.some(dest => disposalDestinations.includes(dest));
-        const destinationName = destinacoesDoTipo[0] || 'Não especificado'; // Pega o primeiro destino como representativo
+        const destinationName = destinacoesDoTipo[0] || 'Não especificado'; 
 
         const weight = record.peso;
 

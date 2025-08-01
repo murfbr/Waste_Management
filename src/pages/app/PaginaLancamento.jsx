@@ -42,6 +42,9 @@ export default function PaginaLancamento() {
   const [selectedClienteId, setSelectedClienteId] = useState('');
   const [selectedClienteData, setSelectedClienteData] = useState(null);
   
+  // BUG FIX: Adiciona uma chave de estado para forçar a reinicialização do formulário.
+  const [formResetKey, setFormResetKey] = useState(0);
+
   const [isExporting, setIsExporting] = useState(false);
   
   const [modalState, setModalState] = useState({
@@ -300,12 +303,15 @@ export default function PaginaLancamento() {
     });
   };
 
+  // BUG FIX: Atualiza a função para recarregar os registros e reiniciar o formulário.
   const handleConfirmLimit = async (limitModalData) => {
     if (!limitModalData) return;
     const { limite, ...recordData } = limitModalData;
     const result = await addPendingRecord(recordData);
     if (result.success) {
       showMessage(result.message);
+      loadAndCombineRecords(); // Recarrega a lista de registros.
+      setFormResetKey(key => key + 1); // Dispara a reinicialização do formulário.
     } else {
       showMessage(result.message, true);
     }
@@ -401,10 +407,12 @@ export default function PaginaLancamento() {
       {!loadingUserClientes && selectedClienteId && selectedClienteData ? (
         <>
           <div className="bg-white p-6 rounded-lg shadow">
+            {/* BUG FIX: Passa a chave de reinicialização para o formulário. */}
             <WasteForm 
                 clienteSelecionado={selectedClienteData} 
                 onLimitExceeded={handleLimitExceeded}
                 onSuccessfulSubmit={loadAndCombineRecords}
+                formResetKey={formResetKey}
             />
           </div>
           <div className="bg-white rounded-lg shadow">

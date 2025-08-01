@@ -29,7 +29,6 @@ const CategoryCard = ({ title, percentage, weightKg, bgColor, textColor }) => (
 );
 
 
-// ALTERAÇÃO: O componente agora espera summaryData.rejeito
 export default function SummaryCards({ summaryData, isLoading }) {
 
   if (isLoading) {
@@ -40,8 +39,8 @@ export default function SummaryCards({ summaryData, isLoading }) {
     );
   }
 
-  // ALTERAÇÃO: A verificação agora busca por summaryData.rejeito
-  if (!summaryData || summaryData.rejeito === undefined) {
+  // A verificação agora busca por summaryData.organico
+  if (!summaryData || summaryData.organico === undefined) {
      return (
       <div className="bg-white p-4 md:p-6 rounded-b-lg shadow">
         <p className="text-center text-rich-soil py-8 font-comfortaa">Sem dados suficientes para os indicadores.</p>
@@ -66,9 +65,9 @@ export default function SummaryCards({ summaryData, isLoading }) {
         {/* Cards de Categoria - ocupando as 3 colunas restantes */}
         <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
           <CategoryCard
-            title="% Compostável"
-            percentage={summaryData.compostavel.percent}
-            weightKg={summaryData.compostavel.kg}
+            title="% Orgânico"
+            percentage={summaryData.organico.percent}
+            weightKg={summaryData.organico.kg}
             bgColor="bg-rich-soil"
             textColor="text-white"  
           />
@@ -79,7 +78,6 @@ export default function SummaryCards({ summaryData, isLoading }) {
             bgColor="bg-rain-forest"
             textColor="text-white"
           />
-          {/* ALTERAÇÃO: O card agora é "% Rejeito" e usa summaryData.rejeito */}
           <CategoryCard
             title="% Rejeito"
             percentage={summaryData.rejeito.percent}
