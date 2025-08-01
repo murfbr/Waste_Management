@@ -1,16 +1,16 @@
-// src/components/filters/YearSelector.jsx
+// src/components/app/filters/YearSelector.jsx
 import React, { useState, useEffect, useRef } from 'react';
+
+const ChevronDownIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-400"><polyline points="6 9 12 15 18 9"></polyline></svg>;
 
 export default function YearSelector({
   availableYears = [],
   selectedYears = [],
   onYearToggle = () => {},
-  disabled = false,
 }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
-  // Fecha o dropdown se clicar fora
   useEffect(() => {
     function handleClickOutside(event) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -18,50 +18,40 @@ export default function YearSelector({
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-    };
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  // Determina o que exibir no botão do dropdown
   const getDisplayValue = () => {
-    if (selectedYears.length === 0) return "Selecione um ano";
-    if (selectedYears.length === 1) return `Ano: ${selectedYears[0]}`;
+    if (selectedYears.length === 0) return "Selecione o ano";
+    if (selectedYears.length === 1) return selectedYears[0];
     return `${selectedYears.length} anos selecionados`;
   };
 
   return (
-    <div className="relative" ref={dropdownRef}>
-      <label htmlFor="yearFilterButton" className="block text-sm font-medium text-gray-700 mb-1">Ano(s)</label>
+    <div className="relative w-full" ref={dropdownRef}>
+      <label htmlFor="year-selector-button" className="block text-sm font-bold text-rich-soil mb-2">Ano</label>
       <button
+        id="year-selector-button"
         type="button"
-        id="yearFilterButton"
         onClick={() => setIsOpen(!isOpen)}
-        className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm bg-white text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-        aria-haspopup="listbox"
-        aria-expanded={isOpen}
-        disabled={disabled || availableYears.length === 0}
+        className="flex items-center justify-between w-full p-2 bg-white border border-early-frost rounded-md shadow-sm text-sm text-blue-coral"
+        disabled={availableYears.length === 0}
       >
-        <span className="block truncate">{getDisplayValue()}</span>
-        <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-          <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-            <path fillRule="evenodd" d="M10 3a1 1 0 01.707.293l3 3a1 1 0 01-1.414 1.414L10 5.414 7.707 7.707a1 1 0 01-1.414-1.414l3-3A1 1 0 0110 3zm-3.707 9.293a1 1 0 011.414 0L10 14.586l2.293-2.293a1 1 0 011.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
-          </svg>
-        </span>
+        <span>{getDisplayValue()}</span>
+        <ChevronDownIcon />
       </button>
 
       {isOpen && (
-        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none sm:text-sm">
+        <div className="absolute z-10 mt-1 w-full bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto">
           {availableYears.map(year => (
-            <label key={year} className="flex items-center px-3 py-2 text-sm text-gray-700 hover:bg-gray-100 cursor-pointer">
+            <label key={year} className="flex items-center px-3 py-2 text-sm text-blue-coral hover:bg-golden-orange hover:bg-opacity-20 cursor-pointer">
               <input
                 type="checkbox"
-                className="h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500 mr-2"
-                value={year}
+                className="h-4 w-4 text-apricot-orange border-early-frost rounded focus:ring-apricot-orange"
                 checked={selectedYears.includes(year)}
                 onChange={() => onYearToggle(year)}
               />
-              {year}
+              <span className="ml-3">{year}</span>
             </label>
           ))}
           {availableYears.length === 0 && (
