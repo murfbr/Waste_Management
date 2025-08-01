@@ -5,6 +5,9 @@ import { Outlet } from 'react-router-dom';
 import Sidebar from '../components/app/Sidebar'; 
 import AuthContext from '../context/AuthContext'; 
 
+// --- MUDANÇA: Importação do logo SVG ---
+import logoSvg from '../components/Simbolo-Laranja-SVG.svg';
+
 const HamburgerIcon = () => (
   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
@@ -54,16 +57,18 @@ export default function MainLayout() {
               ) : (
                 <div className="w-1/3"></div>
               )}
-              <div className="text-xl font-semibold text-gray-700 text-center w-1/3">
-                CtrlWaste
+
+              {/* --- MUDANÇA: Substituição do texto pelo logo no header mobile --- */}
+              <div className="flex justify-center w-1/3">
+                <img src={logoSvg} alt="CtrlWaste" className="h-8 w-auto" />
               </div>
+
               <div className="w-1/3"></div>
           </div>
         </header>
 
         <main className="flex-1 overflow-y-auto">
-          {/* MUDANÇA: Substituindo 'container' por classes de espaçamento explícitas */}
-          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
             <Outlet />
           </div>
         </main>

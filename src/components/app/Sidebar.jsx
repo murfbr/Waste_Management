@@ -5,6 +5,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import AuthContext from '../../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import ConfirmationModal from './ConfirmationModal'; 
+import logoSvg from '../Simbolo-Laranja-SVG.svg';
 
 // --- ÍCONES SVG (sem alterações) ---
 const LançamentoIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
@@ -84,17 +85,30 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
         aria-label="Sidebar principal"
       >
         <div className={`p-4 flex items-center border-b border-white/20 flex-shrink-0 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-          <h1 className={`font-lexend text-acao text-white transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'inline-block'}`}>
-            CtrlWaste
-          </h1>
-           <span className={`font-lexend text-acao text-white transition-opacity duration-200 ${isCollapsed ? 'inline-block' : 'hidden'}`}>
-            CW
+          
+          {/* --- MUDANÇA: Substituição do H1 pela imagem do logo --- */}
+          <img 
+            src={logoSvg} 
+            alt="CtrlWaste" 
+            title="CtrlWaste"
+            className={`h-8 w-auto transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'inline-block'}`}
+          />
+           
+           <span className={`font-lexend text-2xl font-bold text-white transition-opacity duration-200 ${isCollapsed ? 'inline-block' : 'hidden'}`}>
+            <img 
+            src={logoSvg} 
+            alt="CtrlWaste" 
+            className="h-8 w-auto"
+            title="CtrlWaste"
+          />
            </span>
+
           <button onClick={toggleSidebar} className="md:hidden p-1 text-white/80 hover:text-white" aria-label="Fechar menu">
             <CloseIcon />
           </button>
         </div>
 
+        {/* O restante do código permanece o mesmo */}
         <nav className="flex-grow overflow-y-auto p-2 space-y-1">
           {userProfile ? (
             <>
