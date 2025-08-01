@@ -2,13 +2,14 @@
 
 import React, { useState, useEffect } from 'react';
 
-// Configuração dos tipos de resíduo e suas destinações
+// BUG FIX: Adicionado "Aterro Sanitário" e "Incineração" às opções de destinação
+// para Reciclável e Orgânico, para refletir práticas reais de mercado.
 const TIPOS_RESIDUO_CONFIG = {
   'Reciclável': {
-    destinacoes: ['Reciclagem']
+    destinacoes: ['Reciclagem', 'Aterro Sanitário', 'Incineração']
   },
   'Orgânico': {
-    destinacoes: ['Compostagem', 'Biometanização']
+    destinacoes: ['Compostagem', 'Biometanização', 'Aterro Sanitário', 'Incineração']
   },
   'Rejeito': {
     destinacoes: ['Aterro Sanitário', 'Incineração']

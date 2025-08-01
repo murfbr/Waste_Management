@@ -6,7 +6,8 @@ import { addPendingRecord } from '../../services/offlineSyncService';
 import { wasteTypeColors } from '../../utils/wasteTypeColors'; 
 
 const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
-const SUBTIPOS_ORGANICOS_FALLBACK = ["Pré-serviço", "Pós-serviço"];
+// BUG FIX: Adicionado "Geral" como uma sub-categoria padrão para Orgânicos.
+const SUBTIPOS_ORGANICOS_FALLBACK = ["Geral", "Pré-serviço", "Pós-serviço"];
 
 export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSuccessfulSubmit, formResetKey }) { 
   const { currentUser, appId } = useContext(AuthContext);
@@ -94,7 +95,13 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
         setSelectedSubType('');
     } else {
         setSelectedMainCategory(categoria);
-        setSelectedSubType('');
+        // Se a categoria for "Orgânico" e a separação de orgânicos estiver ativa,
+        // pré-seleciona "Geral". Caso contrário, limpa o subtipo.
+        if (categoria === 'Orgânico' && clienteSelecionado?.fazSeparacaoOrganicosCompleta) {
+            setSelectedSubType('Geral');
+        } else {
+            setSelectedSubType('');
+        }
     }
     if (formError) setFormError('');
     if (formSuccess) setFormSuccess('');
@@ -244,6 +251,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
   }
   
   const showRecyclableSubTypes = selectedMainCategory === 'Reciclável' && opcoesSubtipoReciclavel.length > 0;
+  // BUG FIX: Garante que a seção de subtipos orgânicos seja exibida se a categoria principal for "Orgânico".
   const showOrganicSubTypes = selectedMainCategory === 'Orgânico' && opcoesSubtipoOrganico.length > 0;
 
   return (
@@ -251,7 +259,6 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
       <div className="text-center">
         <label htmlFor="peso" className="sr-only">Peso Total (kg):</label>
         <div className="flex items-baseline justify-center">
-            {/* BUG FIX: Atributo 'pattern' removido para evitar conflito com o valor formatado (ex: "0,15") */}
             <input
                 ref={pesoInputRef} 
                 type="tel" 

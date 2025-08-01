@@ -4,7 +4,8 @@ import React, { useState, useEffect, useMemo } from 'react';
 
 const CATEGORIAS_PRINCIPAIS_PADRAO = ["Reciclável", "Orgânico", "Rejeito"];
 const SUBTIPOS_RECICLAVEIS_COMUNS = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
-const SUBTIPOS_ORGANICOS_COMUNS = ["Pré-serviço", "Pós-serviço"];
+// BUG FIX: Adicionado "Geral" como uma sub-categoria padrão para Orgânicos.
+const SUBTIPOS_ORGANICOS_COMUNS = ["Geral", "Pré-serviço", "Pós-serviço"];
 const NOVA_CATEGORIA_VALUE = "__NOVA__";
 
 const LIMITES_PADRAO = {
@@ -142,7 +143,6 @@ export default function ClienteForm({
     }
   }, [selectedTemplateId, clientTemplates, isEditing, initialData]);
 
-  // CORREÇÃO: A variável que estava faltando foi adicionada aqui.
   const categoriasParaLimites = useMemo(() => {
     const outrasCategorias = arrayFromString(outrasCategoriasInput);
     const todasCategorias = new Set([...categoriasPrincipaisSelecionadas, ...outrasCategorias]);
@@ -403,3 +403,4 @@ export default function ClienteForm({
     </form>
   );
 }
+
