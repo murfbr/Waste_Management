@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo } from 'react';
 
 const CATEGORIAS_PRINCIPAIS_PADRAO = ["Reciclável", "Orgânico", "Rejeito"];
 const SUBTIPOS_RECICLAVEIS_COMUNS = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
-// BUG FIX: Adicionado "Geral" como uma sub-categoria padrão para Orgânicos.
 const SUBTIPOS_ORGANICOS_COMUNS = ["Geral", "Pré-serviço", "Pós-serviço"];
 const NOVA_CATEGORIA_VALUE = "__NOVA__";
 
@@ -54,6 +53,10 @@ export default function ClienteForm({
   const [ineaCodUnidade, setIneaCodUnidade] = useState('');
   const [limitesPorResiduo, setLimitesPorResiduo] = useState({...LIMITES_PADRAO});
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
+  
+  // --- INÍCIO DA NOVA LÓGICA ---
+  const [realtimeDashboardEnabled, setRealtimeDashboardEnabled] = useState(false);
+  // --- FIM DA NOVA LÓGICA ---
 
   const arrayFromString = (str) => str.split(',').map(item => item.trim()).filter(item => item.length > 0);
 
@@ -73,6 +76,9 @@ export default function ClienteForm({
     setIneaLogin(''); setIneaSenha(''); setIneaCnpj(''); setIneaCodUnidade('');
     setLimitesPorResiduo({...LIMITES_PADRAO});
     setSelectedTemplateId('');
+    // --- INÍCIO DA NOVA LÓGICA ---
+    setRealtimeDashboardEnabled(false);
+    // --- FIM DA NOVA LÓGICA ---
   };
 
   useEffect(() => {
@@ -122,6 +128,10 @@ export default function ClienteForm({
         setIneaLogin(''); setIneaSenha(''); setIneaCnpj(''); setIneaCodUnidade('');
       }
       setLimitesPorResiduo({ ...LIMITES_PADRAO, ...(initialData.limitesPorResiduo || {}) });
+      // --- INÍCIO DA NOVA LÓGICA ---
+      // Popula o estado do checkbox com o dado do cliente, ou 'false' se não existir.
+      setRealtimeDashboardEnabled(initialData.realtimeDashboardEnabled || false);
+      // --- FIM DA NOVA LÓGICA ---
     } else {
       resetForm();
     }
@@ -215,6 +225,10 @@ export default function ClienteForm({
         codUnidade: ineaCodUnidade.trim(),
       },
       limitesPorResiduo: limitesNumericos,
+      // --- INÍCIO DA NOVA LÓGICA ---
+      // Adiciona o novo campo ao objeto de dados a ser salvo.
+      realtimeDashboardEnabled: realtimeDashboardEnabled,
+      // --- FIM DA NOVA LÓGICA ---
     };
 
     await onSubmit(clienteData);
@@ -333,6 +347,25 @@ export default function ClienteForm({
               <label htmlFor="fazSeparacaoOrganicosCompleta" className="flex items-center text-sm font-medium text-gray-700"><input type="checkbox" id="fazSeparacaoOrganicosCompleta" checked={fazSeparacaoOrganicosCompleta} onChange={(e) => setFazSeparacaoOrganicosCompleta(e.target.checked)} className={`${checkboxStyle} mr-2`} />Cliente detalha os tipos de <span className="font-bold ml-1">orgânicos</span>?</label>
               {fazSeparacaoOrganicosCompleta && ( <div className="mt-3 pl-2"> <label className={labelStyle}>Sub-tipos de Orgânicos Detalhados*</label> <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2"> {SUBTIPOS_ORGANICOS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsOrganicosSelecionados.includes(subtipo)} onChange={() => handleSubtipoComumChange(subtipo, 'organico')} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))} </div> <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposOrganicosInput} onChange={(e) => setOutrosSubtiposOrganicosInput(e.target.value)} placeholder="Ex: Aparas, Cinzas" className={`${inputStyle} mt-1`} /></div> </div> )}
             </div>
+            
+            {/* --- INÍCIO DA NOVA LÓGICA --- */}
+            <div className="border border-gray-200 p-3 rounded-md mt-4 bg-amber-50">
+              <label htmlFor="realtimeDashboardEnabled" className="flex items-center text-sm font-medium text-gray-700">
+                <input 
+                  type="checkbox" 
+                  id="realtimeDashboardEnabled" 
+                  checked={realtimeDashboardEnabled} 
+                  onChange={(e) => setRealtimeDashboardEnabled(e.target.checked)} 
+                  className={`${checkboxStyle} mr-2`} 
+                />
+                Habilitar dashboard em tempo real?
+              </label>
+              <p className="text-xs text-gray-600 mt-1 pl-6">
+                Atenção: Causa um custo maior de leituras no banco de dados. Use apenas para clientes que necessitem de monitoramento ao vivo em eventos.
+              </p>
+            </div>
+            {/* --- FIM DA NOVA LÓGICA --- */}
+
           </div>
         </fieldset>
 
@@ -403,4 +436,3 @@ export default function ClienteForm({
     </form>
   );
 }
-
