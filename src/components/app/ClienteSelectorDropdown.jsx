@@ -44,18 +44,13 @@ export default function ClienteSelectorDropdown({
   };
 
   // Handler para o toggle "Selecionar Todos" dentro do dropdown
-  // Adaptação do onSelectAllClientesToggleChange para fechar o dropdown
   const handleSelectAllToggleWithClose = () => {
     if (onSelectAllClientesToggleChange) {
       onSelectAllClientesToggleChange();
     }
-    // A lógica original na PaginaDashboard já fechava o dropdown,
-    // mas se precisarmos forçar aqui, podemos.
-    // setIsClienteDropdownOpen(false); // Descomente se necessário
   };
 
   // Handler para seleção individual de cliente dentro do dropdown
-  // Adaptação do onClienteSelectionChange (não precisa fechar o dropdown automaticamente)
   const handleIndividualClienteSelection = (clienteId) => {
     if (onClienteSelectionChange) {
       onClienteSelectionChange(clienteId);
