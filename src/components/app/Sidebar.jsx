@@ -124,7 +124,9 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
                   <hr className={`my-2 border-white/20 ${isCollapsed && 'mx-4'}`} />
                   {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs font-lexend text-white/70 uppercase">Informativos</p>}
                   <NavItem to="/app/documentacao" icon={<DocsIcon />} text="Documentação" isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                  {/*
                   <NavItem to="/app/economia-circular" icon={<EconomiaIcon />} text="Economia Circular" isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                  */}
                   <NavItem to="/app/glossario" icon={<GlossarioIcon />} text="Glossário" isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}

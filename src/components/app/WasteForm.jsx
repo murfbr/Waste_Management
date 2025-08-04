@@ -217,7 +217,12 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
         setPeso(prev => Math.floor(prev / 10));
     }
     else if (key === 'Enter') {
+        // Primeiro, tentamos submeter o formulário.
         handleSubmit(e);
+        // Em seguida, removemos o foco do input para fechar o teclado.
+        if (pesoInputRef.current) {
+          pesoInputRef.current.blur();
+        }
     }
   };
 

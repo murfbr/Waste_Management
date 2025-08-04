@@ -1,7 +1,9 @@
 // src/pages/app/PaginaGlossario.jsx
+// Versão com a identidade visual aplicada e layout corrigido.
 
 import React, { useMemo } from 'react';
 
+// Os dados do glossário permanecem os mesmos.
 const glossarioData = [
     { term: "Resíduos Sólidos", definition: "Materiais descartados nas atividades humanas que, após seu uso, não têm mais utilidade imediata. Incluem resíduos domésticos, industriais, comerciais, hospitalares, entre outros." },
     { term: "Lixo Zero (Zero Waste)", definition: "Filosofia que busca repensar o ciclo de vida dos produtos, com o objetivo de reduzir ao máximo a geração de resíduos, priorizando a reutilização, reciclagem e compostagem, evitando o envio de materiais para aterros ou incineração." },
@@ -40,22 +42,21 @@ const glossarioData = [
     { term: "CETESB (Companhia Ambiental do Estado de São Paulo)", definition: "Órgão vinculado à Secretaria de Meio Ambiente, Infraestrutura e Logística do Estado de São Paulo, responsável pelo controle, fiscalização, monitoramento e licenciamento ambiental no estado. A CETESB atua na prevenção e controle da poluição, na gestão da qualidade do ar, da água e do solo, além de fornecer suporte técnico e emitir pareceres ambientais. É o equivalente ao INEA no estado do Rio de Janeiro." }
 ];
 
+// Componente para cada item do glossário, com as classes de estilo da marca.
 const GlossarioItem = ({ term, definition }) => (
-    <div className="py-6 border-b border-gray-200">
+    <div className="py-6 border-b border-early-frost/70">
         <dt>
-            <p className="text-lg leading-6 font-medium text-gray-900">{term}</p>
+            {/* Termo: Fonte Lexend, tamanho 'acao', cor 'abundant-green' */}
+            <p className="font-lexend text-acao font-medium text-abundant-green">{term}</p>
         </dt>
-        <dd className="mt-2 text-base text-gray-500">{definition}</dd>
+        <dd className="mt-2 font-comfortaa text-corpo text-rich-soil">{definition}</dd>
     </div>
 );
 
 export default function PaginaGlossario() {
-  // --- MELHORIA 1: Ordenar e agrupar os dados ---
+  // A lógica para agrupar e ordenar os dados permanece a mesma.
   const groupedData = useMemo(() => {
-    // Ordena os dados alfabeticamente pelo termo
     const sortedData = [...glossarioData].sort((a, b) => a.term.localeCompare(b.term));
-
-    // Agrupa os dados pela primeira letra do termo
     return sortedData.reduce((acc, item) => {
       const firstLetter = item.term[0].toUpperCase();
       if (!acc[firstLetter]) {
@@ -64,27 +65,30 @@ export default function PaginaGlossario() {
       acc[firstLetter].push(item);
       return acc;
     }, {});
-  }, []); // O array vazio [] significa que isso só será calculado uma vez
+  }, []);
 
-  // Pega as letras disponíveis para criar o menu de navegação
   const availableLetters = Object.keys(groupedData);
 
   return (
-    <div className="bg-white p-8 rounded-2xl shadow-lg">
-        <div className="max-w-7xl mx-auto">
-            <h1 className="text-4xl font-bold text-gray-800 text-center">Glossário de Resíduos</h1>
-            <p className="mt-4 text-lg text-gray-600 text-center max-w-3xl mx-auto">
+    // CORREÇÃO: Removido o fundo e o padding do container principal para eliminar a margem azul.
+    <div className="font-comfortaa">
+        {/* Card de conteúdo com fundo branco, que agora é o elemento principal visível. */}
+        <div className="bg-white p-6 sm:p-12 rounded-2xl shadow-2xl max-w-7xl mx-auto">
+            {/* Título principal: Fonte Lexend, tamanho 'titulo', cor 'blue-coral' */}
+            <h1 className="font-lexend text-titulo text-blue-coral text-center">Glossário de Resíduos</h1>
+            {/* Parágrafo introdutório: Fonte Comfortaa, tamanho 'corpo', cor 'exotic-plume' */}
+            <p className="mt-4 text-corpo text-exotic-plume text-center max-w-3xl mx-auto">
                 Uma lista de termos essenciais para entender a gestão de resíduos sólidos e o universo Lixo Zero.
             </p>
 
-            {/* --- MELHORIA 2: Menu de navegação por letra --- */}
-            <nav className="mt-12 sticky top-0 bg-white py-4 z-10 border-b-2 border-gray-200">
-                <ul className="flex justify-center flex-wrap gap-x-3 gap-y-2">
+            {/* Barra de navegação por letra */}
+            <nav className="mt-12 sticky top-0 bg-white/80 backdrop-blur-md py-4 z-10 border-b-2 border-early-frost">
+                <ul className="flex justify-center flex-wrap gap-3 sm:gap-4">
                     {availableLetters.map(letter => (
                         <li key={letter}>
                             <a 
                                 href={`#letra-${letter}`}
-                                className="block w-8 h-8 flex items-center justify-center text-sm font-bold text-gray-500 bg-gray-100 rounded-full hover:bg-indigo-500 hover:text-white transition-colors duration-200"
+                                className="w-10 h-10 flex items-center justify-center font-lexend text-sm font-bold text-blue-coral bg-blue-coral/10 rounded-full hover:bg-apricot-orange hover:text-white transition-all duration-300 ease-in-out transform hover:scale-110"
                             >
                                 {letter}
                             </a>
@@ -95,10 +99,11 @@ export default function PaginaGlossario() {
 
             <div className="mt-8">
                 <dl>
-                    {/* --- MELHORIA 3: Renderização em seções agrupadas --- */}
+                    {/* Renderização das seções agrupadas por letra */}
                     {availableLetters.map(letter => (
-                        <div key={letter} id={`letra-${letter}`} className="pt-8 -mt-8"> {/* Padding e margem negativa para o scroll */}
-                            <h2 className="text-3xl font-bold text-indigo-600 border-b-2 border-indigo-200 pb-2 mb-4">
+                        <div key={letter} id={`letra-${letter}`} className="pt-12 -mt-8 scroll-mt-24">
+                            {/* Título da seção: Fonte Lexend, tamanho 'subtitulo', cor 'apricot-orange' */}
+                            <h2 className="font-lexend text-subtitulo text-apricot-orange border-b-2 border-golden-orange/40 pb-2 mb-6">
                                 {letter}
                             </h2>
                             <div className="space-y-4">
