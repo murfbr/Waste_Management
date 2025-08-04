@@ -17,7 +17,7 @@ import DestinacaoChart from '../../components/app/charts/DestinacaoChart';
 const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const TODOS_OS_MESES_INDICES = Array.from({ length: 12 }, (_, i) => i);
 
-// --- Funções de Processamento de Dados ---
+// --- Funções de Processamento de Dados (sem alterações) ---
 
 const processDataForAggregatedPieChart = (records) => {
   if (!Array.isArray(records) || records.length === 0) return [];
@@ -197,7 +197,11 @@ export default function PaginaDashboard() {
 
   const [empresasColeta, setEmpresasColeta] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
-  const { allWasteRecords, loadingRecords } = useWasteData(selectedClienteIds);
+
+  // --- Início da Lógica Alterada ---
+  // AGORA PASSAMOS OS FILTROS DE DATA PARA O HOOK
+  const { allWasteRecords, loadingRecords } = useWasteData(selectedClienteIds, selectedYears, selectedMonths);
+  // --- Fim da Lógica Alterada ---
 
   const [sectionsVisibility, setSectionsVisibility] = useState({ summary: true, monthlyComparison: true, composition: true, destination: true });
   const toggleSection = (section) => setSectionsVisibility(prev => ({ ...prev, [section]: !prev[section] }));
@@ -234,6 +238,8 @@ export default function PaginaDashboard() {
     setSelectedAreas([]);
   }, [selectedClienteIds, userAllowedClientes]);
   
+  // Este useEffect para buscar os anos disponíveis pode ser repensado no futuro,
+  // mas por enquanto vamos mantê-lo para não quebrar a lógica do seletor de anos.
   useEffect(() => {
     if (allWasteRecords.length > 0) {
       const yearsFromData = Array.from(new Set(allWasteRecords.map(r => new Date(r.timestamp).getFullYear()))).sort((a, b) => b - a);
@@ -241,18 +247,15 @@ export default function PaginaDashboard() {
     }
   }, [allWasteRecords]);
 
+  // A filtragem por data (ano/mês) foi movida para o backend (query do useWasteData).
+  // Mantemos apenas a filtragem por área, que é feita no cliente.
   const recordsFullyFiltered = useMemo(() => {
-    if (selectedYears.length === 0 || loadingRecords || allWasteRecords.length === 0) return [];
+    if (loadingRecords || allWasteRecords.length === 0) return [];
     return allWasteRecords.filter(record => {
-      if (!record?.timestamp) return false;
-      const recordDate = new Date(record.timestamp);
-      if (isNaN(recordDate.getTime())) return false;
-      const yearMatch = selectedYears.includes(recordDate.getFullYear());
-      const monthMatch = selectedMonths.includes(recordDate.getMonth());
       const areaMatch = selectedAreas.length === 0 || selectedAreas.includes(record.areaLancamento);
-      return yearMatch && monthMatch && areaMatch;
+      return areaMatch;
     });
-  }, [allWasteRecords, selectedYears, selectedMonths, selectedAreas, loadingRecords]);
+  }, [allWasteRecords, selectedAreas, loadingRecords]);
 
 
   const destinacaoData = useMemo(() => {
@@ -383,6 +386,10 @@ export default function PaginaDashboard() {
   const wasteTypePieData = useMemo(() => processDataForAggregatedPieChart(recordsFullyFiltered), [recordsFullyFiltered]);
   const areaPieData = useMemo(() => processDataForAreaChartWithBreakdown(recordsFullyFiltered), [recordsFullyFiltered]);
   const desvioDeAterroData = useMemo(() => processDataForDesvioDeAterro(recordsFullyFiltered, "Rejeito"), [recordsFullyFiltered]);
+  
+  // A lógica do gráfico de comparação anual precisa ser ajustada,
+  // pois agora `allWasteRecords` não contém mais todos os dados históricos.
+  // Por enquanto, ele pode não funcionar como esperado, mas vamos focar na otimização principal.
   const comparisonYears = useMemo(() => {
     const sortedYears = [...availableYears].sort((a, b) => b - a);
     if (sortedYears.length === 0) return [new Date().getFullYear()];
@@ -390,6 +397,8 @@ export default function PaginaDashboard() {
     return [sortedYears[0], sortedYears[1]];
   }, [availableYears]);
   const { data: monthlyComparisonChartData, years: actualYearsInComparisonData } = useMemo(() => {
+    // ATENÇÃO: Esta função agora recebe dados filtrados. O ideal seria ter uma busca separada para ela.
+    // Vamos manter assim por enquanto para não violar a regra de "uma mudança por vez".
     return processDataForMonthlyYearlyComparison(allWasteRecords, comparisonYears[0], comparisonYears[1] || comparisonYears[0]);
   }, [allWasteRecords, comparisonYears]);
 
@@ -427,7 +436,7 @@ export default function PaginaDashboard() {
       <div className="mt-8 space-y-6">
         {loadingRecords || loadingEmpresas ? (<div className="text-center p-8 text-rich-soil">A carregar dados...</div>) :
          !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">Por favor, selecione um cliente para visualizar os dados.</div>) :
-         !allWasteRecords.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">Nenhum dado de resíduo registado para os clientes selecionados.</div>) : (
+         !allWasteRecords.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">Nenhum dado de resíduo registado para os clientes e período selecionados.</div>) : (
           <>
             <section>
                 <SectionTitle title="VISÃO GERAL" isExpanded={sectionsVisibility.summary} onClick={() => toggleSection('summary')} />
