@@ -32,11 +32,10 @@ export default function HowItWorksSection() {
                 <div className="mt-20">
                     <div className="grid grid-cols-1 gap-12 md:grid-cols-2 lg:grid-cols-3">
                         <Step number="1" title="Instale e personalize">
-                            <ul className="list-disc list-inside">
-                                <li>Ative o Ctrl Waste no seu tablet, celular ou desktop.</li>
-                                <li>Personalize as categorias de resíduos e áreas da sua operação.</li>
-                                <li>Registe os seus fornecedores de coleta.</li>
-                            </ul>
+                            <p>
+                                Ative o Ctrl Waste no seu tablet, celular ou desktop. Personalize as categorias de resíduos e áreas da sua operação.
+                                Registe os seus fornecedores de coleta.
+                            </p>
                         </Step>
                         <Step number="2" title="Registre as pesagens">
                             <p>Na rotina diária, os colaboradores pesam os resíduos em balanças próprias e inserem os dados em tempo real no sistema, com até 3 cliques.</p>
@@ -44,7 +43,7 @@ export default function HowItWorksSection() {
                         <Step number="3" title="Visualize os dados">
                             <p>Os dashboards mostram a composição dos resíduos, geração por área, taxa de desvio de aterro e a destinação final.</p>
                         </Step>
-                        <Step number="4" title="Gere relatórios e MTRs">
+                        <Step number="4" title="Gere relatórios e MTRs/CDFs">
                            <p>Emita relatórios técnicos com um clique e deixe o sistema automatizar a geração do Manifesto de Transporte de Resíduos (MTR).</p>
                         </Step>
                         <Step number="5" title="Tome decisões estratégicas">

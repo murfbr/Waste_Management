@@ -7,7 +7,7 @@ import { signOut } from 'firebase/auth';
 import ConfirmationModal from './ConfirmationModal'; 
 import logoSvg from '../Simbolo-Laranja-SVG.svg';
 
-// --- ÍCONES SVG (sem alterações) ---
+// --- ÍCONES SVG ---
 const LançamentoIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
 const DashboardIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
 const DocsIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
@@ -19,6 +19,8 @@ const LogoutIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentCol
 const ChevronDoubleLeftIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M18.75 19.5l-7.5-7.5 7.5-7.5m-6 15L5.25 12l7.5-7.5" /></svg>;
 const ChevronDoubleRightIcon = (props) => <svg {...props} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" d="M11.25 4.5l7.5 7.5-7.5 7.5m-6-15l7.5 7.5-7.5 7.5" /></svg>;
 const CloseIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>;
+// --- NOVO ÍCONE ADICIONADO ---
+const MtrIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>;
 
 
 const NavItem = ({ to, icon, text, isCollapsed, onClick }) => {
@@ -86,7 +88,6 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
       >
         <div className={`p-4 flex items-center border-b border-white/20 flex-shrink-0 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
           
-          {/* --- MUDANÇA: Substituição do H1 pela imagem do logo --- */}
           <img 
             src={logoSvg} 
             alt="CtrlWaste" 
@@ -108,7 +109,6 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
           </button>
         </div>
 
-        {/* O restante do código permanece o mesmo */}
         <nav className="flex-grow overflow-y-auto p-2 space-y-1">
           {userProfile ? (
             <>
@@ -124,9 +124,6 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
                   <hr className={`my-2 border-white/20 ${isCollapsed && 'mx-4'}`} />
                   {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs font-lexend text-white/70 uppercase">Informativos</p>}
                   <NavItem to="/app/documentacao" icon={<DocsIcon />} text="Documentação" isCollapsed={isCollapsed} onClick={handleLinkClick} />
-                  {/*
-                  <NavItem to="/app/economia-circular" icon={<EconomiaIcon />} text="Economia Circular" isCollapsed={isCollapsed} onClick={handleLinkClick} />
-                  */}
                   <NavItem to="/app/glossario" icon={<GlossarioIcon />} text="Glossário" isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}
@@ -145,6 +142,8 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
                 <>
                   <NavItem to="/app/admin/clientes" icon={<AdminClientesIcon />} text="Clientes" isCollapsed={isCollapsed} onClick={handleLinkClick} />
                   <NavItem to="/app/admin/empresas-coleta" icon={<AdminClientesIcon />} text="Empresas de Coleta" isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                  {/* --- NOVO LINK ADICIONADO --- */}
+                  <NavItem to="/app/admin/gestao-mtr" icon={<MtrIcon />} text="Gestão MTR/CDF" isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}
             </>

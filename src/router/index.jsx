@@ -28,6 +28,8 @@ const PaginaAdminEmpresasColeta = React.lazy(() => import('../pages/app/PaginaAd
 const PaginaDocumentacao = React.lazy(() => import('../pages/app/PaginaDocumentacao'));
 const PaginaEconomiaCircular = React.lazy(() => import('../pages/app/PaginaEconomiaCircular'));
 const PaginaGlossario = React.lazy(() => import('../pages/app/PaginaGlossario'));
+// --- NOVA LINHA ADICIONADA ---
+const PaginaGestaoMTR = React.lazy(() => import('../pages/app/PaginaGestaoMTR'));
 
 
 // --- Layouts de Rota ---
@@ -68,7 +70,7 @@ export default function AppRoutes() {
           <Route index element={ <ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}><PaginaLancamento /></ProtectedRoute> } />
           <Route path="lancamento" element={ <ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}><PaginaLancamento /></ProtectedRoute> } />
           <Route path="dashboard" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaDashboard /></ProtectedRoute> } />
-          
+
           <Route path="documentacao" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaDocumentacao /></ProtectedRoute> } />
           <Route path="economia-circular" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaEconomiaCircular /></ProtectedRoute> } />
           <Route path="glossario" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaGlossario /></ProtectedRoute> } />
@@ -78,6 +80,7 @@ export default function AppRoutes() {
             <Route path="usuarios" element={ <ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaAdminUsuarios /></ProtectedRoute> } />
             <Route path="clientes" element={ <ProtectedRoute allowedRoles={['master']}><PaginaAdminClientes /></ProtectedRoute> } />
             <Route path="empresas-coleta" element={ <ProtectedRoute allowedRoles={['master']}><PaginaAdminEmpresasColeta /></ProtectedRoute> } />
+            <Route path="gestao-mtr" element={ <ProtectedRoute allowedRoles={['master']}><PaginaGestaoMTR /></ProtectedRoute> } />
           </Route>
         </Route>
 
