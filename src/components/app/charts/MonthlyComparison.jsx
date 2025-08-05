@@ -19,7 +19,7 @@ export default function MonthlyYearlyComparisonChart({
   if (isLoading) {
     return (
       <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-        <h2 className="text-lg md:text-xl font-semibold text-gray-700 mb-4">{chartTitle}</h2>
+        <h2 className="text-acao font-lexend text-rain-forest mb-3 text-center">{chartTitle}</h2>
         <p className="text-center text-gray-500 py-4">Carregando dados...</p>
       </div>
     );
@@ -30,7 +30,7 @@ export default function MonthlyYearlyComparisonChart({
 
   return (
     <div className="bg-white p-4 md:p-6 rounded-lg shadow">
-      <h2 className="text-lg md:text-xl font-semibold text-gray-700 mb-4">
+      <h2 className="text-acao font-lexend text-rain-forest mb-3 text-center">
         {chartTitle}
       </h2>
       {hasData ? (

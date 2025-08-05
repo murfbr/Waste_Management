@@ -75,7 +75,7 @@ export default function SummaryCards({ summaryData, isLoading }) {
             title="% Reciclável"
             percentage={summaryData.reciclavel.percent}
             weightKg={summaryData.reciclavel.kg}
-            bgColor="bg-rain-forest"
+            bgColor="bg-blue-coral"
             textColor="text-white"
           />
           <CategoryCard
