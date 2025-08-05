@@ -284,7 +284,9 @@ export default function PaginaAdminClientes() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold text-gray-800">Gerir Clientes</h1>
-      
+
+{/*       
+      #################BLOCO COMENTADO PARA NÃO APARECER ATÉ TERMOS RETORNO DO INEA#########################
       <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mt-6 rounded-md shadow-sm" role="alert">
         <p className="font-bold">Ferramenta de Diagnóstico</p>
         <p className="text-sm">Se estiver com erros 500 ao salvar, use este botão para verificar se a chave de criptografia está configurada corretamente no ambiente das Cloud Functions.</p>
@@ -295,7 +297,7 @@ export default function PaginaAdminClientes() {
           Verificar Configuração da Chave
         </button>
         {configCheckResult && <p className="mt-2 text-sm font-mono bg-yellow-200 p-2 rounded">{configCheckResult}</p>}
-      </div>
+      </div> */}
 
       <MessageBox message={message} isError={isError} onClose={() => setMessage('')} />
 
