@@ -1,0 +1,217 @@
+{
+  "navbar": {
+    "home": "Home",
+    "product": "The Product",
+    "about": "About Us",
+    "contact": "Contact",
+    "login": "Login"
+  },
+  "hero": {
+    "title": "Intuitive technology. Measurable results.",
+    "paragraph1": "A complete platform for waste monitoring and management, designed for those who truly operate: an intuitive system to record, report, and reduce waste through accurate data, real-time dashboards, automatic MTR issuance, and actionable insights for strategic decisions.",
+    "paragraph2": "From recording to analysis, everything your company needs to make data-driven decisions, reduce operational costs, and advance sustainability efficiently.",
+    "buttonDemo": "Request a Demo",
+    "buttonLearn": "Learn More"
+  },
+  "benefits": {
+    "sectionTitle": "Why choose Ctrl+Waste?",
+    "cards": {
+      "dataEconomy": {
+        "title": "Data-driven savings",
+        "text": "Identify waste by type, area, or period. Act precisely to cut costs."
+      },
+      "operationControl": {
+        "title": "Operational control power",
+        "text": "Contract collection services based on the actual amount of waste generated."
+      },
+      "legalAutomation": {
+        "title": "Automate legal obligations",
+        "text": "Automatic issuance of MTRs and reports. Less manual work, more productivity."
+      },
+      "evidenceDecision": {
+        "title": "Evidence-based decisions",
+        "text": "Turn waste into strategic indicators for your operation. Easy to use and implement."
+      }
+    }
+  },
+  "platform": {
+    "sectionTitle": "The complete platform for your Waste Management",
+    "features": {
+      "dashboards": {
+        "title": "Real-time dashboards",
+        "text1": "Clearly and interactively visualize your operation’s key indicators:",
+        "list": [
+          "Waste weight by type",
+          "Landfill diversion rate (Zero Waste Methodology)",
+          "Tracking of goal progress",
+          "Comparisons by area, unit, and period"
+        ],
+        "highlight": "All 100% digital, updated in real-time."
+      },
+      "quickEntry": {
+        "title": "Fast and efficient data entry",
+        "text1": "Simplified data recording via:",
+        "list": [
+          "Any mobile device",
+          "Waste weighing scale (to be provided by the client)",
+          "Intuitive interface with customizable categories per operation"
+        ]
+      },
+      "reports": {
+        "title": "Reports and compliance",
+        "text1": "Monitor, export, and validate the results of your waste management:",
+        "list": [
+          "Technical and management reports generated in real-time with one click",
+          "Automated CSV export",
+          "Instant issuance of the MTR (Waste Transportation Manifest)",
+          "Solid basis for audits, certifications, and ESG"
+        ],
+        "aside": "💡 Save up to 80% of the time spent on operational tasks."
+      }
+    }
+  },
+  "productHero": {
+    "title": "Turn Waste into Results",
+    "subtitle": "A complete solution, from registration to analysis, for smarter and more economical waste management."
+  },
+  "included": {
+    "title": "What’s included?",
+    "description": "With Ctrl Waste, your operation has a complete solution to turn data into efficient decisions:",
+    "list": [
+      "Software as a Service (SaaS) with multi-user access",
+      "Real-time dashboards for waste monitoring and analysis",
+      "Automated and customized issuance of MTR (Waste Transport Manifest)"
+    ]
+  },
+  "requirements": {
+    "title": "What do you need?",
+    "description": "To use Ctrl Waste efficiently, your setup should include:",
+    "list": [
+      "Tablet or mobile phone for daily weight logging",
+      "Scale for weighing waste",
+      "Operational access: one person can record the weight in the system in 3 clicks – simple, fast, and hassle-free."
+    ]
+  },
+  "howItWorks": {
+    "title": "How does it work in practice?",
+    "subtitle": "Turning waste into data and data into savings is simple with Ctrl Waste. See how your operation works in 5 steps:",
+    "steps": [
+      {
+        "title": "Install and customize",
+        "text": "Activate Ctrl Waste on your tablet, mobile, or desktop. Customize the waste categories and areas of your operation. Register your collection providers."
+      },
+      {
+        "title": "Record the weights",
+        "text": "In daily routines, employees weigh the waste on dedicated scales and enter the data into the system in real time with up to 3 clicks."
+      },
+      {
+        "title": "Visualize the data",
+        "text": "Dashboards show waste composition, generation by area, landfill diversion rate, and final destination."
+      },
+      {
+        "title": "Generate reports and MTRs/CDFs",
+        "text": "Generate technical reports with one click and let the system automate the creation of the Waste Transport Manifest (MTR)."
+      },
+      {
+        "title": "Make strategic decisions",
+        "text": "Use platform insights to reduce waste, review processes, plan actions, and save resources."
+      }
+    ]
+  },
+  "keyFeatures": {
+    "title": "Key Features of Ctrl Waste",
+    "features": [
+      {
+        "title": "Export your data",
+        "text": "Download all waste records generated by your operation easily in CSV."
+      },
+      {
+        "title": "Data by waste category",
+        "text": "Track the volume and type of waste by area or process."
+      },
+      {
+        "title": "One-click reports",
+        "text": "Generate technical and management reports instantly."
+      },
+      {
+        "title": "Your data is yours",
+        "text": "Total transparency and autonomy: the data stays with you."
+      },
+      {
+        "title": "Team management",
+        "text": "Add, view, and manage who is recording data in the system."
+      },
+      {
+        "title": "Ready for larger operations",
+        "text": "Recommended for hotel chains, restaurants, or units with high data volume."
+      },
+      {
+        "title": "Quick logging",
+        "text": "Simplified entry: record a new weighing in under 3 seconds."
+      },
+      {
+        "title": "Don’t worry about MTRs",
+        "text": "Automated and customized MTR issuance to ensure documentation matches reality."
+      }
+    ]
+  },
+  "contact": {
+    "title": "Contact Us",
+    "subtitle": "Would you like to request a demo or ask a question? Fill out the form and our team will get back to you soon.",
+    "legend": "Your Information",
+    "fullName": "Full Name",
+    "fullNamePlaceholder": "Your full name",
+    "email": "Email",
+    "emailPlaceholder": "your.email@example.com",
+    "company": "Company",
+    "companyPlaceholder": "Your company name",
+    "message": "Message",
+    "messagePlaceholder": "How can we help?",
+    "successMessage": "Message sent successfully! We appreciate your contact.",
+    "errorMessage": "An error occurred while sending your message. Please try again later.",
+    "send": "Send Message",
+    "sending": "Sending..."
+  },
+  "aboutHero": {
+    "title": "About us",
+    "subtitle": "Technology to turn waste into data and data into savings.",
+    "paragraph1": "Ctrl Waste is a cleantech solution developed to make waste management more efficient, economical, and strategic. We combine intelligent software and accessible hardware (scale + tablet) to offer the control your operation needs: by weight, type of waste, generation point, and period.",
+    "paragraph2": "With Ctrl Waste, your company gains full visibility over what it discards, identifies opportunities to reduce waste, and automates essential processes, such as issuing the Waste Transport Manifest (MTR).",
+    "paragraph3": "More than just monitoring, we help you make decisions based on real data — a key step toward achieving ESG goals, certifications, and operational gains."
+  },
+  "valuesSection": {
+  "title": "Our values",
+  "description": "We believe technology should serve a greater purpose. Our values guide every line of code, every feature, and every interaction we have with our clients and the planet.",
+  "subtitle": "Our Principles",
+  "values": [
+    { "text": "Practical and measurable sustainability", "icon": "🌱" },
+    { "text": "Innovation with purpose", "icon": "🚀" },
+    { "text": "Excellence in what we deliver", "icon": "💡" },
+    { "text": "Transparency in data and processes", "icon": "🔍" },
+    { "text": "Scalability that grows with your business", "icon": "📈" }
+  ]
+},
+"teamSection": {
+  "title": "Who we are",
+  "members": {
+    "pedro": {
+      "bio": "Pedro is a bioprocess engineer (UFRJ), with a master's in Sustainability Science (PUC-Rio), and a specialist in Sustainability Design. Founder of HUBIS, he has been recognized for leading award-winning environmental and social impact projects. At Ctrl Waste, he combines strategic vision, innovation, and purpose to transform the waste sector with scalable and sustainable solutions."
+    },
+    "gustavo": {
+      "bio": "Gustavo is a technology specialist with experience in no-code development, agile team leadership, and digital project management. With international experience in Ireland and work in marketing companies, he brings a user-centered and efficiency-driven approach. At Ctrl Waste, he leads tech solutions that drive environmental impact through accessible innovation."
+    },
+    "julia": {
+      "bio": "With a background in Advertising and specializations in Branding (University of Amsterdam) and Business Management (ESS – Prague), Julia integrates creativity, strategy, and sustainability. Her trajectory includes award-winning projects that connect marketing and ESG. At Ctrl Waste, she leads brand building and commercial strategy, promoting ethical growth and positive impact."
+    }
+  }
+},
+  "footer": {
+    "slogan": "Optimizing waste management.",
+    "links": {
+      "home": "Home",
+      "product": "The Product",
+      "contact": "Contact"
+    },
+    "rights": "All rights reserved 2025."
+  }
+}

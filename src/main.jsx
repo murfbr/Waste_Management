@@ -4,6 +4,7 @@ import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App'; // Seu componente App principal
 import { BrowserRouter } from 'react-router-dom'; // Importa o BrowserRouter
+import './i18n';
 import './styles/main.css'; // Seus estilos globais
 
 ReactDOM.createRoot(document.getElementById('root')).render(

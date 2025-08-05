@@ -1,8 +1,14 @@
 import React from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 export default function Footer() {
+  const { t, i18n } = useTranslation();
+  const location = useLocation();
+  const lang = i18n.language;
+  const prefix = lang === 'pt' ? '' : `/${lang}`;
   const currentYear = new Date().getFullYear();
+
   const linkClasses = "font-comfortaa text-early-frost hover:text-apricot-orange transition-colors duration-300";
 
   return (
@@ -11,19 +17,18 @@ export default function Footer() {
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="mb-6 md:mb-0">
             <h3 className="text-2xl font-bold">Ctrl+Waste</h3>
-            <p className="text-gray-400 mt-2">Otimizando a gestão de resíduos.</p>
+            <p className="text-early-frost mt-2">{t('footer.slogan')}</p>
           </div>
           <div className="flex space-x-6">
-            <Link to="/" className={linkClasses}>Início</Link>
-            <Link to="/produto" className={linkClasses}>O Produto</Link>
-            <Link to="/contato" className={linkClasses}>Contato</Link>
+            <Link to={`${prefix}/`} className={linkClasses}>{t('footer.links.home')}</Link>
+            <Link to={`${prefix}/produto`} className={linkClasses}>{t('footer.links.product')}</Link>
+            <Link to={`${prefix}/contato`} className={linkClasses}>{t('footer.links.contact')}</Link>
           </div>
         </div>
-        
-        <p className="text-center text-gray-400 text-sm">
-          &copy; {currentYear} Ctrl+Waste. Todos os direitos reservados.
+        <p className="text-center text-early-frost text-sm mt-6">
+          &copy; {currentYear} Ctrl+Waste. {t('footer.rights')}
         </p>
       </div>
     </footer>
   );
-};
+}

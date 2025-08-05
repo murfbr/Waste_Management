@@ -1,30 +1,20 @@
-// src/components/site/ValuesSection.jsx
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
-// Componente para um único item da lista de valores
 const ValueItem = ({ icon, text }) => (
   <div className="flex items-start gap-x-4">
-    {/* Ícone */}
-    {/* ANTES: bg-green-600 */}
     <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-lg bg-blue-coral">
       <span className="text-2xl">{icon}</span>
     </div>
     <div>
-      {/* Texto do Valor */}
-      {/* ANTES: text-lg font-semibold text-gray-900 */}
       <p className="font-lexend text-lg font-semibold text-blue-coral">{text}</p>
     </div>
   </div>
 );
 
 export default function ValuesSection() {
-  const values = [
-    { text: 'Sustentabilidade prática e mensurável', icon: '🌱' },
-    { text: 'Inovação com propósito', icon: '🚀' },
-    { text: 'Excelência no que entregamos', icon: '💡' },
-    { text: 'Transparência nos dados e processos', icon: '🔍' },
-    { text: 'Escalabilidade que acompanha seu crescimento', icon: '📈' },
-  ];
+  const { t } = useTranslation();
+  const values = t('valuesSection.values', { returnObjects: true });
 
   return (
     <section className="bg-gray-100 py-24 sm:py-32">
@@ -32,18 +22,21 @@ export default function ValuesSection() {
         <div className="mx-auto grid max-w-2xl grid-cols-1 gap-x-12 gap-y-16 sm:gap-y-20 lg:mx-0 lg:max-w-none lg:grid-cols-2 items-start">
           <div className="lg:pr-8 lg:pt-2">
             <div className="lg:max-w-lg">
-              <p className="font-lexend text-subtitulo font-bold tracking-tight text-blue-coral">Nossos valores</p>
-              <p className="mt-6 font-comfortaa text-corpo leading-8 text-rich-soil">
-                Acreditamos que a tecnologia deve servir a um propósito maior. Nossos valores guiam cada linha de código, cada funcionalidade e cada interação que temos com nossos clientes e com o planeta.
+              <p className="font-lexend text-subtitulo font-bold tracking-tight text-blue-coral">
+                {t('valuesSection.title')}
               </p>
-              {/* ANTES: text-green-600 */}
-              <h2 className="mt-10 font-lexend text-base font-semibold leading-7 text-apricot-orange">Nossos Princípios</h2>
+              <p className="mt-6 font-comfortaa text-corpo leading-8 text-rich-soil">
+                {t('valuesSection.description')}
+              </p>
+              <h2 className="mt-10 font-lexend text-base font-semibold leading-7 text-apricot-orange">
+                {t('valuesSection.subtitle')}
+              </h2>
             </div>
           </div>
-          
+
           <dl className="grid grid-cols-1 gap-x-8 gap-y-10 sm:grid-cols-2 lg:pt-2">
-            {values.map((value) => (
-              <ValueItem key={value.text} icon={value.icon} text={value.text} />
+            {values.map((value, i) => (
+              <ValueItem key={i} icon={value.icon} text={value.text} />
             ))}
           </dl>
         </div>
