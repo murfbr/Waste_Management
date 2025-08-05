@@ -16,8 +16,8 @@ export default function Footer() {
       <div className="container mx-auto px-6 py-8">
         <div className="flex flex-col md:flex-row justify-between items-center">
           <div className="mb-6 md:mb-0">
-            <h3 className="text-2xl font-bold">Ctrl+Waste</h3>
-            <p className="text-early-frost mt-2">{t('footer.slogan')}</p>
+            <h3 className="text-2xl font-bold font-comfortaa">Ctrl+Waste</h3>
+            <p className="text-early-frost font-comfortaa mt-2">{t('footer.slogan')}</p>
           </div>
           <div className="flex space-x-6">
             <Link to={`${prefix}/`} className={linkClasses}>{t('footer.links.home')}</Link>
@@ -25,7 +25,7 @@ export default function Footer() {
             <Link to={`${prefix}/contato`} className={linkClasses}>{t('footer.links.contact')}</Link>
           </div>
         </div>
-        <p className="text-center text-early-frost text-sm mt-6">
+        <p className="text-center font-comfortaa text-early-frost text-sm mt-6">
           &copy; {currentYear} Ctrl+Waste. {t('footer.rights')}
         </p>
       </div>
