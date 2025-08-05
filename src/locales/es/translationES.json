@@ -63,8 +63,8 @@
         "list": [
           "Informes técnicos y gerenciales generados en tiempo real con un solo clic",
           "Exportación CSV automatizada",
-          "Emisión instantánea del MTR (Manifiesto de Transporte de Residuos)",
-          "Base sólida para auditorías, certificaciones y ESG"
+          "Emisión automatizada y personalizada de MTR (Manifiesto de Transporte de Residuos)",
+          "Base sólida para auditorías, certificaciones e informes ESG"
         ],
         "aside": "💡 Ahorre hasta el 80% del tiempo dedicado a tareas operativas."
       }
@@ -76,7 +76,7 @@
   },
   "included": {
     "title": "¿Qué está incluido?",
-    "description": "Con Ctrl Waste, su operación cuenta con una solución completa para transformar datos en decisiones eficientes:",
+    "description": "Con Ctrl+Waste, su operación cuenta con una solución completa para transformar datos en decisiones eficientes:",
     "list": [
       "Software como Servicio (SaaS) con acceso multiusuario",
       "Tableros en tiempo real para monitoreo y análisis de residuos",
@@ -85,7 +85,7 @@
   },
   "requirements": {
     "title": "¿Qué necesita tener?",
-    "description": "Para utilizar Ctrl Waste con total eficiencia, su estructura debe contar con:",
+    "description": "Para utilizar Ctrl+Waste con total eficiencia, su estructura debe contar con:",
     "list": [
       "Tableta o celular para el registro diario de pesajes",
       "Balanza para pesar los residuos",
@@ -94,11 +94,11 @@
   },
   "howItWorks": {
     "title": "¿Cómo funciona en la práctica?",
-    "subtitle": "Transformar residuos en datos y datos en ahorro es simple con Ctrl Waste. Vea cómo funciona su operación en 5 pasos:",
+    "subtitle": "Transformar residuos en datos y datos en ahorro es simple con Ctrl+Waste. Vea cómo funciona su operación en 5 pasos:",
     "steps": [
       {
         "title": "Instale y personalice",
-        "text": "Active Ctrl Waste en su tableta, celular o computadora. Personalice las categorías de residuos y áreas de su operación. Registre sus proveedores de recolección."
+        "text": "Active Ctrl+Waste en su tableta, celular o computadora. Personalice las categorías de residuos y áreas de su operación. Registre sus proveedores de recolección."
       },
       {
         "title": "Registre los pesajes",
@@ -109,8 +109,8 @@
         "text": "Los tableros muestran la composición de los residuos, generación por área, tasa de desvío de vertedero y destino final."
       },
       {
-        "title": "Genere informes y MTRs/CDFs",
-        "text": "Emita informes técnicos con un clic y deje que el sistema automatice la generación del Manifiesto de Transporte de Residuos (MTR)."
+        "title": "Generar informes y documentos obligatorios para el transporte de residuos",
+        "text": "Genera informes técnicos con un clic y deja que el sistema automatice la creación de los documentos obligatorios para el transporte de residuos."
       },
       {
         "title": "Tome decisiones estratégicas",
@@ -119,7 +119,7 @@
     ]
   },
   "keyFeatures": {
-    "title": "Funcionalidades clave de Ctrl Waste",
+    "title": "Funcionalidades clave de Ctrl+Waste",
     "features": [
       {
         "title": "Exporta tus datos",
@@ -134,8 +134,8 @@
         "text": "Genera informes técnicos y de gestión al instante."
       },
       {
-        "title": "Tus datos son tuyos",
-        "text": "Transparencia total y autonomía: los datos permanecen contigo."
+        "title": "Controla tus datos",
+        "text": "Transparencia y autonomía total: tú controlas tus datos."
       },
       {
         "title": "Gestión de equipo",
@@ -150,8 +150,8 @@
         "text": "Registro simplificado: registra un nuevo pesaje en menos de 3 segundos."
       },
       {
-        "title": "No te preocupes por los MTRs",
-        "text": "Emisión de MTRs automatizada y personalizada para asegurar que la documentación coincida con la realidad."
+        "title": "No te preocupes por los documentos obligatorios",
+        "text": "Emisión automatizada y personalizada de documentos obligatorios para el transporte de residuos para garantizar que la documentación coincida con la realidad."
       }
     ]
   },
@@ -175,13 +175,13 @@
   "aboutHero": {
     "title": "Sobre nosotros",
     "subtitle": "Tecnología para transformar residuos en datos y datos en ahorro.",
-    "paragraph1": "Ctrl Waste es una solución cleantech desarrollada para hacer la gestión de residuos más eficiente, económica y estratégica. Combinamos software inteligente y hardware accesible (balanza + tableta) para ofrecer el control que su operación necesita: por peso, tipo de residuo, punto de generación y período.",
-    "paragraph2": "Con Ctrl Waste, su empresa obtiene visibilidad total sobre lo que descarta, identifica oportunidades para reducir desperdicios y automatiza procesos esenciales, como la emisión del Manifiesto de Transporte de Residuos (MTR).",
+    "paragraph1": "Ctrl+Waste es una solución de tecnología limpia diseñada para hacer que la gestión de residuos sea más eficiente, rentable y estratégica. Combinamos software inteligente y hardware asequible para proporcionar el control que su operación necesita: por peso, tipo de residuo, área de generación y período de tiempo.",
+    "paragraph2": "Con Ctrl+Waste, su empresa obtiene visibilidad total sobre lo que descarta, identifica oportunidades para reducir desperdicios y automatiza procesos esenciales, como la emisión del Manifiesto de Transporte de Residuos (MTR).",
     "paragraph3": "Más que monitorear, lo ayudamos a tomar decisiones basadas en datos reales — un paso esencial para alcanzar metas de ESG, certificaciones y ganancias operativas."
   },
   "valuesSection": {
   "title": "Nuestros valores",
-  "description": "Creemos que la tecnología debe servir a un propósito mayor. Nuestros valores guían cada línea de código, cada funcionalidad y cada interacción que tenemos con nuestros clientes y con el planeta.",
+  "description": "Creemos que la tecnología debería servir a un propósito mayor. Nuestros valores guían cada línea de código, cada característica y cada interacción que tenemos con nuestros clientes y nuestro futuro.",
   "subtitle": "Nuestros Principios",
   "values": [
     { "text": "Sostenibilidad práctica y medible", "icon": "🌱" },
@@ -195,13 +195,13 @@
   "title": "Quiénes somos",
   "members": {
     "pedro": {
-      "bio": "Pedro es ingeniero en bioprocesos (UFRJ), magíster en Ciencia de la Sostenibilidad (PUC-Rio) y especialista en Diseño de Sostenibilidad. Fundador de HUBIS, fue reconocido por liderar proyectos premiados de impacto ambiental y social. En Ctrl Waste, une visión estratégica, innovación y propósito para transformar el sector de residuos con soluciones escalables y sostenibles."
+      "bio": "Pedro es ingeniero de bioprocesos (UFRJ), con maestría en Ciencias de la Sustentabilidad (PUC-Rio) y especialista en Diseño de Sustentabilidad. Fundador de la consultora HUBIS, ha sido reconocido por liderar proyectos premiados con impacto ambiental y social. En Ctrl+Waste, combina visión estratégica, innovación y propósito para transformar el sector de residuos con soluciones escalables y sostenibles."
     },
     "gustavo": {
-      "bio": "Gustavo es especialista en tecnología con experiencia en desarrollo no-code, liderazgo de equipos ágiles y gestión de proyectos digitales. Con experiencia internacional en Irlanda y trabajo en empresas de marketing, aporta un enfoque centrado en el usuario y la eficiencia. En Ctrl Waste, lidera soluciones tecnológicas que impulsan impacto ambiental con innovación accesible."
+      "bio": "Gustavo es un especialista en tecnología con experiencia en desarrollo y gestión de proyectos digitales. Con experiencia internacional en Irlanda y experiencia en diversos sectores, aporta un enfoque centrado en el usuario y en la eficiencia. En Ctrl+Waste, es responsable de soluciones tecnológicas que impulsan el impacto ambiental con innovación accesible."
     },
     "julia": {
-      "bio": "Con formación en Publicidad y especializaciones en Branding (Universidad de Ámsterdam) y Gestión Empresarial (ESS – Praga), Julia integra creatividad, estrategia y sostenibilidad. Su trayectoria incluye proyectos premiados que conectan marketing y ESG. En Ctrl Waste, lidera la construcción de la marca y la estrategia comercial, promoviendo crecimiento ético e impacto positivo."
+      "bio": "Licenciada en Publicidad y especializada en Branding (Universidad de Amsterdam) y Gestión Empresarial (ESS – Praga), Julia integra creatividad, estrategia y sostenibilidad. Su carrera incluye proyectos premiados que conectan marketing y ESG. En Ctrl+Waste, lidera la construcción de marca y la estrategia comercial, promoviendo el crecimiento ético y el impacto positivo."
     }
   }
 },
