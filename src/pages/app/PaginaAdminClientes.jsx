@@ -8,8 +8,7 @@ import MessageBox from '../../components/app/MessageBox';
 import ClienteForm from '../../components/app/ClienteForm'; 
 import Papa from 'papaparse';
 import TemplateManagerModal from '../../components/app/TemplateManagerModal';
-
-// A lista de categorias fixas foi removida para dar lugar à lógica dinâmica.
+import DeleteConfirmationModal from '../../components/app/DeleteConfirmationModal';
 
 export default function PaginaAdminClientes() {
   const { db, functions, appId, userProfile: masterProfile, currentUser: masterCurrentUser, refreshAllowedClientes } = useContext(AuthContext);
@@ -35,6 +34,9 @@ export default function PaginaAdminClientes() {
   const [configCheckResult, setConfigCheckResult] = useState(null);
   const [isTemplateModalOpen, setIsTemplateModalOpen] = useState(false);
   const [clientTemplates, setClientTemplates] = useState([]);
+
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [clienteParaDeletar, setClienteParaDeletar] = useState(null);
 
   const showMessage = (msg, error = false, duration = 6000) => {
     setMessage(msg); setIsError(error);
@@ -67,7 +69,6 @@ export default function PaginaAdminClientes() {
     }
   };
 
-  // Efeito para buscar clientes
   useEffect(() => {
     if (!db) return; 
     setLoadingClientes(true);
@@ -84,7 +85,6 @@ export default function PaginaAdminClientes() {
     return () => unsub();
   }, [db]);
 
-  // Efeito para buscar empresas de coleta
   useEffect(() => {
     if (!db) return;
     const qE = query(collection(db, "empresasColeta"), orderBy("nomeFantasia"));
@@ -94,7 +94,6 @@ export default function PaginaAdminClientes() {
     return () => unsubE();
   }, [db]);
   
-  // Efeito para buscar os modelos de cliente
   useEffect(() => {
     if (!db) return;
     const templatesCollection = collection(db, 'systemPresets/clientConfiguration/clientTemplates');
@@ -108,20 +107,16 @@ export default function PaginaAdminClientes() {
     return () => unsubscribe();
   }, [db]);
 
-  // EFEITO ATUALIZADO: Combina as categorias dos clientes e dos modelos em uma única lista
   useEffect(() => {
     const categoriasDosClientes = clientes
       .map(cliente => cliente.categoriaCliente)
-      .filter(Boolean); // Filtra valores nulos ou vazios
-
+      .filter(Boolean);
     const categoriasDosTemplates = clientTemplates
       .map(template => template.category)
       .filter(Boolean);
-
-    // Usa um Set para garantir que a lista final não tenha duplicatas
     const todasCategorias = Array.from(new Set([...categoriasDosClientes, ...categoriasDosTemplates]));
     setAvailableClientCategorias(todasCategorias.sort());
-  }, [clientes, clientTemplates]); // Roda sempre que a lista de clientes ou modelos mudar
+  }, [clientes, clientTemplates]);
 
   const handleNewCategoriaAdded = (novaCategoria) => {
     if (novaCategoria && !availableClientCategorias.includes(novaCategoria)) {
@@ -136,6 +131,7 @@ export default function PaginaAdminClientes() {
     setClienteParaImportar(null); 
     setTestConnectionStatus({ loading: false, message: '', isError: false });
   };
+
   const handleEditCliente = (cliente) => { 
     setEditingClienteId(cliente.id); 
     setEditingClienteData(cliente); 
@@ -144,24 +140,39 @@ export default function PaginaAdminClientes() {
     setTestConnectionStatus({ loading: false, message: '', isError: false });
     window.scrollTo({ top: 0, behavior: 'smooth' }); 
   };
+  
   const handleCancelForm = () => { 
     setShowForm(false); 
     setEditingClienteId(null); 
     setEditingClienteData(null);
   };
   
-  const handleDeleteCliente = async (clienteId) => {
-    if (!db || !masterProfile || masterProfile.role !== 'master') return showMessage("Ação não permitida.", true);
-    if (window.confirm("Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.")) {
-        try { 
-          await deleteDoc(doc(db, "clientes", clienteId)); 
-          await refreshAllowedClientes();
-          showMessage("Cliente excluído com sucesso!"); 
-          if (editingClienteId === clienteId) handleCancelForm();
-        } catch (e) { 
-          console.error("Erro ao excluir cliente:", e); 
-          showMessage("Erro ao excluir cliente. Tente novamente.", true); 
-        }
+  const handleOpenDeleteModal = (cliente) => {
+    setClienteParaDeletar(cliente);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleCloseDeleteModal = () => {
+    setClienteParaDeletar(null);
+    setIsDeleteModalOpen(false);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!db || !masterProfile || masterProfile.role !== 'master' || !clienteParaDeletar) {
+      showMessage("Ação não permitida ou cliente não selecionado.", true);
+      return;
+    }
+
+    try {
+      await deleteDoc(doc(db, "clientes", clienteParaDeletar.id));
+      await refreshAllowedClientes();
+      showMessage("Cliente excluído com sucesso!");
+      if (editingClienteId === clienteParaDeletar.id) handleCancelForm();
+    } catch (e) {
+      console.error("Erro ao excluir cliente:", e);
+      showMessage("Erro ao excluir cliente. Tente novamente.", true);
+    } finally {
+      handleCloseDeleteModal();
     }
   };
 
@@ -169,18 +180,14 @@ export default function PaginaAdminClientes() {
     if (!db || !masterCurrentUser || !masterProfile || masterProfile.role !== 'master') {
       return showMessage("Ação não permitida.", true);
     }
-    
     const { configINEA, ...clienteDataPrincipal } = formData;
-
     const clienteDataToSave = { 
       ...clienteDataPrincipal, 
       ultimaModificacao: serverTimestamp(), 
       modificadoPor: masterCurrentUser.uid 
     };
-
     try {
       let clienteId = editingClienteId;
-
       if (editingClienteId) { 
         await updateDoc(doc(db, "clientes", editingClienteId), clienteDataToSave); 
         showMessage("Dados do cliente atualizados com sucesso!");
@@ -191,12 +198,9 @@ export default function PaginaAdminClientes() {
         clienteId = docRef.id;
         showMessage("Cliente adicionado com sucesso!");
       }
-
       await refreshAllowedClientes();
-
       if (clienteId && configINEA && (configINEA.login || configINEA.senha || configINEA.cnpj || configINEA.codUnidade)) {
         showMessage("A salvar credenciais da integração INEA...", false, 3000);
-        
         await saveIneaCredentials({
           clienteId: clienteId,
           login: configINEA.login,
@@ -204,10 +208,8 @@ export default function PaginaAdminClientes() {
           cnpj: configINEA.cnpj,
           codUnidade: configINEA.codUnidade,
         });
-
         showMessage("Credenciais INEA salvas com sucesso!", false);
       }
-
       handleCancelForm(); 
     } catch (e) { 
       console.error("Erro ao salvar cliente ou credenciais:", e); 
@@ -227,7 +229,6 @@ export default function PaginaAdminClientes() {
     setClienteParaImportar(null); 
     setImportFile(null); 
   };
-
   const processAndImportCSV = async () => { 
     if (!importFile || !clienteParaImportar || !db || !masterCurrentUser || masterProfile?.role !== 'master') { 
       showMessage("Selecione cliente e ficheiro, ou permissão negada.", true); return; 
@@ -338,9 +339,45 @@ export default function PaginaAdminClientes() {
         onClose={() => setIsTemplateModalOpen(false)}
       />
 
+      {/* ////////////////////////////////////////////////////// */}
+      {/* /// CORREÇÃO: Bloco de importação de histórico RESTAURADO /// */}
+      {/* ////////////////////////////////////////////////////// */}
       {clienteParaImportar && !showForm && (
           <div className="bg-white p-6 rounded-xl shadow-lg mt-8 border border-blue-300">
-            {/* ... (JSX de importação) */}
+            <h2 className="text-xl font-semibold text-gray-800 mb-2">Importar Histórico para: <span className="text-blue-600">{clienteParaImportar.nome}</span></h2>
+            <div className="text-sm text-gray-600 mb-4 space-y-1">
+              <p><strong>Instruções para o ficheiro CSV:</strong></p>
+              <ul className="list-disc list-inside pl-4">
+                <li>O ficheiro deve ser no formato CSV (valores separados por vírgula).</li>
+                <li>A primeira linha deve ser o cabeçalho.</li>
+                <li>Colunas obrigatórias (com estes nomes exatos no cabeçalho): <strong>Data</strong>, <strong>Area</strong>, <strong>TipoResiduo</strong>, <strong>Peso</strong>.</li>
+                <li>Formato da <strong>Data</strong>: DD/MM/YYYY ou YYYY-MM-DD.</li>
+                <li><strong>Area</strong>: Deve corresponder a uma das "Áreas Internas" configuradas para este cliente.</li>
+                <li><strong>TipoResiduo</strong>: Deve corresponder a uma das "Categorias Principais" ou "Sub-tipos de Recicláveis" configurados para este cliente.</li>
+                <li><strong>Peso</strong>: Número (ex: 10.5 ou 10,5).</li>
+              </ul>
+            </div>
+            <div className="flex items-center space-x-3">
+              <input 
+                type="file" 
+                accept=".csv" 
+                onChange={handleFileChange} 
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
+              />
+              <button 
+                onClick={processAndImportCSV} 
+                disabled={!importFile || isImporting}
+                className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+              >
+                {isImporting ? "A Importar..." : "Importar Ficheiro"}
+              </button>
+              <button 
+                onClick={handleCancelImport}
+                className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancelar
+              </button>
+            </div>
           </div>
       )}
 
@@ -391,7 +428,9 @@ export default function PaginaAdminClientes() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-center">
                       <div className="flex justify-center items-center space-x-2">
                         <button onClick={() => handleEditCliente(cliente)} className="text-indigo-600 hover:text-indigo-900">Editar</button>
-                        <button onClick={() => handleDeleteCliente(cliente.id)} className="text-red-600 hover:text-red-900">Excluir</button> 
+                        
+                        <button onClick={() => handleOpenDeleteModal(cliente)} className="text-red-600 hover:text-red-900">Excluir</button> 
+                        
                         <button 
                           onClick={() => handleOpenImportModal(cliente)} 
                           className="px-2 py-1 border border-gray-300 text-xs font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
@@ -408,6 +447,13 @@ export default function PaginaAdminClientes() {
           </div>
         )}
       </div>
+
+      <DeleteConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={handleCloseDeleteModal}
+        onConfirm={handleConfirmDelete}
+        clienteNome={clienteParaDeletar?.nome}
+      />
     </div>
   );
 }
