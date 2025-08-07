@@ -1,0 +1,27 @@
+{
+  "navigation": {
+    "entry": "Entry",
+    "dashboards": "Dashboards",
+    "info": "Informative",
+    "glossary": "Glossary",
+    "documentation": "Documentação",
+    "admin": "Administration",
+    "users": "Users",
+    "clients": "Clients",
+    "collectors": "Collection Providers",
+    "mtrManagement": "Gestão MTR/CDF"
+  },
+  "user": {
+    "level": "Level"
+  },
+  "menu": {
+    "expand": "Expand menu",
+    "collapse": "Collapse menu"
+  },
+  "logout": {
+    "button": "Logout",
+    "modalTitle": "Confirm Logout",
+    "modalMessage": "Are you sure you want to log out?",
+    "modalConfirm": "Yes, Logout"
+  }
+}

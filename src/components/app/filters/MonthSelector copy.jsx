@@ -1,21 +1,13 @@
 // src/components/app/filters/MonthSelector.jsx
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 
+const MESES_FILTRO = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 const TODOS_OS_MESES = Array.from({ length: 12 }, (_, i) => i);
 
 export default function MonthSelector({
   selectedMonths,
   onSelectedMonthsChange,
 }) {
-  const { t } = useTranslation('dashboard');
-  
-  const MESES_FILTRO = t('filtersComponent.monthSelector.months', { returnObjects: true }) || [];
-
-  if (!Array.isArray(MESES_FILTRO) || MESES_FILTRO.length === 0) {
-    return null; 
-  }
-
   const allMonthsSelected = selectedMonths.length === MESES_FILTRO.length;
 
   const handleMonthToggle = (toggledMonthIndex) => {
@@ -39,7 +31,7 @@ export default function MonthSelector({
 
   return (
     <div className="w-full">
-      <label className="block text-sm font-bold text-rich-soil mb-2">{t('filtersComponent.monthSelector.label')}</label>
+      <label className="block text-sm font-bold text-rich-soil mb-2">Mês</label>
       <div className="p-3 bg-white border border-early-frost rounded-md shadow-sm">
         <label className="flex items-center cursor-pointer mb-3">
           <input
@@ -48,7 +40,7 @@ export default function MonthSelector({
             onChange={handleSelectAllToggle}
             className="h-4 w-4 text-apricot-orange border-early-frost rounded focus:ring-apricot-orange"
           />
-          <span className="ml-2 text-sm text-blue-coral">{t('filtersComponent.monthSelector.allMonths')}</span>
+          <span className="ml-2 text-sm text-blue-coral">Todos os Meses</span>
         </label>
         <div className="grid grid-cols-3 sm:grid-cols-4 gap-2">
           {MESES_FILTRO.map((month, index) => (

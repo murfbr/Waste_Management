@@ -1,15 +1,13 @@
 // src/components/app/filters/YearSelector.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 
-const ChevronDownIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-400"><polyline points="6 9 12 15 18 9"></polyline></svg>;
+const ChevronDownIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-400"><polyline points="6 9 12 15 18 9"></polyline></svg>;
 
 export default function YearSelector({
   availableYears = [],
   selectedYears = [],
   onYearToggle = () => {},
 }) {
-  const { t } = useTranslation('dashboard');
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -24,15 +22,14 @@ export default function YearSelector({
   }, []);
 
   const getDisplayValue = () => {
-    if (selectedYears.length === 0) return t('filtersComponent.yearSelector.placeholder');
-    // AQUI ESTÁ A CORREÇÃO:
-    if (selectedYears.length === 1) return selectedYears[0]; 
-    return t('filtersComponent.yearSelector.multipleSelected', { count: selectedYears.length });
+    if (selectedYears.length === 0) return "Selecione o ano";
+    if (selectedYears.length === 1) return selectedYears[0];
+    return `${selectedYears.length} anos selecionados`;
   };
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
-      <label htmlFor="year-selector-button" className="block text-sm font-bold text-rich-soil mb-2">{t('filtersComponent.yearSelector.label')}</label>
+      <label htmlFor="year-selector-button" className="block text-sm font-bold text-rich-soil mb-2">Ano</label>
       <button
         id="year-selector-button"
         type="button"
@@ -58,7 +55,7 @@ export default function YearSelector({
             </label>
           ))}
           {availableYears.length === 0 && (
-              <div className="px-3 py-2 text-sm text-gray-500">{t('filtersComponent.yearSelector.noneAvailable')}</div>
+              <div className="px-3 py-2 text-sm text-gray-500">Nenhum ano disponível.</div>
           )}
         </div>
       )}

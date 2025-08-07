@@ -1,13 +1,34 @@
 // src/components/app/Sidebar.jsx
 
-import React, { useState, useContext } from 'react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import React, { useState, useContext, useRef, useEffect } from 'react';
+import { NavLink, useNavigate, useLocation } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import AuthContext from '../../context/AuthContext';
 import { signOut } from 'firebase/auth';
 import ConfirmationModal from './ConfirmationModal'; 
 import logoSvg from '../Simbolo-Laranja-SVG.svg';
 
-// --- ÍCONES SVG ---
+// --- HOOK CUSTOMIZADO PARA CLIQUE FORA ---
+const useOutsideClick = (callback) => {
+  const ref = useRef();
+
+  useEffect(() => {
+    const handleClick = (event) => {
+      if (ref.current && !ref.current.contains(event.target)) {
+        callback();
+      }
+    };
+
+    document.addEventListener('mousedown', handleClick);
+    return () => {
+      document.removeEventListener('mousedown', handleClick);
+    };
+  }, [callback]);
+
+  return ref;
+};
+
+// --- ÍCONES SVG (sem alteração) ---
 const LançamentoIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>;
 const DashboardIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" /></svg>;
 const DocsIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>;
@@ -19,10 +40,7 @@ const ChevronDoubleRightIcon = (props) => <svg {...props} xmlns="http://www.w3.o
 const CloseIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12"></path></svg>;
 const MtrIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>;
 const FornecedorIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 17H5.714C4.767 17 4 16.233 4 15.286V8.714C4 7.767 4.767 7 5.714 7H15l4 4v4.286zM4 12h15"></path></svg>;
-
-// --- ÍCONE DO GLOSSÁRIO ATUALIZADO ---
 const GlossarioIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 20L12 4L20 20M7 14H17" /></svg>;
-
 
 const NavItem = ({ to, icon, text, isCollapsed, onClick }) => {
   return (
@@ -32,8 +50,8 @@ const NavItem = ({ to, icon, text, isCollapsed, onClick }) => {
       className={({ isActive }) =>
         `flex items-center p-2.5 rounded-md transition duration-200 space-x-4 font-lexend text-corpo ` +
         (isActive
-          ? 'bg-apricot-orange text-white' // Estilo para link ativo
-          : 'text-white hover:bg-white/10') // Estilo para link inativo
+          ? 'bg-apricot-orange text-white'
+          : 'text-white hover:bg-white/10')
       }
       title={isCollapsed ? text : ""}
     >
@@ -43,18 +61,96 @@ const NavItem = ({ to, icon, text, isCollapsed, onClick }) => {
   );
 };
 
+const LanguageSelector = ({ isCollapsed }) => {
+    const { i18n } = useTranslation('sidebar');
+    const location = useLocation();
+    const navigate = useNavigate();
+
+    const [isLangOpen, setIsLangOpen] = useState(false);
+    const langDropdownRef = useOutsideClick(() => setIsLangOpen(false));
+
+    const languages = [
+        { code: 'pt', label: 'Português' },
+        { code: 'en', label: 'English' },
+        { code: 'es', label: 'Español' },
+    ];
+    const currentLang = languages.find(l => l.code === i18n.language) || languages[0];
+
+    const changeLanguage = (lng) => {
+        const path = location.pathname.replace(/^\/(en|es)/, '');
+        i18n.changeLanguage(lng);
+        const newPath = lng === 'pt' ? (path || '/') : `/${lng}${path}`;
+        navigate(newPath);
+        setIsLangOpen(false);
+    };
+
+    if (isCollapsed) {
+        return (
+            <div className="relative group">
+                <div className="flex items-center justify-center p-2.5 rounded-md transition duration-200 text-white hover:bg-white/10 cursor-pointer">
+                    <span className="text-xl">🌍</span>
+                </div>
+                <div className="absolute left-full top-0 ml-2 w-36 bg-blue-coral shadow-lg rounded-md hidden group-hover:block ring-1 ring-white/20 z-50">
+                    {languages.map(l => (
+                      <button
+                        key={l.code}
+                        onClick={() => changeLanguage(l.code)}
+                        className={`block w-full text-left px-4 py-2 text-sm text-white rounded-md ${currentLang.code === l.code ? 'bg-apricot-orange' : 'hover:bg-white/10'}`}
+                      >
+                        {l.label}
+                      </button>
+                    ))}
+                </div>
+            </div>
+        )
+    }
+
+    return (
+        <div className="relative px-2 pt-2" ref={langDropdownRef}>
+            <button
+                onClick={() => setIsLangOpen(!isLangOpen)}
+                className="w-full flex items-center justify-between p-2.5 rounded-md transition duration-200 text-white hover:bg-white/10"
+                aria-haspopup="true"
+                aria-expanded={isLangOpen}
+            >
+                <div className="flex items-center space-x-2">
+                    <span className="text-xl">🌍</span>
+                    <span>{currentLang.code.toUpperCase()}</span>
+                </div>
+                <span className={`transform transition-transform duration-200 ${isLangOpen ? 'rotate-180' : ''}`}>▼</span>
+            </button>
+            {isLangOpen && (
+                <div className="absolute bottom-full left-0 mb-2 w-full bg-blue-coral shadow-lg rounded-md ring-1 ring-white/20 z-50">
+                    {languages.map(l => (
+                        <button
+                            key={l.code}
+                            onClick={() => changeLanguage(l.code)}
+                            className={`block w-full text-left px-4 py-3 text-sm rounded-md text-white ${currentLang.code === l.code ? 'bg-apricot-orange' : 'hover:bg-white/10'}`}
+                        >
+                            {l.label}
+                        </button>
+                    ))}
+                </div>
+            )}
+        </div>
+    );
+}
+
 export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCollapse }) {
   const { userProfile, currentUser, auth: authInstanceFromContext } = useContext(AuthContext);
+  const { t, i18n } = useTranslation('sidebar');
   const navigate = useNavigate();
   
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  
+  const langPrefix = i18n.language === 'pt' ? '' : `/${i18n.language}`;
 
   const handleConfirmLogout = async () => {
     try {
       await signOut(authInstanceFromContext);
       setIsLogoutModalOpen(false);
       if (isOpen && typeof toggleSidebar === 'function') toggleSidebar();
-      navigate('/login');
+      navigate(`${langPrefix}/login`);
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
     }
@@ -114,20 +210,21 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
           {userProfile ? (
             <>
               {(userProfile.role === 'master' || userProfile.role === 'gerente' || userProfile.role === 'operacional') && (
-                <NavItem to="/app/lancamento" icon={<LançamentoIcon />} text="Lançamento" isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                <NavItem to={`${langPrefix}/app/lancamento`} icon={<LançamentoIcon />} text={t('navigation.entry')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
               )}
               {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
-                <NavItem to="/app/dashboard" icon={<DashboardIcon />} text="Dashboards" isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                <NavItem to={`${langPrefix}/app/dashboard`} icon={<DashboardIcon />} text={t('navigation.dashboards')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
               )}
               
               {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
                 <>
                   <hr className={`my-2 border-white/20 ${isCollapsed && 'mx-4'}`} />
-                  {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs font-lexend text-white/70 uppercase">Informativos</p>}
-            {/* #############DESATIVADO TEMPORARIAMENTE ###############
-                 <NavItem to="/app/documentacao" icon={<DocsIcon />} text="Documentação" isCollapsed={isCollapsed} onClick={handleLinkClick} />
-                 */}
-                  <NavItem to="/app/glossario" icon={<GlossarioIcon />} text="Glossário" isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                  {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs font-lexend text-white/70 uppercase">{t('navigation.info')}</p>}
+                  
+                  {/* #############DESATIVADO TEMPORARIAMENTE ############### */}
+                  {/* <NavItem to={`${langPrefix}/app/documentacao`} icon={<DocsIcon />} text={t('navigation.documentation')} isCollapsed={isCollapsed} onClick={handleLinkClick} /> */}
+
+                  <NavItem to={`${langPrefix}/app/glossario`} icon={<GlossarioIcon />} text={t('navigation.glossary')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}
               
@@ -135,19 +232,19 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
               {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
                 <>
                   <hr className={`my-2 border-white/20 ${isCollapsed && 'mx-4'}`} />
-                  {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs font-lexend text-white/70 uppercase">Administração</p>}
-                  <NavItem to="/app/admin/usuarios" icon={<AdminUsersIcon />} text="Usuários" isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                  {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs font-lexend text-white/70 uppercase">{t('navigation.admin')}</p>}
+                  <NavItem to={`${langPrefix}/app/admin/usuarios`} icon={<AdminUsersIcon />} text={t('navigation.users')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}
 
               
               {userProfile.role === 'master' && (
                 <>
-                  <NavItem to="/app/admin/clientes" icon={<AdminClientesIcon />} text="Clientes" isCollapsed={isCollapsed} onClick={handleLinkClick} />
-                  <NavItem to="/app/admin/empresas-coleta" icon={<FornecedorIcon />} text="Fornecedores de Coleta" isCollapsed={isCollapsed} onClick={handleLinkClick} />
-                  {/* #############DESATIVADO TEMPORARIAMENTE ###############
-                  <NavItem to="/app/admin/gestao-mtr" icon={<MtrIcon />} text="Gestão MTR/CDF" isCollapsed={isCollapsed} onClick={handleLinkClick} />
-                  */}
+                  <NavItem to={`${langPrefix}/app/admin/clientes`} icon={<AdminClientesIcon />} text={t('navigation.clients')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                  <NavItem to={`${langPrefix}/app/admin/empresas-coleta`} icon={<FornecedorIcon />} text={t('navigation.collectors')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                  
+                  {/* #############DESATIVADO TEMPORARIAMENTE ############### */}
+                  {/* <NavItem to={`${langPrefix}/app/admin/gestao-mtr`} icon={<MtrIcon />} text={t('navigation.mtrManagement')} isCollapsed={isCollapsed} onClick={handleLinkClick} /> */}
                 </>
               )}
             </>
@@ -160,15 +257,17 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
           <button
             onClick={onToggleCollapse}
             className="hidden md:flex items-center justify-center w-full p-2.5 rounded-md transition duration-200 hover:bg-white/10 mb-2"
-            title={isCollapsed ? "Expandir menu" : "Recolher menu"}
+            title={isCollapsed ? t('menu.expand') : t('menu.collapse')}
           >
             {isCollapsed ? <ChevronDoubleRightIcon className="w-6 h-6" /> : <ChevronDoubleLeftIcon className="w-6 h-6" />}
           </button>
+
+          <LanguageSelector isCollapsed={isCollapsed} />
         
-          <div className={`font-comfortaa ${isCollapsed ? 'hidden' : 'block'}`}>
+          <div className={`font-comfortaa mt-2 ${isCollapsed ? 'hidden' : 'block'}`}>
             {userProfile && userProfile.role && (
               <p className="text-xs text-white/70 text-center mb-1">
-                Nível: {userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)}
+                {t('user.level')}: {userProfile.role.charAt(0).toUpperCase() + userProfile.role.slice(1)}
               </p>
             )}
             {currentUser && currentUser.email && (
@@ -179,10 +278,10 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
           </div>
           <button
             onClick={handleLogoutRequest}
-            className={`w-full flex items-center font-lexend py-2 px-4 rounded-lg text-sm transition duration-200 bg-apricot-orange hover:opacity-90 ${isCollapsed ? 'justify-center' : ''}`}
+            className={`w-full flex items-center font-lexend py-2 px-4 rounded-lg text-sm transition duration-200 bg-apricot-orange hover:opacity-90 mt-2 ${isCollapsed ? 'justify-center' : ''}`}
           >
             <LogoutIcon />
-            <span className={isCollapsed ? 'hidden' : 'ml-2'}>Sair</span>
+            <span className={isCollapsed ? 'hidden' : 'ml-2'}>{t('logout.button')}</span>
           </button>
         </div>
       </aside>
@@ -191,9 +290,9 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
         isOpen={isLogoutModalOpen}
         onCancel={() => setIsLogoutModalOpen(false)}
         onConfirm={handleConfirmLogout}
-        title="Confirmar Saída"
-        message="Tem certeza de que deseja encerrar a sessão?"
-        confirmText="Sim, Sair"
+        title={t('logout.modalTitle')}
+        message={t('logout.modalMessage')}
+        confirmText={t('logout.modalConfirm')}
         theme="danger"
       />
     </>

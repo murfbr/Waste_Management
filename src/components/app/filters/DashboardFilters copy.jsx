@@ -1,7 +1,6 @@
 // src/components/app/filters/DashboardFilters.jsx
 
 import React, { useState } from 'react';
-import { useTranslation } from 'react-i18next';
 import MonthSelector from './MonthSelector';
 import AreaSelector from './AreaSelector';
 import YearSelector from './YearSelector';
@@ -22,13 +21,9 @@ export default function DashboardFilters({
     onSelectedMonthsChange,
     selectedAreas, 
     onSelectedAreasChange,
-    availableAreas, // A prop que estamos investigando
+    availableAreas,
     onQuickPeriodSelect,
 }) {
-    // --- LINHA DE DEPURAÇÃO ---
-    console.log("Dentro do DashboardFilters, a prop 'availableAreas' é:", availableAreas);
-
-    const { t } = useTranslation('dashboard');
     const [isExpanded, setIsExpanded] = useState(true);
     const [activePeriod, setActivePeriod] = useState('thisMonth');
 
@@ -65,21 +60,22 @@ export default function DashboardFilters({
             >
                 <div className="flex items-center">
                     <FilterIcon />
-                    <h2 className="font-lexend text-acao text-blue-coral font-semibold">{t('filtersComponent.title')}</h2>
+                    <h2 className="font-lexend text-acao text-blue-coral font-semibold">Filtros</h2>
                 </div>
                 <ChevronDownIcon isOpen={isExpanded} />
             </button>
 
             {isExpanded && (
                 <div className="p-4 border-t border-early-frost">
+                    {/* Linha 1: Períodos Rápidos e Ano */}
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                         <div className="lg:col-span-2">
-                             <label className="block text-sm font-bold text-rich-soil mb-2">{t('filtersComponent.quickPeriods.label')}</label>
+                             <label className="block text-sm font-bold text-rich-soil mb-2">Períodos Rápidos</label>
                             <div className="flex flex-wrap items-center gap-2">
-                                <FilterButton period="thisMonth" label={t('filtersComponent.quickPeriods.thisMonth')} />
-                                <FilterButton period="last3Months" label={t('filtersComponent.quickPeriods.last3Months')} />
-                                <FilterButton period="thisYear" label={t('filtersComponent.quickPeriods.thisYear')} />
-                                {hasLastYearData && <FilterButton period="lastYear" label={t('filtersComponent.quickPeriods.lastYear')} />}
+                                <FilterButton period="thisMonth" label="Este Mês" />
+                                <FilterButton period="last3Months" label="Últimos 3 Meses" />
+                                <FilterButton period="thisYear" label="Este Ano" />
+                                {hasLastYearData && <FilterButton period="lastYear" label="Ano Passado" />}
                             </div>
                         </div>
                         <YearSelector 
@@ -89,6 +85,7 @@ export default function DashboardFilters({
                         />
                     </div>
                     
+                    {/* Linha 2: Mês e Área */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-early-frost">
                         <MonthSelector
                             selectedMonths={selectedMonths}

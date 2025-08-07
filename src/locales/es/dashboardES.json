@@ -1,0 +1,47 @@
+{
+  "paginaDashboard": {
+    "header": {
+      "title": "Panel de Análisis"
+    },
+    "sections": {
+      "overview": "VISIÓN GENERAL",
+      "monthlyGeneration": "GENERACIÓN POR MES",
+      "generationComposition": "COMPOSICIÓN DE LA GENERACIÓN",
+      "destinationComposition": "COMPOSICIÓN DEL DESTINO"
+    },
+    "filters": {
+      "loadingData": "Cargando datos...",
+      "selectClient": "Por favor, seleccione un cliente para ver los datos.",
+      "noData": "No se han registrado datos de residuos para los clientes y período seleccionados."
+    }
+  },
+  "filtersComponent": {
+    "title": "Filtros",
+    "quickPeriods": {
+      "label": "Períodos Rápidos",
+      "thisMonth": "Este Mes",
+      "last3Months": "Últimos 3 Meses",
+      "thisYear": "Este Año",
+      "lastYear": "Año Pasado"
+    },
+    "yearSelector": {
+      "label": "Año",
+      "placeholder": "Seleccione el año",
+      "multipleSelected_one": "{{count}} año seleccionado",
+      "multipleSelected_other": "{{count}} años seleccionados",
+      "noneAvailable": "Ningún año disponible."
+    },
+    "monthSelector": {
+      "label": "Mes",
+      "allMonths": "Todos los Meses",
+      "months": [ "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" ]
+    },
+    "areaSelector": {
+      "label": "Área de Registro",
+      "allAreas": "Todas las Áreas",
+      "multipleSelected_one": "{{count}} área seleccionada",
+      "multipleSelected_other": "{{count}} áreas seleccionadas",
+      "noneAvailable": "Ninguna área disponible."
+    }
+  }
+}

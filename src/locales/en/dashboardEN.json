@@ -1,0 +1,47 @@
+{
+  "paginaDashboard": {
+    "header": {
+      "title": "Analysis Dashboard"
+    },
+    "sections": {
+      "overview": "OVERVIEW",
+      "monthlyGeneration": "GENERATION BY MONTH",
+      "generationComposition": "GENERATION COMPOSITION",
+      "destinationComposition": "DESTINATION COMPOSITION"
+    },
+    "filters": {
+      "loadingData": "Loading data...",
+      "selectClient": "Please select a client to view the data.",
+      "noData": "No waste data recorded for the selected clients and period."
+    }
+  },
+  "filtersComponent": {
+    "title": "Filters",
+    "quickPeriods": {
+      "label": "Quick Periods",
+      "thisMonth": "This Month",
+      "last3Months": "Last 3 Months",
+      "thisYear": "This Year",
+      "lastYear": "Last Year"
+    },
+    "yearSelector": {
+      "label": "Year",
+      "placeholder": "Select year",
+      "multipleSelected_one": "{{count}} year selected",
+      "multipleSelected_other": "{{count}} years selected",
+      "noneAvailable": "No year available."
+    },
+    "monthSelector": {
+      "label": "Month",
+      "allMonths": "All Months",
+      "months": [ "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec" ]
+    },
+    "areaSelector": {
+      "label": "Entry Area",
+      "allAreas": "All Areas",
+       "multipleSelected_one": "{{count}} area selected",
+      "multipleSelected_other": "{{count}} areas selected",
+      "noneAvailable": "No area available."
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "navigation": {
+    "entry": "Lançamento",
+    "dashboards": "Dashboards",
+    "info": "Informativos",
+    "glossary": "Glossário",
+    "documentation": "Documentação",
+    "admin": "Administração",
+    "users": "Usuários",
+    "clients": "Clientes",
+    "collectors": "Fornecedores de Coleta",
+    "mtrManagement": "Gestão MTR/CDF"
+  },
+  "user": {
+    "level": "Nível"
+  },
+  "menu": {
+    "expand": "Expandir menu",
+    "collapse": "Recolher menu"
+  },
+  "logout": {
+    "button": "Sair",
+    "modalTitle": "Confirmar Saída",
+    "modalMessage": "Tem certeza de que deseja encerrar a sessão?",
+    "modalConfirm": "Sim, Sair"
+  }
+}

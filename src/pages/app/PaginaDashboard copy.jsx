@@ -27,7 +27,6 @@ const TODOS_OS_MESES_INDICES = Array.from({ length: 12 }, (_, i) => i);
 
 // ... (todas as funções processDataFor... continuam aqui, sem mudanças)
 const processDataForAggregatedPieChart = (records) => {
-  console.log('[LAZY LOAD] Executando cálculo para Gráfico de Pizza por TIPO...');
   if (!Array.isArray(records) || records.length === 0) return [];
   const aggregation = records.reduce((acc, record) => {
     if (!record || !record.wasteType) return acc;
@@ -67,7 +66,6 @@ const processDataForAggregatedPieChart = (records) => {
   }));
 };
 const processDataForAreaChartWithBreakdown = (records) => {
-    console.log('[LAZY LOAD] Executando cálculo para Gráfico de Pizza por ÁREA...');
     if (!Array.isArray(records) || records.length === 0) return [];
     const aggregation = records.reduce((acc, record) => {
         if (!record || !record.areaLancamento || !record.wasteType) return acc;
@@ -90,7 +88,6 @@ const processDataForAreaChartWithBreakdown = (records) => {
     }));
 };
 const processDataForDesvioDeAterro = (records, rejectCategoryName = "Rejeito") => {
-    console.log('[LAZY LOAD] Executando cálculo para Gráfico de Desvio de Aterro...');
     if (!Array.isArray(records) || records.length === 0) return [];
     const dailyDataAggregated = records.reduce((acc, record) => {
         if (!record || !record.timestamp) return acc;
@@ -121,7 +118,6 @@ const processDataForDesvioDeAterro = (records, rejectCategoryName = "Rejeito") =
     });
 };
 const processDataForMonthlyYearlyComparison = (records, year1, year2) => {
-  console.log('[LAZY LOAD] Executando cálculo para Gráfico de Comparação Mensal...');
   if (!Array.isArray(records)) return { data: [], years: [] };
   const monthlyData = {};
   records.forEach(record => {
@@ -151,7 +147,6 @@ const processDataForMonthlyYearlyComparison = (records, year1, year2) => {
   return { data: chartData, years: actualYearsInData };
 };
 const processDataForSummaryCards = (records) => {
-  console.log('[LAZY LOAD] Executando cálculo para Cards de Sumário...');
   if (!Array.isArray(records) || records.length === 0) return [];
   let totalGeralKg = 0, totalOrganicoKg = 0, totalReciclavelKg = 0, totalRejeitoKg = 0;
   records.forEach(record => {
@@ -190,7 +185,7 @@ const SectionTitle = ({ title, isExpanded, onClick }) => (
 );
 
 export default function PaginaDashboard() {
-  const { t } = useTranslation('dashboard');
+  const { t } = useTranslation(['dashboard', 'filters']);
   const { db, userProfile, userAllowedClientes, loadingAuth, loadingAllowedClientes } = useContext(AuthContext);
   
   const now = new Date();
@@ -206,12 +201,9 @@ export default function PaginaDashboard() {
   const [empresasColeta, setEmpresasColeta] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
 
-  // --- INÍCIO DA NOVA LÓGICA ---
-  // Estados para controlar a visibilidade de cada seção lazy-loaded
   const [isMonthlyComparisonVisible, setIsMonthlyComparisonVisible] = useState(false);
   const [isCompositionVisible, setIsCompositionVisible] = useState(false);
   const [isDestinationVisible, setIsDestinationVisible] = useState(false);
-  // --- FIM DA NOVA LÓGICA ---
 
   const dashboardMode = useMemo(() => {
     if (!selectedClienteIds.length || !userAllowedClientes.length) {
@@ -280,39 +272,27 @@ export default function PaginaDashboard() {
 
 
   const destinacaoData = useMemo(() => {
-    // --- INÍCIO DA NOVA LÓGICA ---
-    // Adiciona uma guarda: só calcula se a seção estiver visível
     if (!isDestinationVisible) return [];
-    console.log('[LAZY LOAD] Executando cálculo para Gráfico de Destinação...');
-    // --- FIM DA NOVA LÓGICA ---
-
     if (recordsFullyFiltered.length === 0 || empresasColeta.length === 0) {
         return [];
     }
-
     const empresasMap = new Map(empresasColeta.map(e => [e.id, e]));
     const disposalDestinations = ['Aterro Sanitário', 'Incineração'];
-
     const recoveryData = { value: 0, breakdown: {} };
     const disposalData = { value: 0, breakdown: {} };
-
     recordsFullyFiltered.forEach(record => {
         const empresa = empresasMap.get(record.empresaColetaId);
         if (!empresa?.destinacoes || !record.wasteType) return;
-
         let mainWasteType = record.wasteType;
         if (mainWasteType.startsWith('Reciclável')) {
             mainWasteType = 'Reciclável';
         } else if (mainWasteType.startsWith('Orgânico')) {
             mainWasteType = 'Orgânico';
         }
-
         const destinacoesDoTipo = empresa.destinacoes[mainWasteType] || [];
         const isDisposal = destinacoesDoTipo.some(dest => disposalDestinations.includes(dest));
         const destinationName = destinacoesDoTipo[0] || 'Não especificado'; 
-
         const weight = record.peso;
-
         if (isDisposal) {
             disposalData.value += weight;
             disposalData.breakdown[destinationName] = (disposalData.breakdown[destinationName] || 0) + weight;
@@ -345,12 +325,12 @@ export default function PaginaDashboard() {
     }
 
     return result;
-  }, [recordsFullyFiltered, empresasColeta, isDestinationVisible]); // Adiciona a dependência
+  }, [recordsFullyFiltered, empresasColeta, isDestinationVisible]);
 
 
   const handleClienteSelectionChange = (clienteId) => {
     setSelectedClienteIds(prev => {
-        const newSelection = prev.includes(clienteId) ? prev.filter(id => id !== clienteId) : [...prev, id];
+        const newSelection = prev.includes(clienteId) ? prev.filter(id => id !== clienteId) : [...prev, clienteId];
         if (userAllowedClientes) { setSelectAllClientesToggle(newSelection.length === userAllowedClientes.length); }
         return newSelection;
     });
@@ -406,8 +386,6 @@ export default function PaginaDashboard() {
     setSelectedMonths(months);
   };
 
-  // --- INÍCIO DA LÓGICA ALTERADA ---
-  // A seção de Sumário não é lazy-loaded, então seu cálculo permanece como estava.
   const summaryData = useMemo(() => processDataForSummaryCards(recordsFullyFiltered), [recordsFullyFiltered]);
 
   const wasteTypePieData = useMemo(() => {
@@ -425,9 +403,6 @@ export default function PaginaDashboard() {
     return processDataForDesvioDeAterro(recordsFullyFiltered, "Rejeito");
   }, [recordsFullyFiltered, isDestinationVisible]);
 
-  // A lógica de comparação anual é um desafio com lazy loading.
-  // Vamos mantê-la simples por enquanto, sabendo que ela só terá os dados do período filtrado.
-  // Uma solução futura seria ter uma busca de dados separada para ela.
   const comparisonYears = useMemo(() => {
     const sortedYears = [...availableYears].sort((a, b) => b - a);
     if (sortedYears.length === 0) return [new Date().getFullYear()];
@@ -439,8 +414,6 @@ export default function PaginaDashboard() {
     if (!isMonthlyComparisonVisible) return { data: [], years: [] };
     return processDataForMonthlyYearlyComparison(allWasteRecords, comparisonYears[0], comparisonYears[1] || comparisonYears[0]);
   }, [allWasteRecords, comparisonYears, isMonthlyComparisonVisible]);
-  // --- FIM DA NOVA LÓGICA ---
-
 
   if (loadingAuth || loadingAllowedClientes) { return <div className="p-8 text-center text-rich-soil">A carregar...</div>; }
     
@@ -474,12 +447,11 @@ export default function PaginaDashboard() {
         onYearToggle={handleYearToggle} 
         availableYears={availableYears} 
         selectedMonths={selectedMonths} 
-        onSelectedMonthsChange={setSelectedMonths}
+        onSelectedMonthsChange={onSelectedMonthsChange}
         selectedAreas={selectedAreas} 
-        onSelectedAreasChange={setSelectedAreas} 
+        onSelectedAreasChange={onSelectedAreasChange} 
         availableAreas={availableAreas} 
         onQuickPeriodSelect={handleQuickPeriodSelect}
-        isLoading={loadingRecords || selectedYears.length === 0} 
       />
       
       <div className="mt-8 space-y-6">
@@ -487,14 +459,11 @@ export default function PaginaDashboard() {
          !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('paginaDashboard.filters.selectClient')}</div>) :
          !allWasteRecords.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('paginaDashboard.filters.noData')}</div>) : (
           <>
-            {/* A primeira seção (Visão Geral) carrega imediatamente */}
             <section>
                 <SectionTitle title={t('paginaDashboard.sections.overview')} isExpanded={sectionsVisibility.summary} onClick={() => toggleSection('summary')} />
                 {sectionsVisibility.summary && <SummaryCards summaryData={summaryData} isLoading={loadingRecords} />}
             </section>
             
-            {/* --- INÍCIO DA NOVA LÓGICA --- */}
-            {/* As seções seguintes são envolvidas pelo LazySection */}
             <LazySection onVisible={() => setIsMonthlyComparisonVisible(true)}>
               <section>
                   <SectionTitle title={t('paginaDashboard.sections.monthlyGeneration')} isExpanded={sectionsVisibility.monthlyComparison} onClick={() => toggleSection('monthlyComparison')} />
@@ -525,7 +494,6 @@ export default function PaginaDashboard() {
                   )}
               </section>
             </LazySection>
-            {/* --- FIM DA NOVA LÓGICA --- */}
           </>
         )}
       </div>

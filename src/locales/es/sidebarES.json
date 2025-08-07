@@ -1,0 +1,27 @@
+{
+  "navigation": {
+    "entry": "Registro",
+    "dashboards": "Tableros",
+    "info": "Informativos",
+    "glossary": "Glosario",
+    "documentation": "Documentação",
+    "admin": "Administración",
+    "users": "Usuarios",
+    "clients": "Clientes",
+    "collectors": "Proveedores de Recolección",
+    "mtrManagement": "Gestão MTR/CDF"
+  },
+  "user": {
+    "level": "Nivel"
+  },
+  "menu": {
+    "expand": "Expandir menú",
+    "collapse": "Contraer menú"
+  },
+  "logout": {
+    "button": "Cerrar sesión",
+    "modalTitle": "Confirmar salida",
+    "modalMessage": "¿Está seguro de que desea cerrar la sesión?",
+    "modalConfirm": "Sí, salir"
+  }
+}

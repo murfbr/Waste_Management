@@ -1,0 +1,47 @@
+{
+  "paginaDashboard": {
+    "header": {
+      "title": "Dashboard de Análises"
+    },
+    "sections": {
+      "overview": "VISÃO GERAL",
+      "monthlyGeneration": "GERAÇÃO POR MÊS",
+      "generationComposition": "COMPOSIÇÃO DA GERAÇÃO",
+      "destinationComposition": "COMPOSIÇÃO DA DESTINAÇÃO"
+    },
+    "filters": {
+      "loadingData": "A carregar dados...",
+      "selectClient": "Por favor, selecione um cliente para visualizar os dados.",
+      "noData": "Nenhum dado de resíduo registado para os clientes e período selecionados."
+    }
+  },
+       "filtersComponent": {
+      "title": "Filtros",
+      "quickPeriods": {
+        "label": "Períodos Rápidos",
+        "thisMonth": "Este Mês",
+        "last3Months": "Últimos 3 Meses",
+        "thisYear": "Este Ano",
+        "lastYear": "Ano Passado"
+      },
+      "yearSelector": {
+        "label": "Ano",
+        "placeholder": "Selecione o ano",
+        "multipleSelected_one": "{{count}} ano selecionado",
+        "multipleSelected_other": "{{count}} anos selecionados",
+        "noneAvailable": "Nenhum ano disponível."
+      },
+      "monthSelector": {
+        "label": "Mês",
+        "allMonths": "Todos os Meses",
+        "months": [ "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez" ]
+      },
+      "areaSelector": {
+        "label": "Área de Lançamento",
+        "allAreas": "Todas as Áreas",
+        "multipleSelected_one": "{{count}} área selecionada",
+        "multipleSelected_other": "{{count}} áreas selecionadas",
+        "noneAvailable": "Nenhuma área disponível."
+      }
+    }
+}

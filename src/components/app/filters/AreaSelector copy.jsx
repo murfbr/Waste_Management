@@ -1,6 +1,5 @@
 // src/components/app/filters/AreaSelector.jsx
 import React, { useState, useEffect, useRef } from 'react';
-import { useTranslation } from 'react-i18next';
 
 const ChevronDownIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-400"><polyline points="6 9 12 15 18 9"></polyline></svg>;
 
@@ -9,7 +8,6 @@ export default function AreaSelector({
   selectedAreas = [],
   onSelectedAreasChange = () => {},
 }) {
-  const { t } = useTranslation('dashboard');
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
 
@@ -34,21 +32,19 @@ export default function AreaSelector({
     onSelectedAreasChange(selectedAreas.length === availableAreas.length ? [] : availableAreas.map(a => a));
   };
 
-  // --- LÓGICA DE EXIBIÇÃO CORRIGIDA ---
   const getDisplayValue = () => {
     if (selectedAreas.length === 0 || selectedAreas.length === availableAreas.length) {
-      return t('filtersComponent.areaSelector.allAreas');
+      return "Todas as Áreas";
     }
     if (selectedAreas.length === 1) {
       return selectedAreas[0];
     }
-    // A chamada correta para pluralização
-    return t('filtersComponent.areaSelector.multipleSelected', { count: selectedAreas.length });
+    return `${selectedAreas.length} áreas selecionadas`;
   };
 
   return (
     <div className="relative w-full" ref={dropdownRef}>
-      <label htmlFor="area-selector-button" className="block text-sm font-bold text-rich-soil mb-2">{t('filtersComponent.areaSelector.label')}</label>
+      <label htmlFor="area-selector-button" className="block text-sm font-bold text-rich-soil mb-2">Área de Lançamento</label>
       <button
         id="area-selector-button"
         type="button"
@@ -70,7 +66,7 @@ export default function AreaSelector({
                   checked={selectedAreas.length === availableAreas.length}
                   onChange={handleSelectAll}
                 />
-                <span className="ml-3">{t('filtersComponent.areaSelector.allAreas')}</span>
+                <span className="ml-3">Todas as Áreas</span>
               </label>
           )}
           {availableAreas.map(area => (
@@ -85,7 +81,7 @@ export default function AreaSelector({
             </label>
           ))}
            {availableAreas.length === 0 && (
-              <div className="px-3 py-2 text-sm text-gray-500">{t('filtersComponent.areaSelector.noneAvailable')}</div>
+              <div className="px-3 py-2 text-sm text-gray-500">Nenhuma área disponível.</div>
           )}
         </div>
       )}
