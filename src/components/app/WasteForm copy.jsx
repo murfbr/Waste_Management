@@ -1,26 +1,16 @@
 // src/components/app/WasteForm.jsx
 
 import React, { useState, useEffect, useRef, useContext } from 'react';
-import { useTranslation } from 'react-i18next';
 import AuthContext from '../../context/AuthContext'; 
 import { addPendingRecord } from '../../services/offlineSyncService';
 import { wasteTypeColors } from '../../utils/wasteTypeColors'; 
 
-// As chaves de fallback agora são neutras e serão traduzidas na tela
-const SUBTIPOS_RECICLAVEIS_FALLBACK = ["paper", "glass", "metal", "plastic", "batteries", "electronics"];
-const SUBTIPOS_ORGANICOS_FALLBACK = ["general", "preService", "postService"];
+const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
+// BUG FIX: Adicionado "Geral" como uma sub-categoria padrão para Orgânicos.
+const SUBTIPOS_ORGANICOS_FALLBACK = ["Geral", "Pré-serviço", "Pós-serviço"];
 
 export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSuccessfulSubmit, formResetKey }) { 
-  const { t, i18n } = useTranslation('wasteRegister');
   const { currentUser, appId } = useContext(AuthContext);
-
-  // Mapeia o código de idioma do i18next para um locale de formatação de número
-  const localeMap = {
-    pt: 'pt-BR',
-    en: 'en-US',
-    es: 'es-ES',
-  };
-  const currentLocale = localeMap[i18n.language] || 'pt-BR';
 
   const [areaLancamento, setAreaLancamento] = useState('');
   const [selectedMainCategory, setSelectedMainCategory] = useState('');
@@ -86,8 +76,10 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
   }, [clienteSelecionado, formResetKey]);
 
   const formatPesoForDisplay = (valor) => {
-    const valorNumerico = valor / 100;
-    return valorNumerico.toLocaleString(currentLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const valorString = String(valor).padStart(3, '0');
+    const inteiro = valorString.slice(0, -2);
+    const decimal = valorString.slice(-2);
+    return `${inteiro},${decimal}`;
   };
 
   const clearMessagesAfterDelay = () => {
@@ -103,8 +95,10 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
         setSelectedSubType('');
     } else {
         setSelectedMainCategory(categoria);
+        // Se a categoria for "Orgânico" e a separação de orgânicos estiver ativa,
+        // pré-seleciona "Geral". Caso contrário, limpa o subtipo.
         if (categoria === 'Orgânico' && clienteSelecionado?.fazSeparacaoOrganicosCompleta) {
-            setSelectedSubType('general'); // Usa a chave neutra
+            setSelectedSubType('Geral');
         } else {
             setSelectedSubType('');
         }
@@ -119,29 +113,29 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     setFormSuccess('');
 
     if (!selectedMainCategory) {
-      setFormError(t('wasteFormComponent.errors.selectWasteType'));
+      setFormError('Por favor, selecione um tipo de resíduo.');
       clearMessagesAfterDelay();
       return;
     }
     if (selectedMainCategory === 'Reciclável' && opcoesSubtipoReciclavel.length > 0 && !selectedSubType) {
-      setFormError(t('wasteFormComponent.errors.specifyRecyclable'));
+      setFormError('Por favor, especifique o tipo de reciclável.');
       clearMessagesAfterDelay();
       return;
     }
     if (selectedMainCategory === 'Orgânico' && opcoesSubtipoOrganico.length > 0 && !selectedSubType) {
-      setFormError(t('wasteFormComponent.errors.specifyOrganic'));
+      setFormError('Por favor, especifique o tipo de orgânico.');
       clearMessagesAfterDelay();
       return;
     }
     if (!areaLancamento && opcoesArea.length > 0) {
-      setFormError(t('wasteFormComponent.errors.selectArea'));
+      setFormError('Por favor, selecione uma área de lançamento.');
       clearMessagesAfterDelay();
       return;
     }
     
     const parsedPeso = peso / 100;
     if (isNaN(parsedPeso) || parsedPeso <= 0) {
-      setFormError(t('wasteFormComponent.errors.invalidWeight'));
+      setFormError('Por favor, insira um peso válido.');
       clearMessagesAfterDelay();
       return;
     }
@@ -153,7 +147,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     );
 
     const recordData = {
-      areaLancamento: areaLancamento || (opcoesArea.length === 0 ? t('wasteFormComponent.data.general') : t('wasteFormComponent.data.notSpecified')),
+      areaLancamento: areaLancamento || (opcoesArea.length === 0 ? "Geral" : "Não especificada"),
       wasteType: selectedMainCategory,
       peso: parsedPeso,
       clienteId: clienteSelecionado.id,
@@ -168,10 +162,9 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     let tipoParaExibir = selectedMainCategory;
 
     if (selectedSubType) {
-      recordData.wasteSubType = selectedSubType; // Salva a chave neutra no DB
-      // Para exibição no modal de limite, traduzimos o subtipo
-      const translatedSubType = t(`wasteFormComponent.fallbackSubtypes.${selectedMainCategory.toLowerCase()}.${selectedSubType}`, selectedSubType);
-      tipoParaExibir = `${selectedMainCategory} (${translatedSubType})`;
+      recordData.wasteSubType = selectedSubType;
+      tipoParaExibir = `${selectedMainCategory} (${selectedSubType})`;
+      categoriaParaVerificarLimite = selectedMainCategory;
     }
 
     const limites = clienteSelecionado.limitesPorResiduo || {};
@@ -190,7 +183,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     const result = await addPendingRecord(recordData);
 
     if (result.success) {
-      setFormSuccess(result.message); // A mensagem de sucesso já vem do service
+      setFormSuccess(result.message);
       if (onSuccessfulSubmit) onSuccessfulSubmit();
       
       setSelectedMainCategory('');
@@ -208,6 +201,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     clearMessagesAfterDelay();
   };
 
+  // #region CORREÇÃO APLICADA AQUI
   const handlePesoKeyDown = (e) => {
     e.preventDefault();
     
@@ -225,11 +219,13 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     }
     else if (key === 'Enter') {
         handleSubmit(e);
+        // Esta linha remove o foco do input, fechando o teclado no celular.
         if (pesoInputRef.current) {
           pesoInputRef.current.blur();
         }
     }
   };
+  // #endregion
 
   const getButtonStyles = (type, isSelected) => {
     const colorTheme = wasteTypeColors[type] || wasteTypeColors['default'];
@@ -257,16 +253,17 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
   const subLabelStyle = "block font-lexend text-corpo text-exotic-plume text-center mb-3";
 
   if (!clienteSelecionado) {
-    return <p className="text-center text-rich-soil">{t('wasteFormComponent.selectClient')}</p>;
+    return <p className="text-center text-rich-soil">Selecione um cliente para iniciar o lançamento.</p>;
   }
   
   const showRecyclableSubTypes = selectedMainCategory === 'Reciclável' && opcoesSubtipoReciclavel.length > 0;
+  // BUG FIX: Garante que a seção de subtipos orgânicos seja exibida se a categoria principal for "Orgânico".
   const showOrganicSubTypes = selectedMainCategory === 'Orgânico' && opcoesSubtipoOrganico.length > 0;
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="text-center">
-        <label htmlFor="peso" className="sr-only">{t('wasteFormComponent.weightLabel')}</label>
+        <label htmlFor="peso" className="sr-only">Peso Total (kg):</label>
         <div className="flex items-baseline justify-center">
             <input
                 ref={pesoInputRef} 
@@ -277,13 +274,13 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
                 onKeyDown={handlePesoKeyDown}
                 className="w-auto max-w-[200px] p-2 border-2 border-early-frost rounded-xl text-7xl font-bold text-center text-rich-soil focus:ring-2 focus:ring-blue-coral focus:border-blue-coral appearance-none bg-white"
             />
-            <span className="text-4xl font-semibold text-rich-soil ml-2">{t('wasteFormComponent.unit')}</span>
+            <span className="text-4xl font-semibold text-rich-soil ml-2">kg</span>
         </div>
       </div>
 
       {opcoesTipoResiduo.length > 0 ? (
         <div>
-          <label className={labelStyle}>{t('wasteFormComponent.wasteTypeLabel')}</label>
+          <label className={labelStyle}>Tipo de Resíduo*</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {opcoesTipoResiduo.map((tipo) => (
               <button
@@ -302,19 +299,19 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
 
           {showRecyclableSubTypes && (
              <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-early-frost">
-              <label className={subLabelStyle}>{t('wasteFormComponent.recyclableLabel')}</label>
+              <label className={subLabelStyle}>Especifique o Reciclável*</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {opcoesSubtipoReciclavel.map((subtipoKey) => (
+                {opcoesSubtipoReciclavel.map((subtipo) => (
                   <button
-                    key={`subtype-${subtipoKey}`} type="button" onClick={() => setSelectedSubType(subtipoKey)}
-                    style={getButtonStyles(subtipoKey, selectedSubType === subtipoKey)}
+                    key={`subtype-${subtipo}`} type="button" onClick={() => setSelectedSubType(subtipo)}
+                    style={getButtonStyles(subtipo, selectedSubType === subtipo)}
                     className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl font-lexend text-corpo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
-                        ${selectedSubType === subtipoKey
+                        ${selectedSubType === subtipo
                             ? 'ring-rich-soil shadow-lg'
                             : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
                         }`}
                   >
-                    {t(`wasteFormComponent.fallbackSubtypes.recyclable.${subtipoKey}`, subtipoKey)}
+                    {subtipo}
                   </button>
                 ))}
               </div>
@@ -323,19 +320,19 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
 
           {showOrganicSubTypes && (
              <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-early-frost">
-              <label className={subLabelStyle}>{t('wasteFormComponent.organicLabel')}</label>
+              <label className={subLabelStyle}>Especifique o Orgânico*</label>
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                {opcoesSubtipoOrganico.map((subtipoKey) => (
+                {opcoesSubtipoOrganico.map((subtipo) => (
                   <button
-                    key={`subtype-${subtipoKey}`} type="button" onClick={() => setSelectedSubType(subtipoKey)}
-                    style={getButtonStyles(subtipoKey, selectedSubType === subtipoKey)}
+                    key={`subtype-${subtipo}`} type="button" onClick={() => setSelectedSubType(subtipo)}
+                    style={getButtonStyles(subtipo, selectedSubType === subtipo)}
                     className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl font-lexend text-corpo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
-                        ${selectedSubType === subtipoKey
+                        ${selectedSubType === subtipo
                             ? 'ring-rich-soil shadow-lg'
                             : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
                         }`}
                   >
-                    {t(`wasteFormComponent.fallbackSubtypes.organic.${subtipoKey}`, subtipoKey)}
+                    {subtipo}
                   </button>
                 ))}
               </div>
@@ -343,12 +340,12 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
           )}
         </div>
       ) : (
-        <p className="text-center text-rich-soil">{t('wasteFormComponent.noWasteTypes')}</p>
+        <p className="text-center text-rich-soil">Este cliente não possui tipos de resíduo para lançamento.</p>
       )}
 
       {opcoesArea.length > 0 && (
         <div>
-          <label className={labelStyle}>{t('wasteFormComponent.areaLabel')}</label>
+          <label className={labelStyle}>Área da empresa*</label>
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
             {opcoesArea.map((areaOption) => (
               <button
@@ -383,7 +380,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
             className="w-full bg-apricot-orange hover:opacity-90 text-white font-lexend text-acao py-4 px-6 rounded-xl shadow-md transition duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-coral focus:ring-offset-2 disabled:opacity-70"
             disabled={submitting || peso === 0 || !selectedMainCategory || (!areaLancamento && opcoesArea.length > 0) || (showRecyclableSubTypes && !selectedSubType) || (showOrganicSubTypes && !selectedSubType)}
         >
-            {submitting ? t('wasteFormComponent.submittingButton') : t('wasteFormComponent.submitButton')}
+            {submitting ? 'A Registrar...' : 'Registrar Pesagem'}
         </button>
       </div>
     </form>

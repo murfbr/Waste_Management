@@ -350,7 +350,7 @@ export default function PaginaDashboard() {
 
   const handleClienteSelectionChange = (clienteId) => {
     setSelectedClienteIds(prev => {
-        const newSelection = prev.includes(clienteId) ? prev.filter(id => id !== clienteId) : [...prev, id];
+        const newSelection = prev.includes(clienteId) ? prev.filter(id => id !== clienteId) : [...prev, clienteId];
         if (userAllowedClientes) { setSelectAllClientesToggle(newSelection.length === userAllowedClientes.length); }
         return newSelection;
     });

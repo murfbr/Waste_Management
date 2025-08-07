@@ -1,13 +1,13 @@
 // src/components/app/ConfirmationModal.jsx
 
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 
 // Objeto de configuração para os diferentes temas do modal
 const THEMES = {
   danger: {
     iconBg: 'bg-red-100',
     iconColor: 'text-red-600',
+    // AJUSTE: Cor 100% no mobile, 80% no desktop (md:), 100% no hover.
     confirmBtnBg: 'bg-red-600 md:bg-red-600/80 hover:bg-red-600',
     icon: () => (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -18,6 +18,7 @@ const THEMES = {
   warning: {
     iconBg: 'bg-early-frost/80',
     iconColor: 'text-apricot-orange',
+    // AJUSTE: Cor 100% no mobile, 80% no desktop (md:), 100% no hover.
     confirmBtnBg: 'bg-apricot-orange md:bg-apricot-orange/80 hover:bg-apricot-orange',
     icon: () => (
       <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -28,6 +29,7 @@ const THEMES = {
   info: {
     iconBg: 'bg-blue-100',
     iconColor: 'text-blue-600',
+    // AJUSTE: Cor 100% no mobile, 80% no desktop (md:), 100% no hover.
     confirmBtnBg: 'bg-blue-600 md:bg-blue-600/80 hover:bg-blue-600',
     icon: () => (
         <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -43,20 +45,14 @@ export default function ConfirmationModal({
   onConfirm,
   title,
   message,
-  confirmText,
-  cancelText,
-  theme = 'info',
-  children,
+  confirmText = "Confirmar",
+  cancelText = "Cancelar",
+  theme = 'info', // 'info', 'warning', 'danger'
+  children, // Para conteúdo customizado, como os detalhes do limite
 }) {
-  const { t } = useTranslation('common');
-
   if (!isOpen) return null;
 
   const currentTheme = THEMES[theme] || THEMES.info;
-
-  // Usa o texto passado via prop (ex: "Sim, Sair") ou o padrão do 'common.json'
-  const finalConfirmText = confirmText || t('confirm');
-  const finalCancelText = cancelText || t('cancel');
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 z-50 flex justify-center items-center p-4 transition-opacity duration-300">
@@ -67,24 +63,28 @@ export default function ConfirmationModal({
           </div>
         </div>
         
+        {/* TIPOGRAFIA APLICADA */}
         <h2 className="font-lexend text-acao font-bold text-gray-800 mb-2">{title}</h2>
         
+        {/* TIPOGRAFIA APLICADA */}
         <p className="font-comfortaa text-corpo text-gray-600 mb-6">{message}</p>
 
         {children}
         
         <div className="flex justify-center space-x-4 mt-6">
+          {/* TIPOGRAFIA APLICADA */}
           <button 
             onClick={onCancel} 
             className="px-8 py-3 rounded-lg text-gray-700 bg-early-frost md:bg-early-frost/80 hover:bg-early-frost font-lexend text-corpo font-bold transition-transform transform hover:scale-105"
           >
-            {finalCancelText}
+            {cancelText}
           </button>
+          {/* TIPOGRAFIA APLICADA */}
           <button 
             onClick={onConfirm} 
             className={`px-8 py-3 rounded-lg text-white ${currentTheme.confirmBtnBg} font-lexend text-corpo font-bold transition-transform transform hover:scale-105`}
           >
-            {finalConfirmText}
+            {confirmText}
           </button>
         </div>
       </div>

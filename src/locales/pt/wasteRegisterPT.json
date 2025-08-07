@@ -1,3 +1,91 @@
 {
-    
+  "paginaLancamento": {
+    "title": "Pesagem",
+    "logoutButton": "Sair",
+    "selectClient": "Selecionar Cliente",
+    "loadingClients": "A carregar clientes...",
+    "noClientsAvailable": "Nenhum cliente disponível",
+    "pleaseSelectClient": "Por favor, selecione um cliente para continuar.",
+    "recentRecords": "Registros Recentes de:",
+    "loadingData": "A carregar dados...",
+    "loadingProfile": "A carregar perfil...",
+    "accessDenied": "Acesso Negado.",
+    "noClientAccess": "Sem acesso a clientes. Contacte o administrador.",
+    "noClientsRegistered": "Nenhum cliente ativo cadastrado no sistema.",
+    "loadingClientList": "A carregar lista de clientes...",
+    "deleteModal": {
+      "title": "Confirmar Exclusão",
+      "message": "Tem certeza de que deseja excluir permanentemente este registro?",
+      "confirm": "Sim, Excluir",
+      "itemType": "Tipo",
+      "itemWeight": "Peso",
+      "itemDate": "Data"
+    },
+    "limitModal": {
+      "title": "Atenção: Limite Máximo Excedido",
+      "message": "O peso lançado está acima do limite configurado. Deseja confirmar mesmo assim?",
+      "confirm": "Confirmar Mesmo Assim",
+      "itemType": "Tipo",
+      "limit": "Limite",
+      "submitted": "Lançado"
+    },
+    "logoutModal": {
+      "title": "Confirmar Saída",
+      "message": "Tem certeza de que deseja encerrar a sessão?",
+      "confirm": "Sim, Sair"
+    },
+    "messages": {
+      "logoutError": "Erro ao tentar sair. Tente novamente.",
+      "loadError": "Erro ao carregar registros.",
+      "pendingDeleted": "Registro pendente excluído com sucesso!",
+      "recordDeleted": "Registro excluído com sucesso!",
+      "deleteError": "Erro ao excluir registro. Tente novamente.",
+      "exportClientError": "Por favor, selecione um cliente primeiro.",
+      "exportError": "Falha ao gerar o relatório. Tente novamente."
+    }
+  },
+  "wasteFormComponent": {
+    "selectClient": "Selecione um cliente para iniciar o lançamento.",
+    "weightLabel": "Peso Total (kg):",
+    "wasteTypeLabel": "Tipo de Resíduo*",
+    "recyclableLabel": "Especifique o Reciclável*",
+    "organicLabel": "Especifique o Orgânico*",
+    "areaLabel": "Área da empresa*",
+    "noWasteTypes": "Este cliente não possui tipos de resíduo para lançamento.",
+    "submitButton": "Registrar Pesagem",
+    "submittingButton": "A Registrar...",
+    "unit": "kg",
+    "errors": {
+      "selectWasteType": "Por favor, selecione um tipo de resíduo.",
+      "specifyRecyclable": "Por favor, especifique o tipo de reciclável.",
+      "specifyOrganic": "Por favor, especifique o tipo de orgânico.",
+      "selectArea": "Por favor, selecione uma área de lançamento.",
+      "invalidWeight": "Por favor, insira um peso válido."
+    },
+    "data": {
+      "general": "Geral",
+      "notSpecified": "Não especificada"
+    }
+  },
+  "wasteRecordsListComponent": {
+    "loading": "Carregando registros...",
+    "noRecords": "Nenhum registro encontrado para a seleção atual.",
+    "exportTitle": "Exportar Relatório",
+    "periodLabel": "Período:",
+    "periods": {
+      "today": "Hoje",
+      "7days": "Últimos 7 dias",
+      "30days": "Últimos 30 dias"
+    },
+    "exportingButton": "A exportar...",
+    "exportButton": "Gerar CSV",
+    "itemArea": "Área",
+    "itemType": "Tipo",
+    "itemWeight": "Peso",
+    "itemDate": "Data",
+    "pendingSync": "Aguardando sincronização",
+    "deleteButton": "Excluir",
+    "loadMoreButton": "Carregar Mais Registros",
+    "loadingMoreButton": "A Carregar..."
+  }
 }

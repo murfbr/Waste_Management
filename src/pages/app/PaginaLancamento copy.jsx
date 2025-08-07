@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
-import { useTranslation } from 'react-i18next';
 import AuthContext from '../../context/AuthContext';
 import { 
     collection, 
@@ -12,6 +11,7 @@ import {
     query, 
     where, 
     getDocs, 
+    documentId, 
     orderBy, 
     limit, 
     startAfter 
@@ -29,15 +29,7 @@ const REGISTROS_POR_PAGINA = 10;
 
 export default function PaginaLancamento() {
   const { db, auth, currentUser, appId, userProfile, userAllowedClientes, loadingUserClientes } = useContext(AuthContext);
-  const { t, i18n } = useTranslation('wasteRegister');
   const navigate = useNavigate();
-
-  const localeMap = {
-    pt: 'pt-BR',
-    en: 'en-GB',
-    es: 'es-ES',
-  };
-  const currentLocale = localeMap[i18n.language] || 'pt-BR';
 
   const [message, setMessage] = useState('');
   const [isError, setIsError] = useState(false);
@@ -50,7 +42,9 @@ export default function PaginaLancamento() {
   const [selectedClienteId, setSelectedClienteId] = useState('');
   const [selectedClienteData, setSelectedClienteData] = useState(null);
   
+  // BUG FIX: Adiciona uma chave de estado para forçar a reinicialização do formulário.
   const [formResetKey, setFormResetKey] = useState(0);
+
   const [isExporting, setIsExporting] = useState(false);
   
   const [modalState, setModalState] = useState({
@@ -76,16 +70,16 @@ export default function PaginaLancamento() {
       navigate('/login');
     } catch (error) {
       console.error('Erro ao fazer logout:', error);
-      showMessage(t('paginaLancamento.messages.logoutError'), true);
+      showMessage('Erro ao tentar sair. Tente novamente.', true);
     }
   };
   
   const handleLogoutRequest = () => {
     setModalState({
         isOpen: true,
-        title: t('paginaLancamento.logoutModal.title'),
-        message: t('paginaLancamento.logoutModal.message'),
-        confirmText: t('paginaLancamento.logoutModal.confirm'),
+        title: 'Confirmar Saída',
+        message: 'Tem certeza de que deseja encerrar a sessão?',
+        confirmText: 'Sim, Sair',
         theme: 'danger',
         onConfirm: () => {
             handleLogout();
@@ -144,12 +138,12 @@ export default function PaginaLancamento() {
 
     } catch (error) {
       console.error("PAGINA LANCAMENTO - Erro ao carregar e combinar registros:", error);
-      showMessage(t('paginaLancamento.messages.loadError'), true);
+      showMessage('Erro ao carregar registros.', true);
       setUnifiedRecords([]);
       setHasMoreRecords(false);
     }
     setLoadingRecords(false);
-  }, [db, currentUser, userProfile, selectedClienteId, appId, t]);
+  }, [db, currentUser, userProfile, selectedClienteId, appId]);
   
   useEffect(() => {
     if (selectedClienteId) { 
@@ -169,7 +163,7 @@ export default function PaginaLancamento() {
 
   const handleExportRequest = async (period, clienteNome) => {
     if (!selectedClienteId) {
-        showMessage(t('paginaLancamento.messages.exportClientError'), true);
+        showMessage('Por favor, selecione um cliente primeiro.', true);
         return;
     }
     setIsExporting(true);
@@ -218,7 +212,7 @@ export default function PaginaLancamento() {
 
     } catch (error) {
         console.error("Erro ao gerar relatório CSV:", error);
-        showMessage(t('paginaLancamento.messages.exportError'), true);
+        showMessage('Falha ao gerar o relatório. Tente novamente.', true);
     } finally {
         setIsExporting(false);
     }
@@ -247,7 +241,7 @@ export default function PaginaLancamento() {
 
     } catch (error) {
       console.error("PAGINA LANCAMENTO - Erro ao carregar mais registros:", error);
-      showMessage(t('paginaLancamento.messages.loadError'), true);
+      showMessage('Erro ao carregar mais registros.', true);
     }
     setLoadingMore(false);
   };
@@ -255,16 +249,16 @@ export default function PaginaLancamento() {
   const handleDeleteRequest = (record) => {
     setModalState({
         isOpen: true,
-        title: t('paginaLancamento.deleteModal.title'),
-        message: t('paginaLancamento.deleteModal.message'),
-        confirmText: t('paginaLancamento.deleteModal.confirm'),
+        title: 'Confirmar Exclusão',
+        message: 'Tem certeza de que deseja excluir permanentemente este registro?',
+        confirmText: 'Sim, Excluir',
         theme: 'danger',
         onConfirm: () => handleConfirmDelete(record),
         content: (
             <div className="bg-red-50 border border-red-200 rounded-md p-3 text-sm text-red-800 mb-6 text-left">
-                <p><strong>{t('paginaLancamento.deleteModal.itemType')}:</strong> {record.wasteType} {record.wasteSubType ? `(${record.wasteSubType})` : ''}</p>
-                <p><strong>{t('paginaLancamento.deleteModal.itemWeight')}:</strong> {record.peso} kg</p>
-                <p><strong>{t('paginaLancamento.deleteModal.itemDate')}:</strong> {new Date(record.timestamp).toLocaleString(currentLocale)}</p>
+                <p><strong>Tipo:</strong> {record.wasteType} {record.wasteSubType ? `(${record.wasteSubType})` : ''}</p>
+                <p><strong>Peso:</strong> {record.peso} kg</p>
+                <p><strong>Data:</strong> {new Date(record.timestamp).toLocaleString('pt-BR')}</p>
             </div>
         )
     });
@@ -275,17 +269,17 @@ export default function PaginaLancamento() {
     try {
       if (recordToDelete.isPending) {
         await deletePendingRecord(recordToDelete.localId);
-        showMessage(t('paginaLancamento.messages.pendingDeleted'));
+        showMessage('Registro pendente excluído com sucesso!');
       } else {
         await deleteDoc(doc(db, `artifacts/${appId}/public/data/wasteRecords`, recordToDelete.id));
-        showMessage(t('paginaLancamento.messages.recordDeleted'));
+        showMessage('Registro excluído com sucesso!');
       }
       if (!recordToDelete.isPending) {
         loadAndCombineRecords();
       }
     } catch (error) { 
       console.error("Erro ao excluir registro:", error);
-      showMessage(t('paginaLancamento.messages.deleteError'), true);
+      showMessage('Erro ao excluir registro. Tente novamente.', true);
     }
     setModalState({ isOpen: false });
   };
@@ -294,29 +288,30 @@ export default function PaginaLancamento() {
     const { peso, limite, wasteType } = data;
     setModalState({
         isOpen: true,
-        title: t('paginaLancamento.limitModal.title'),
-        message: t('paginaLancamento.limitModal.message'),
-        confirmText: t('paginaLancamento.limitModal.confirm'),
+        title: 'Atenção: Limite Máximo Excedido',
+        message: 'O peso lançado está acima do limite configurado. Deseja confirmar mesmo assim?',
+        confirmText: 'Confirmar Mesmo Assim',
         theme: 'warning',
         onConfirm: () => handleConfirmLimit(data),
         content: (
             <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2 mb-6 text-left">
-                <div className="flex justify-between text-lg"><span className="font-medium text-gray-500">{t('paginaLancamento.limitModal.itemType')}:</span><span className="font-bold text-gray-900">{wasteType}</span></div>
-                <div className="flex justify-between text-lg"><span className="font-medium text-gray-500">{t('paginaLancamento.limitModal.limit')}:</span><span className="font-bold text-gray-900">{limite} kg</span></div>
-                <div className="flex justify-between text-2xl"><span className="font-medium text-gray-500">{t('paginaLancamento.limitModal.submitted')}:</span><span className="font-extrabold text-red-600">{peso} kg</span></div>
+                <div className="flex justify-between text-lg"><span className="font-medium text-gray-500">Tipo:</span><span className="font-bold text-gray-900">{wasteType}</span></div>
+                <div className="flex justify-between text-lg"><span className="font-medium text-gray-500">Limite:</span><span className="font-bold text-gray-900">{limite} kg</span></div>
+                <div className="flex justify-between text-2xl"><span className="font-medium text-gray-500">Lançado:</span><span className="font-extrabold text-red-600">{peso} kg</span></div>
             </div>
         )
     });
   };
 
+  // BUG FIX: Atualiza a função para recarregar os registros e reiniciar o formulário.
   const handleConfirmLimit = async (limitModalData) => {
     if (!limitModalData) return;
     const { limite, ...recordData } = limitModalData;
     const result = await addPendingRecord(recordData);
     if (result.success) {
       showMessage(result.message);
-      loadAndCombineRecords(); 
-      setFormResetKey(key => key + 1);
+      loadAndCombineRecords(); // Recarrega a lista de registros.
+      setFormResetKey(key => key + 1); // Dispara a reinicialização do formulário.
     } else {
       showMessage(result.message, true);
     }
@@ -326,16 +321,16 @@ export default function PaginaLancamento() {
   const toggleRecordsVisibility = () => setIsRecordsVisible(!isRecordsVisible);
   
 
-  if (loadingUserClientes && !userProfile) return <div className="text-center text-gray-600 p-8">{t('paginaLancamento.loadingData')}</div>;
-  if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">{t('paginaLancamento.loadingProfile')}</div>;
+  if (loadingUserClientes && !userProfile) return <div className="text-center text-gray-600 p-8">A carregar dados...</div>;
+  if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">A carregar perfil...</div>;
   if (!userProfile || !['master', 'gerente', 'operacional'].includes(userProfile.role)) {
-    return <div className="text-center text-red-600 p-8">{t('paginaLancamento.accessDenied')}</div>;
+    return <div className="text-center text-red-600 p-8">Acesso Negado.</div>;
   }
   if (userProfile.role !== 'master' && userAllowedClientes.length === 0 && !loadingUserClientes) {
-    return <div className="text-center text-orange-600 p-8">{t('paginaLancamento.noClientAccess')}</div>;
+    return <div className="text-center text-orange-600 p-8">Sem acesso a clientes. Contacte o administrador.</div>;
   }
   if (userProfile.role === 'master' && userAllowedClientes.length === 0 && !loadingUserClientes) {
-    return <div className="text-center text-orange-600 p-8">{t('paginaLancamento.noClientsRegistered')}</div>;
+    return <div className="text-center text-orange-600 p-8">Nenhum cliente ativo cadastrado no sistema.</div>;
   }
 
   return (
@@ -355,7 +350,7 @@ export default function PaginaLancamento() {
           )}
         </div>
         <div className="text-center order-1 sm:order-2">
-          <h1 className="font-lexend text-subtitulo text-rain-forest">{t('paginaLancamento.title')}</h1>
+          <h1 className="font-lexend text-subtitulo text-rain-forest">Pesagem</h1>
         </div>
         <div className="flex justify-center sm:justify-end items-center order-3">
             {userProfile.role === 'operacional' ? (
@@ -370,7 +365,7 @@ export default function PaginaLancamento() {
                   onClick={handleLogoutRequest}
                   className="w-auto px-4 py-2 bg-apricot-orange text-white font-lexend rounded-lg shadow-md hover:opacity-90 transition duration-150 flex-shrink-0"
                 >
-                  {t('paginaLancamento.logoutButton')}
+                  Sair
                 </button>
               </div>
             ) : (
@@ -379,7 +374,7 @@ export default function PaginaLancamento() {
                 <div className="w-full sm:w-auto sm:max-w-xs">
                   {userAllowedClientes.length > 0 && (
                     <>
-                      <label htmlFor="clienteSelectLancamento" className="sr-only">{t('paginaLancamento.selectClient')}</label>
+                      <label htmlFor="clienteSelectLancamento" className="sr-only">Selecionar Cliente</label>
                       <select 
                         id="clienteSelectLancamento" 
                         value={selectedClienteId} 
@@ -387,8 +382,8 @@ export default function PaginaLancamento() {
                         className="block w-full p-2 border border-early-frost rounded-md shadow-sm focus:ring-blue-coral focus:border-blue-coral font-comfortaa text-corpo"
                         disabled={loadingUserClientes}
                       >
-                        {loadingUserClientes && <option value="">{t('paginaLancamento.loadingClients')}</option>}
-                        {!loadingUserClientes && userAllowedClientes.length === 0 && <option value="">{t('paginaLancamento.noClientsAvailable')}</option>}
+                        {loadingUserClientes && <option value="">A carregar clientes...</option>}
+                        {!loadingUserClientes && userAllowedClientes.length === 0 && <option value="">Nenhum cliente disponível</option>}
                         {!loadingUserClientes && userAllowedClientes.map(cliente => (
                           <option key={cliente.id} value={cliente.id}>
                             {cliente.nome} ({cliente.cidade || 'N/A'})
@@ -406,12 +401,13 @@ export default function PaginaLancamento() {
       <MessageBox message={message} isError={isError} onClose={() => setMessage('')} />
 
       {loadingUserClientes && userAllowedClientes.length === 0 && (
-          <div className="text-center text-rich-soil p-8">{t('paginaLancamento.loadingClientList')}</div>
+          <div className="text-center text-rich-soil p-8">A carregar lista de clientes...</div>
       )}
 
       {!loadingUserClientes && selectedClienteId && selectedClienteData ? (
         <>
           <div className="bg-white p-6 rounded-lg shadow">
+            {/* BUG FIX: Passa a chave de reinicialização para o formulário. */}
             <WasteForm 
                 clienteSelecionado={selectedClienteData} 
                 onLimitExceeded={handleLimitExceeded}
@@ -427,7 +423,7 @@ export default function PaginaLancamento() {
               aria-controls="waste-records-list-lancamento"
             >
               <h2 className="font-lexend text-acao text-rain-forest">
-                {t('paginaLancamento.recentRecords')} <span className="text-blue-coral">{selectedClienteData?.nome || ''}</span>
+                Registros Recentes de: <span className="text-blue-coral">{selectedClienteData?.nome || 'Cliente Selecionado'}</span>
               </h2>
               <span className="text-2xl text-exotic-plume transform transition-transform duration-200">{isRecordsVisible ? '▲' : '▼'}</span>
             </button>
@@ -450,7 +446,7 @@ export default function PaginaLancamento() {
           </div>
         </>
       ) : !loadingUserClientes && userAllowedClientes.length > 0 && !selectedClienteId ? (
-         <div className="text-center text-rich-soil p-8">{t('paginaLancamento.pleaseSelectClient')}</div>
+         <div className="text-center text-rich-soil p-8">Por favor, selecione um cliente para continuar.</div>
       ) : null}
 
       <ConfirmationModal

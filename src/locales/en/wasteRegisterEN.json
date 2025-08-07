@@ -1,3 +1,91 @@
 {
-    
+  "paginaLancamento": {
+    "title": "Weighing",
+    "logoutButton": "Logout",
+    "selectClient": "Select Client",
+    "loadingClients": "Loading clients...",
+    "noClientsAvailable": "No clients available",
+    "pleaseSelectClient": "Please select a client to continue.",
+    "recentRecords": "Recent Records for:",
+    "loadingData": "Loading data...",
+    "loadingProfile": "Loading profile...",
+    "accessDenied": "Access Denied.",
+    "noClientAccess": "No client access. Contact the administrator.",
+    "noClientsRegistered": "No active clients registered in the system.",
+    "loadingClientList": "Loading client list...",
+    "deleteModal": {
+      "title": "Confirm Deletion",
+      "message": "Are you sure you want to permanently delete this record?",
+      "confirm": "Yes, Delete",
+      "itemType": "Type",
+      "itemWeight": "Weight",
+      "itemDate": "Date"
+    },
+    "limitModal": {
+      "title": "Warning: Maximum Limit Exceeded",
+      "message": "The submitted weight is above the configured limit. Do you want to confirm anyway?",
+      "confirm": "Confirm Anyway",
+      "itemType": "Type",
+      "limit": "Limit",
+      "submitted": "Submitted"
+    },
+    "logoutModal": {
+      "title": "Confirm Logout",
+      "message": "Are you sure you want to log out?",
+      "confirm": "Yes, Logout"
+    },
+    "messages": {
+      "logoutError": "Error trying to log out. Please try again.",
+      "loadError": "Error loading records.",
+      "pendingDeleted": "Pending record successfully deleted!",
+      "recordDeleted": "Record successfully deleted!",
+      "deleteError": "Error deleting record. Please try again.",
+      "exportClientError": "Please select a client first.",
+      "exportError": "Failed to generate report. Please try again."
+    }
+  },
+  "wasteFormComponent": {
+    "selectClient": "Select a client to start logging.",
+    "weightLabel": "Total Weight (kg):",
+    "wasteTypeLabel": "Waste Type*",
+    "recyclableLabel": "Specify Recyclable*",
+    "organicLabel": "Specify Organic*",
+    "areaLabel": "Company Area*",
+    "noWasteTypes": "This client has no waste types for logging.",
+    "submitButton": "Submit Weighing",
+    "submittingButton": "Submitting...",
+    "unit": "kg",
+    "errors": {
+      "selectWasteType": "Please select a waste type.",
+      "specifyRecyclable": "Please specify the recyclable type.",
+      "specifyOrganic": "Please specify the organic type.",
+      "selectArea": "Please select a logging area.",
+      "invalidWeight": "Please enter a valid weight."
+    },
+    "data": {
+      "general": "General",
+      "notSpecified": "Not specified"
+    }
+  },
+  "wasteRecordsListComponent": {
+    "loading": "Loading records...",
+    "noRecords": "No records found for the current selection.",
+    "exportTitle": "Export Report",
+    "periodLabel": "Period:",
+    "periods": {
+      "today": "Today",
+      "7days": "Last 7 days",
+      "30days": "Last 30 days"
+    },
+    "exportingButton": "Exporting...",
+    "exportButton": "Generate CSV",
+    "itemArea": "Area",
+    "itemType": "Type",
+    "itemWeight": "Weight",
+    "itemDate": "Date",
+    "pendingSync": "Awaiting synchronization",
+    "deleteButton": "Delete",
+    "loadMoreButton": "Load More Records",
+    "loadingMoreButton": "Loading..."
+  }
 }

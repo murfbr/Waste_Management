@@ -18,24 +18,31 @@ import sidebarPT from './locales/pt/sidebarPT.json';
 import sidebarEN from './locales/en/sidebarEN.json';
 import sidebarES from './locales/es/sidebarES.json';
 
+import commonPT from './locales/pt/commonPT.json';
+import commonEN from './locales/en/commonEN.json';
+import commonES from './locales/es/commonES.json';
+
 const resources = {
   pt: {
     site: sitePT,
     dashboard: dashboardPT,
     wasteRegister: wasteRegisterPT,
-    sidebar: sidebarPT
+    sidebar: sidebarPT,
+    common: commonPT
   },
   en: {
     site: siteEN,
     dashboard: dashboardEN,
     wasteRegister: wasteRegisterEN,
-    sidebar: sidebarEN 
+    sidebar: sidebarEN,
+    common: commonEN
   },
   es: {
     site: siteES,
     dashboard: dashboardES,
     wasteRegister: wasteRegisterES,
-    sidebar: sidebarES
+    sidebar: sidebarES,
+    common: commonES
   }
 };
 
@@ -45,8 +52,8 @@ i18n
   .init({
     resources,
     fallbackLng: 'pt',
-    ns: ['site', 'dashboard', 'wasteRegister', 'sidebar'],
-    defaultNS: 'site',
+    ns: ['site', 'dashboard', 'wasteRegister', 'sidebar', 'common'],
+    defaultNS: 'common',
     interpolation: {
       escapeValue: false
     }
