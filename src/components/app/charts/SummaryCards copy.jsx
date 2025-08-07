@@ -1,16 +1,12 @@
 // src/components/app/charts/SummaryCards.jsx
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 
-// Função auxiliar agora é dinâmica
-const formatNumber = (number, locale, decimalPlaces = 2) => {
+// Função auxiliar para formatar números no padrão pt-BR
+const formatNumberBR = (number, decimalPlaces = 2) => {
   if (typeof number !== 'number' || isNaN(number)) {
-    return '0,00'; // Retorna um padrão em caso de erro
+    return '0,00';
   }
-  return number.toLocaleString(locale, { 
-    minimumFractionDigits: decimalPlaces, 
-    maximumFractionDigits: decimalPlaces 
-  });
+  return number.toLocaleString('pt-BR', { minimumFractionDigits: decimalPlaces, maximumFractionDigits: decimalPlaces });
 };
 
 // Card genérico para o valor total
@@ -24,39 +20,30 @@ const SummaryCard = ({ title, value, unit, bgColor, textColor }) => (
 );
 
 // Card para as categorias de resíduos
-const CategoryCard = ({ title, percentage, weightKg, bgColor, textColor, locale }) => (
+const CategoryCard = ({ title, percentage, weightKg, bgColor, textColor }) => (
   <div className={`p-4 md:p-6 rounded-lg shadow-md flex flex-col items-center justify-center text-center h-full ${bgColor} ${textColor} font-comfortaa`}>
     <h3 className="text-sm font-semibold mb-1">{title}</h3>
-    <p className="font-lexend text-2xl md:text-3xl font-bold mb-1">{formatNumber(percentage, locale)}%</p>
-    <p className="text-lg md:text-xl font-medium">{formatNumber(weightKg, locale)} Kg</p>
+    <p className="font-lexend text-2xl md:text-3xl font-bold mb-1">{formatNumberBR(percentage)}%</p>
+    <p className="text-lg md:text-xl font-medium">{formatNumberBR(weightKg)} Kg</p>
   </div>
 );
 
 
 export default function SummaryCards({ summaryData, isLoading }) {
-  const { t, i18n } = useTranslation('dashboard');
-
-  // Mapeia o código de idioma do i18next para um locale de formatação de número
-  const localeMap = {
-    pt: 'pt-BR',
-    en: 'en-US',
-    es: 'es-ES',
-  };
-  const currentLocale = localeMap[i18n.language] || 'pt-BR';
-
 
   if (isLoading) {
     return (
       <div className="bg-white p-4 md:p-6 rounded-b-lg shadow">
-        <p className="text-center text-rich-soil py-8 font-comfortaa">{t('summaryCardsComponent.loading')}</p>
+        <p className="text-center text-rich-soil py-8 font-comfortaa">Carregando indicadores...</p>
       </div>
     );
   }
 
+  // A verificação agora busca por summaryData.organico
   if (!summaryData || summaryData.organico === undefined) {
      return (
       <div className="bg-white p-4 md:p-6 rounded-b-lg shadow">
-        <p className="text-center text-rich-soil py-8 font-comfortaa">{t('summaryCardsComponent.noData')}</p>
+        <p className="text-center text-rich-soil py-8 font-comfortaa">Sem dados suficientes para os indicadores.</p>
       </div>
     );
   }
@@ -67,9 +54,9 @@ export default function SummaryCards({ summaryData, isLoading }) {
         {/* Card Total */}
         <div className="md:col-span-1">
           <SummaryCard
-            title={t('summaryCardsComponent.totalWaste')}
-            value={formatNumber(summaryData.totalGeralKg, currentLocale)}
-            unit={t('summaryCardsComponent.unit')}
+            title="Total de Resíduos"
+            value={formatNumberBR(summaryData.totalGeralKg)}
+            unit="Kg"
             bgColor="bg-golden-orange"
             textColor="text-white"
           />
@@ -78,28 +65,25 @@ export default function SummaryCards({ summaryData, isLoading }) {
         {/* Cards de Categoria - ocupando as 3 colunas restantes */}
         <div className="md:col-span-3 grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6">
           <CategoryCard
-            title={t('summaryCardsComponent.organic')}
+            title="% Orgânico"
             percentage={summaryData.organico.percent}
             weightKg={summaryData.organico.kg}
             bgColor="bg-rich-soil"
-            textColor="text-white"
-            locale={currentLocale}
+            textColor="text-white"  
           />
           <CategoryCard
-            title={t('summaryCardsComponent.recyclable')}
+            title="% Reciclável"
             percentage={summaryData.reciclavel.percent}
             weightKg={summaryData.reciclavel.kg}
             bgColor="bg-blue-coral"
             textColor="text-white"
-            locale={currentLocale}
           />
           <CategoryCard
-            title={t('summaryCardsComponent.disposable')}
+            title="% Rejeito"
             percentage={summaryData.rejeito.percent}
             weightKg={summaryData.rejeito.kg}
             bgColor="bg-early-frost"
             textColor="text-rich-soil"
-            locale={currentLocale}
           />
         </div>
       </div>

@@ -331,14 +331,14 @@ export default function PaginaDashboard() {
     const result = [];
     if (recoveryData.value > 0) {
         result.push({
-            name: 'Recuperação',
+            name: 'recovery',
             value: parseFloat(recoveryData.value.toFixed(2)),
             breakdown: formatBreakdown(recoveryData.breakdown)
         });
     }
     if (disposalData.value > 0) {
         result.push({
-            name: 'Descarte',
+            name: 'disposal',
             value: parseFloat(disposalData.value.toFixed(2)),
             breakdown: formatBreakdown(disposalData.breakdown)
         });

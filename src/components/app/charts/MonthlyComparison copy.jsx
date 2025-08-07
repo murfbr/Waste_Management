@@ -1,6 +1,5 @@
 // src/components/charts/MonthlyYearlyComparisonChart.jsx
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import {
     BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
 } from 'recharts';
@@ -11,29 +10,17 @@ const YEAR_COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042'];
 export default function MonthlyYearlyComparisonChart({
   chartData, // Array no formato: [{ month: 'Janeiro', '2024': 150, '2025': 180 }, ...]
   yearsToCompare, // Array de strings/números dos anos, ex: ['2024', '2025']
+  titleContext, // String opcional para adicionar ao título, ex: "de Cliente X"
   isLoading,
 }) {
-  const { t, i18n } = useTranslation('dashboard');
-
-  // Mapeia o código de idioma do i18next para um locale de formatação de número
-  const localeMap = {
-    pt: 'pt-BR',
-    en: 'en-US',
-    es: 'es-ES',
-  };
-  const currentLocale = localeMap[i18n.language] || 'pt-BR';
-
-  const chartTitle = t('monthlyComparisonComponent.chartTitle');
-  const noDataMessage = t('monthlyComparisonComponent.noData');
-  const loadingMessage = t('monthlyComparisonComponent.loading');
-  const yAxisLabel = t('monthlyComparisonComponent.yAxisLabel');
-  const tooltipUnit = t('monthlyComparisonComponent.tooltipUnit');
+  const chartTitle = `Volume Mensal Comparativo Anual${titleContext || ''}`;
+  const noDataMessage = `Sem dados para o gráfico de volume mensal comparativo.`;
 
   if (isLoading) {
     return (
       <div className="bg-white p-4 md:p-6 rounded-lg shadow">
         <h2 className="text-acao font-lexend text-rain-forest mb-3 text-center">{chartTitle}</h2>
-        <p className="text-center text-gray-500 py-4">{loadingMessage}</p>
+        <p className="text-center text-gray-500 py-4">Carregando dados...</p>
       </div>
     );
   }
@@ -51,8 +38,8 @@ export default function MonthlyYearlyComparisonChart({
           <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
             <CartesianGrid strokeDasharray="3 3" />
             <XAxis dataKey="month" />
-            <YAxis label={{ value: yAxisLabel, angle: -90, position: 'insideLeft', offset: -10 }} />
-            <Tooltip formatter={(value) => `${typeof value === 'number' ? value.toLocaleString(currentLocale, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : value} ${tooltipUnit}`} />
+            <YAxis label={{ value: 'Peso (kg)', angle: -90, position: 'insideLeft', offset: -10 }} />
+            <Tooltip formatter={(value) => `${typeof value === 'number' ? value.toFixed(2) : value} kg`} />
             <Legend />
             {yearsToCompare.map((year, index) => (
               <Bar key={year} dataKey={year.toString()} fill={YEAR_COLORS[index % YEAR_COLORS.length]} name={year.toString()} />

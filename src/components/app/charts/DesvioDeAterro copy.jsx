@@ -1,6 +1,5 @@
 // src/components/charts/DesvioDeAterro.jsx
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import {
     LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine
 } from 'recharts';
@@ -17,23 +16,14 @@ export default function DesvioDeAterro({
   isLoading,
   noDataMessageDetails = ""
 }) {
-  const { t, i18n } = useTranslation('dashboard');
-
-  const localeMap = {
-    pt: 'pt-BR',
-    en: 'en-US',
-    es: 'es-ES',
-  };
-  const currentLocale = localeMap[i18n.language] || 'pt-BR';
-
-  const chartTitle = t('landfillDiversionComponent.chartTitle');
-  const baseNoDataMessage = t('landfillDiversionComponent.noData');
+  const chartTitle = "Taxa de desvio de aterro";
+  const baseNoDataMessage = `Sem dados para o gráfico Taxa de Desvio de Aterro.`;
 
   if (isLoading) {
     return (
       <div className="bg-white p-4 md:p-6 rounded-lg shadow font-comfortaa">
         <h2 className="text-acao font-lexend text-rain-forest text-center mb-4">{chartTitle}</h2>
-        <p className="text-center text-rain-forest py-4">{t('landfillDiversionComponent.loading')}</p>
+        <p className="text-center text-rain-forest py-4">Carregando dados...</p>
       </div>
     );
   }
@@ -50,18 +40,19 @@ export default function DesvioDeAterro({
             <XAxis dataKey="name" tick={{ fill: '#0D4F5F', fontFamily: 'Comfortaa' }} />
             <YAxis 
               tick={{ fill: '#0D4F5F', fontFamily: 'Comfortaa' }}
-              label={{ value: t('landfillDiversionComponent.yAxisLabel'), angle: -90, position: 'insideLeft', fill: '#0D4F5F', fontFamily: 'Lexend', offset: -5 }} 
+              label={{ value: '% Desvio', angle: -90, position: 'insideLeft', fill: '#0D4F5F', fontFamily: 'Lexend', offset: -5 }} 
               domain={[0, 100]}
               tickFormatter={(tick) => `${tick}%`}
               allowDataOverflow 
             />
             <Tooltip 
               formatter={(value, name) => {
-                const formattedValue = `${typeof value === 'number' ? value.toLocaleString(currentLocale, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : value}%`;
-                // 'name' aqui é o que definimos na prop 'name' de cada <Line>
-                return [formattedValue, name]; 
+                const formattedValue = `${typeof value === 'number' ? value.toFixed(2) : value}%`;
+                if (name === 'Taxa de Desvio') return [formattedValue, 'Taxa de Desvio'];
+                if (name === 'Média de Desvio') return [formattedValue, 'Média de Desvio'];
+                return [value, name];
               }}
-              labelFormatter={(label) => `${t('landfillDiversionComponent.tooltip.label')}: ${label}`}
+              labelFormatter={(label) => `Dia: ${label}`}
               contentStyle={{ fontFamily: 'Comfortaa', borderColor: '#BCBCBC', borderRadius: '0.5rem' }}
               labelStyle={{ fontFamily: 'Lexend', color: '#0D4F5F' }}
             />
@@ -71,7 +62,7 @@ export default function DesvioDeAterro({
               dataKey="taxaDesvio"
               stroke={chartColors.taxaDesvio}
               strokeWidth={2}
-              name={t('landfillDiversionComponent.legend.diversionRate')}
+              name="Taxa de Desvio"
               activeDot={{ r: 6, fill: chartColors.taxaDesvio }} 
             />
             <Line 
@@ -79,13 +70,13 @@ export default function DesvioDeAterro({
               dataKey="mediaTaxaDesvio"
               stroke={chartColors.mediaTaxaDesvio}
               strokeWidth={2}
-              name={t('landfillDiversionComponent.legend.averageRate')}
+              name="Média de Desvio"
               strokeDasharray="5 5" 
               dot={false} 
             />
             <ReferenceLine 
               y={90}
-              label={{ value: t('landfillDiversionComponent.goalLine', { value: 90 }), position: "insideTopRight", fill: chartColors.meta, dy: -10, fontFamily: 'Lexend' }} 
+              label={{ value: "Meta 90%", position: "insideTopRight", fill: chartColors.meta, dy: -10, fontFamily: 'Lexend' }} 
               stroke={chartColors.meta}
               strokeWidth={2}
               strokeDasharray="3 3" 

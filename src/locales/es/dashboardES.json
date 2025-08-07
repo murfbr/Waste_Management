@@ -43,5 +43,60 @@
       "multipleSelected_other": "{{count}} áreas seleccionadas",
       "noneAvailable": "Ninguna área disponible."
     }
+},
+    "summaryCardsComponent": {
+    "loading": "Cargando indicadores...",
+    "noData": "Datos insuficientes para los indicadores.",
+    "totalWaste": "Residuos Totales",
+    "unit": "Kg",
+    "organic": "% Orgánico",
+    "recyclable": "% Reciclable",
+    "disposable": "% Rechazo"
+  },
+  "monthlyComparisonComponent": {
+    "chartTitle": "Volumen Mensual - Comparativa",
+    "noData": "No hay datos para el gráfico de volumen mensual comparativo.",
+    "loading": "Cargando datos...",
+    "yAxisLabel": "Peso (kg)",
+    "tooltipUnit": "kg"
+  },
+   "wasteTypePieChartComponent": {
+    "chartTitle": "Composición por Tipo de Residuo",
+    "loading": "Cargando datos...",
+    "noData": "No hay datos para mostrar.",
+    "unit": "kg"
+  },
+  "areaPieChartComponent": {
+    "chartTitle": "Composición por Área",
+    "loading": "Cargando datos...",
+    "noData": "No hay datos para mostrar.",
+    "unit": "kg"
+  },
+   "landfillDiversionComponent": {
+    "chartTitle": "Tasa de Desvío de Relleno Sanitario",
+    "noData": "No hay datos para el gráfico de Tasa de Desvío de Relleno.",
+    "loading": "Cargando datos...",
+    "yAxisLabel": "% Desvío",
+    "tooltip": {
+      "label": "Día",
+      "diversionRate": "Tasa de Desvío",
+      "averageRate": "Desvío Promedio"
+    },
+    "legend": {
+      "diversionRate": "Tasa de Desvío",
+      "averageRate": "Desvío Promedio"
+    },
+    "goalLine": "Meta {{value}}%"
+  },
+   "destinationChartComponent": {
+    "chartTitle": "Destino Final",
+    "loading": "Calculando datos de destino...",
+    "noData": "Datos insuficientes para calcular el destino.",
+    "noDataDetails": "Verifique los contratos y destinos.",
+    "unit": "kg",
+    "dataKeys": {
+      "recovery": "Recuperación",
+      "disposal": "Eliminación"
+    }
   }
 }

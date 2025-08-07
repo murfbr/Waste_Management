@@ -1,35 +1,33 @@
 // src/components/app/charts/DestinacaoChart.jsx
 
 import React from 'react';
-import { useTranslation } from 'react-i18next';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// Cores agora usam as chaves neutras
+// Cores definidas localmente, baseadas na sua identidade visual
 const COLORS = {
-    'recovery': '#0D3520', // rain-forest (sucesso)
-    'disposal': '#BCBCBC',    // early-frost (alerta/descarte)
+    'Recuperação': '#0D3520', // rain-forest (sucesso)
+    'Descarte': '#BCBCBC',    // early-frost (alerta/descarte)
 };
 
-// Função auxiliar dinâmica
-const formatNumber = (number, locale, decimals = 1) => {
+// Função auxiliar para formatar números
+const formatNumberBR = (number, decimals = 1) => {
   if (typeof number !== 'number' || isNaN(number)) {
     return '0,0';
   }
-  return number.toLocaleString(locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
+  return number.toLocaleString('pt-BR', { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 };
 
-// Tooltip customizado que agora recebe locale e unit
-const CustomTooltip = ({ active, payload, locale, unit }) => {
+const CustomTooltip = ({ active, payload }) => {
     if (active && payload && payload.length) {
-        const data = payload[0]; // Payload do PieChart é um pouco diferente
-        const mainValue = data.payload.value;
-        const mainName = data.name; // 'name' já vem traduzido
-        const breakdown = data.payload.breakdown || [];
+        const data = payload[0].payload;
+        const mainValue = data.value;
+        const mainName = data.name;
+        const breakdown = data.breakdown || [];
 
         return (
             <div className="p-3 bg-white bg-opacity-95 border border-early-frost rounded-lg shadow-lg font-comfortaa text-rain-forest">
                 <p className="font-lexend text-base mb-2 border-b border-early-frost pb-1">
-                    {mainName}: <span className="font-bold">{formatNumber(mainValue, locale, 2)} {unit}</span>
+                    {mainName}: <span className="font-bold">{formatNumberBR(mainValue, 2)} kg</span>
                 </p>
                 {breakdown.length > 0 && (
                      <ul className="list-none p-0 m-0 text-sm space-y-1">
@@ -38,7 +36,7 @@ const CustomTooltip = ({ active, payload, locale, unit }) => {
                             return (
                                 <li key={index} className="flex justify-between items-center">
                                     <span>{item.name}:</span>
-                                    <span className="font-bold ml-3">{formatNumber(item.value, locale, 2)} {unit} ({formatNumber(percentage, locale, 1)}%)</span>
+                                    <span className="font-bold ml-3">{formatNumberBR(item.value, 2)} kg ({formatNumberBR(percentage, 1)}%)</span>
                                 </li>
                             );
                         })}
@@ -51,26 +49,10 @@ const CustomTooltip = ({ active, payload, locale, unit }) => {
 };
 
 export default function DestinacaoChart({ data, isLoading }) {
-    const { t, i18n } = useTranslation('dashboard');
-
-    const localeMap = {
-        pt: 'pt-BR',
-        en: 'en-US',
-        es: 'es-ES',
-    };
-    const currentLocale = localeMap[i18n.language] || 'pt-BR';
-    const unit = t('destinationChartComponent.unit');
-
-    // Traduz os dados recebidos antes de passá-los para o gráfico
-    const translatedData = data.map(entry => ({
-        ...entry,
-        name: t(`destinationChartComponent.dataKeys.${entry.name}`)
-    }));
-
     if (isLoading) {
         return (
             <div className="flex justify-center items-center h-full min-h-[400px] bg-white rounded-lg shadow font-comfortaa">
-                <p className="text-rain-forestl">{t('destinationChartComponent.loading')}</p>
+                <p className="text-rain-forestl">Calculando dados de destinação...</p>
             </div>
         );
     }
@@ -79,9 +61,9 @@ export default function DestinacaoChart({ data, isLoading }) {
         return (
             <div className="flex justify-center items-center h-full min-h-[400px] bg-white rounded-lg shadow font-comfortaa">
                 <p className="text-rain-forest text-center">
-                    {t('destinationChartComponent.noData')}
+                    Sem dados suficientes para calcular a destinação.
                     <br />
-                    <span className="text-xs">{t('destinationChartComponent.noDataDetails')}</span>
+                    <span className="text-xs">Verifique os contratos e destinações.</span>
                 </p>
             </div>
         );
@@ -90,27 +72,26 @@ export default function DestinacaoChart({ data, isLoading }) {
     return (
         <div className="bg-white p-4 rounded-lg shadow h-full min-h-[488px] flex flex-col">
             <h3 className="text-acao font-lexend text-rain-forest text-center mb-4">
-                {t('destinationChartComponent.chartTitle')}
+                Destinação Final
             </h3>
             <div className="flex-grow">
                 <ResponsiveContainer width="100%" height="100%">
                     <PieChart>
                         <Pie
-                            data={translatedData} // Usando os dados traduzidos
+                            data={data}
                             cx="50%"
                             cy="50%"
                             labelLine={false}
                             outerRadius="80%"
-                            fill="#8884d8"
+                            fill="#8884d8" // Cor padrão (não será usada por causa das Cells)
                             dataKey="value"
                             nameKey="name"
                         >
-                            {/* O 'entry.name' aqui já está traduzido, mas precisamos da chave original para a cor */}
-                            {translatedData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[data[index].name]} />
+                            {data.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={COLORS[entry.name]} />
                             ))}
                         </Pie>
-                        <Tooltip content={<CustomTooltip locale={currentLocale} unit={unit} />} />
+                        <Tooltip content={<CustomTooltip />} />
                         <Legend 
                             formatter={(value) => <span className="text-blue-coral font-comfortaa">{value}</span>} 
                         />

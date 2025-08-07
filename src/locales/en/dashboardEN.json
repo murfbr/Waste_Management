@@ -43,5 +43,60 @@
       "multipleSelected_other": "{{count}} areas selected",
       "noneAvailable": "No area available."
     }
+},
+    "summaryCardsComponent": {
+    "loading": "Loading indicators...",
+    "noData": "Not enough data for indicators.",
+    "totalWaste": "Total Waste",
+    "unit": "Kg",
+    "organic": "% Organic",
+    "recyclable": "% Recyclable",
+    "disposable": "% Disposable"
+  },
+  "monthlyComparisonComponent": {
+    "chartTitle": "Monthly Volume - Comparison",
+    "noData": "No data for the monthly volume comparison chart.",
+    "loading": "Loading data...",
+    "yAxisLabel": "Weight (kg)",
+    "tooltipUnit": "kg"
+  },
+   "wasteTypePieChartComponent": {
+    "chartTitle": "Composition by Waste Type",
+    "loading": "Loading data...",
+    "noData": "No data to display.",
+    "unit": "kg"
+  },
+   "areaPieChartComponent": {
+    "chartTitle": "Composition by Area",
+    "loading": "Loading data...",
+    "noData": "No data to display.",
+    "unit": "kg"
+  },
+  "landfillDiversionComponent": {
+    "chartTitle": "Landfill Diversion Rate",
+    "noData": "No data for the Landfill Diversion Rate chart.",
+    "loading": "Loading data...",
+    "yAxisLabel": "% Diversion",
+    "tooltip": {
+      "label": "Day",
+      "diversionRate": "Diversion Rate",
+      "averageRate": "Average Diversion"
+    },
+    "legend": {
+      "diversionRate": "Diversion Rate",
+      "averageRate": "Average Diversion"
+    },
+    "goalLine": "Goal {{value}}%"
+  },
+   "destinationChartComponent": {
+    "chartTitle": "Final Destination",
+    "loading": "Calculating destination data...",
+    "noData": "Not enough data to calculate destination.",
+    "noDataDetails": "Check the contracts and destinations.",
+    "unit": "kg",
+    "dataKeys": {
+      "recovery": "Recovery",
+      "disposal": "Disposal"
+    }
   }
 }

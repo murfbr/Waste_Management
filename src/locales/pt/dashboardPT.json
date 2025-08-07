@@ -43,5 +43,60 @@
         "multipleSelected_other": "{{count}} áreas selecionadas",
         "noneAvailable": "Nenhuma área disponível."
       }
+    },
+      "summaryCardsComponent": {
+    "loading": "Carregando indicadores...",
+    "noData": "Sem dados suficientes para os indicadores.",
+    "totalWaste": "Total de Resíduos",
+    "unit": "Kg",
+    "organic": "% Orgânico",
+    "recyclable": "% Reciclável",
+    "disposable": "% Rejeito"
+  },
+  "monthlyComparisonComponent": {
+    "chartTitle": "Volume Mensal Comparativo",
+    "noData": "Sem dados para o gráfico de volume mensal comparativo.",
+    "loading": "Carregando dados...",
+    "yAxisLabel": "Peso (kg)",
+    "tooltipUnit": "kg"
+  },
+  "wasteTypePieChartComponent": {
+    "chartTitle": "Composição por Tipo de Resíduo",
+    "loading": "Carregando dados...",
+    "noData": "Sem dados para exibir.",
+    "unit": "kg"
+  },
+   "areaPieChartComponent": {
+    "chartTitle": "Composição por Área",
+    "loading": "Carregando dados...",
+    "noData": "Sem dados para exibir.",
+    "unit": "kg"
+  },
+    "landfillDiversionComponent": {
+    "chartTitle": "Taxa de Desvio de Aterro",
+    "noData": "Sem dados para o gráfico Taxa de Desvio de Aterro.",
+    "loading": "Carregando dados...",
+    "yAxisLabel": "% Desvio",
+    "tooltip": {
+      "label": "Dia",
+      "diversionRate": "Taxa de Desvio",
+      "averageRate": "Média de Desvio"
+    },
+    "legend": {
+      "diversionRate": "Taxa de Desvio",
+      "averageRate": "Média de Desvio"
+    },
+    "goalLine": "Meta {{value}}%"
+  },
+  "destinationChartComponent": {
+    "chartTitle": "Destinação Final",
+    "loading": "Calculando dados de destinação...",
+    "noData": "Sem dados suficientes para calcular a destinação.",
+    "noDataDetails": "Verifique os contratos e destinações.",
+    "unit": "kg",
+    "dataKeys": {
+      "recovery": "Recuperação",
+      "disposal": "Descarte"
     }
+  }
 }
