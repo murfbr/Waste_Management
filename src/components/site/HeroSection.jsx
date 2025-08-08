@@ -7,7 +7,7 @@ import lancamentoImg from '../../pages/site/img/lancamento3.png';
 import logoAzulLaranja from '../../pages/site/img/Vertical-AzulLaranja-SVG.svg';
 
 export default function HeroSection() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('site');
 
   return (
     <section className="bg-white text-rich-soil">

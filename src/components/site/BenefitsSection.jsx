@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 export default function BenefitsSection() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('site');
 
   return (
     <section className="bg-gray-50 py-24 sm:py-32">

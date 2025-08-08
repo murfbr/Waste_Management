@@ -3,7 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 
 export default function Footer() {
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation('site');
   const location = useLocation();
   const lang = i18n.language;
   const prefix = lang === 'pt' ? '' : `/${lang}`;

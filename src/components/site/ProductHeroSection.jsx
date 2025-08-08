@@ -4,7 +4,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 export default function ProductHeroSection() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('site');
 
   return (
     <div className="bg-blue-coral">

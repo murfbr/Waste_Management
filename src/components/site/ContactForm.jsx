@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 export default function FormularioContato() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('site');
 
   const [formData, setFormData] = useState({
     fullName: '',

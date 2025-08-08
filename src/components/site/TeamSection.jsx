@@ -23,7 +23,7 @@ const teamMembers = [
 ];
 
 export default function TeamSection() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('site');
 
   return (
     <section className="bg-white py-24 sm:py-32">

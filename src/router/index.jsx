@@ -54,7 +54,6 @@ export default function AppRoutes() {
   const location = useLocation();
   const path = location.pathname;
 
-  // Redireciona "/" para "/" (pt), mas "/en" → "/en/", etc.
   if (path === '/en') return <Navigate to="/en/" replace />;
   if (path === '/es') return <Navigate to="/es/" replace />;
 
@@ -62,19 +61,43 @@ export default function AppRoutes() {
     <Suspense fallback={<PageLoader />}>
       <Routes>
 
-        {/* ROTAS EM PORTUGUÊS (sem prefixo) */}
-        <Route element={<LanguageWrapper lang="pt"><Outlet /></LanguageWrapper>}>
-          {/* Rotas Públicas */}
-          <Route element={<PublicLayout />}>
-            <Route path="/" element={<HomePage />} />
-            <Route path="/produto" element={<PaginaProduto />} />
-            <Route path="/sobre" element={<PaginaSobre />} />
-            <Route path="/contato" element={<PaginaContato />} />
-            <Route path="/login" element={<PaginaLogin />} />
-          </Route>
+        {/* ROTAS PÚBLICAS EM PORTUGUÊS (sem prefixo) */}
+        <Route element={<LanguageWrapper lang="pt"><PublicLayout /></LanguageWrapper>}>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/produto" element={<PaginaProduto />} />
+          <Route path="/sobre" element={<PaginaSobre />} />
+          <Route path="/contato" element={<PaginaContato />} />
+          <Route path="/login" element={<PaginaLogin />} />
+        </Route>
 
-          {/* ROTAS PRIVADAS PARA PORTUGUÊS */}
-          <Route path="/app" element={<PrivateRoutesLayout />}>
+        {/* ROTAS PÚBLICAS INTERNACIONAIS COM PREFIXO /en e /es */}
+        {['en', 'es'].map((lang) => (
+          <Route key={lang} path={`/${lang}`} element={<LanguageWrapper lang={lang}><PublicLayout /></LanguageWrapper>}>
+            <Route index element={<HomePage />} />
+            <Route path="produto" element={<PaginaProduto />} />
+            <Route path="sobre" element={<PaginaSobre />} />
+            <Route path="contato" element={<PaginaContato />} />
+            <Route path="login" element={<PaginaLogin />} />
+          </Route>
+        ))}
+        
+        {/* ROTAS PRIVADAS (APP) EM PORTUGUÊS */}
+        <Route path="/app" element={<LanguageWrapper lang="pt"><PrivateRoutesLayout /></LanguageWrapper>}>
+            <Route index element={<ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}><PaginaLancamento /></ProtectedRoute>} />
+            <Route path="lancamento" element={<ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}><PaginaLancamento /></ProtectedRoute>} />
+            <Route path="dashboard" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaDashboard /></ProtectedRoute>} />
+            <Route path="documentacao" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaDocumentacao /></ProtectedRoute>} />
+            <Route path="economia-circular" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaEconomiaCircular /></ProtectedRoute>} />
+            <Route path="glossario" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaGlossario /></ProtectedRoute>} />
+            <Route path="admin/usuarios" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaAdminUsuarios /></ProtectedRoute>} />
+            <Route path="admin/clientes" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminClientes /></ProtectedRoute>} />
+            <Route path="admin/empresas-coleta" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminEmpresasColeta /></ProtectedRoute>} />
+            <Route path="admin/gestao-mtr" element={<ProtectedRoute allowedRoles={['master']}><PaginaGestaoMTR /></ProtectedRoute>} />
+        </Route>
+
+        {/* ROTAS PRIVADAS (APP) INTERNACIONAIS */}
+        {['en', 'es'].map((lang) => (
+          <Route key={`app-${lang}`} path={`/${lang}/app`} element={<LanguageWrapper lang={lang}><PrivateRoutesLayout /></LanguageWrapper>}>
             <Route index element={<ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}><PaginaLancamento /></ProtectedRoute>} />
             <Route path="lancamento" element={<ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}><PaginaLancamento /></ProtectedRoute>} />
             <Route path="dashboard" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaDashboard /></ProtectedRoute>} />
@@ -86,37 +109,9 @@ export default function AppRoutes() {
             <Route path="admin/empresas-coleta" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminEmpresasColeta /></ProtectedRoute>} />
             <Route path="admin/gestao-mtr" element={<ProtectedRoute allowedRoles={['master']}><PaginaGestaoMTR /></ProtectedRoute>} />
           </Route>
-        </Route>
-
-        {/* ROTAS INTERNACIONAIS COM PREFIXO /en e /es */}
-        {['en', 'es'].map((lang) => (
-          <Route key={lang} path={`/${lang}`} element={<LanguageWrapper lang={lang}><Outlet /></LanguageWrapper>}>
-            {/* Rotas Públicas */}
-            <Route element={<PublicLayout />}>
-              <Route index element={<HomePage />} />
-              <Route path="produto" element={<PaginaProduto />} />
-              <Route path="sobre" element={<PaginaSobre />} />
-              <Route path="contato" element={<PaginaContato />} />
-              <Route path="login" element={<PaginaLogin />} />
-            </Route>
-
-            {/* ROTAS PRIVADAS PARA OUTROS IDIOMAS */}
-            <Route path="app" element={<PrivateRoutesLayout />}>
-              <Route index element={<ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}><PaginaLancamento /></ProtectedRoute>} />
-              <Route path="lancamento" element={<ProtectedRoute allowedRoles={['master', 'gerente', 'operacional']}><PaginaLancamento /></ProtectedRoute>} />
-              <Route path="dashboard" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaDashboard /></ProtectedRoute>} />
-              <Route path="documentacao" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaDocumentacao /></ProtectedRoute>} />
-              <Route path="economia-circular" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaEconomiaCircular /></ProtectedRoute>} />
-              <Route path="glossario" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaGlossario /></ProtectedRoute>} />
-              <Route path="admin/usuarios" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaAdminUsuarios /></ProtectedRoute>} />
-              <Route path="admin/clientes" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminClientes /></ProtectedRoute>} />
-              <Route path="admin/empresas-coleta" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminEmpresasColeta /></ProtectedRoute>} />
-              <Route path="admin/gestao-mtr" element={<ProtectedRoute allowedRoles={['master']}><PaginaGestaoMTR /></ProtectedRoute>} />
-            </Route>
-          </Route>
         ))}
 
-        {/* ACESSO NEGADO E 404 */}
+        {/* ROTAS DE FALLBACK */}
         <Route path="/acesso-negado" element={<PaginaAcessoNegado />} />
         <Route path="*" element={<PaginaNotFound />} />
 

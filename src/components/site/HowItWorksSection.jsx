@@ -16,7 +16,7 @@ const Step = ({ number, title, children }) => (
 );
 
 export default function HowItWorksSection() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('site');
   const steps = t('howItWorks.steps', { returnObjects: true });
 
   return (

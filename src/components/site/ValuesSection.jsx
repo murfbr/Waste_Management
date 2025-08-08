@@ -13,7 +13,7 @@ const ValueItem = ({ icon, text }) => (
 );
 
 export default function ValuesSection() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('site');
   const values = t('valuesSection.values', { returnObjects: true });
 
   return (

@@ -19,7 +19,8 @@ const FeatureDetail = ({ title, children, imageUrl, reverse = false }) => (
 );
 
 export default function PlatformSection() {
-  const { t } = useTranslation();
+  // --- CORREÇÃO APLICADA AQUI ---
+  const { t } = useTranslation('site');
 
   return (
     <section className="body-font bg-white">

@@ -15,7 +15,7 @@ const ListItem = ({ icon, text }) => (
 );
 
 export default function IncludedSection() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('site');
 
   const includedList = t('included.list', { returnObjects: true }) || [];
   const requirementsList = t('requirements.list', { returnObjects: true }) || [];

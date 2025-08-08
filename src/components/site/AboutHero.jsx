@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 
 export default function AboutHero() {
-  const { t } = useTranslation();
+  const { t } = useTranslation('site');
 
   return (
     <section className="bg-white py-20 sm:py-28">

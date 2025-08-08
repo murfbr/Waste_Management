@@ -26,7 +26,7 @@ const useOutsideClick = (callback) => {
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isLangOpen, setIsLangOpen] = useState(false);
-  const { t, i18n } = useTranslation();
+  const { t, i18n } = useTranslation('site');
   const location = useLocation();
   const navigate = useNavigate();
 
