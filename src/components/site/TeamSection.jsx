@@ -1,8 +1,8 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import PedroImg from '../../pages/site/img/pedro2.png';
-import JuliaImg from '../../pages/site/img/julia2.png';
-import GustavoImg from '../../pages/site/img/gustavo2.png';
+import PedroImg from '../../pages/site/img/PedroNova.png';
+import JuliaImg from '../../pages/site/img/JuliaNovo.png';
+import GustavoImg from '../../pages/site/img/gustavoNova.png';
 
 const teamMembers = [
   {
