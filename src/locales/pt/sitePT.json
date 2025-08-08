@@ -213,5 +213,28 @@
       "contact": "Contato"
     },
     "rights": "Todos os direitos reservados 2025."
+  },
+  "loginPage": {
+    "title": "Acessar Sistema",
+    "welcome": "Bem-vindo de volta!",
+    "form": {
+      "emailLabel": "Email",
+      "emailPlaceholder": "Endereço de e-mail",
+      "passwordLabel": "Senha",
+      "passwordPlaceholder": "Senha",
+      "submitButton": "Entrar",
+      "submittingButton": "Entrando..."
+    },
+    "messages": {
+      "authNotReady": "Serviços de autenticação não prontos. Tente novamente.",
+      "fillFields": "Por favor, preencha o e-mail e a senha.",
+      "genericError": "Erro ao fazer login. Verifique suas credenciais.",
+      "invalidCredentials": "E-mail ou senha inválidos.",
+      "tooManyRequests": "Muitas tentativas de login. Tente novamente mais tarde."
+    },
+    "pwa": {
+      "installPrompt": "Para uma experiência mais fluida e imersiva, instale nosso aplicativo em seu dispositivo.",
+      "installButton": "Instalar Aplicativo"
+    }
   }
 }

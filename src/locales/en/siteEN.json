@@ -213,5 +213,28 @@
       "contact": "Contact"
     },
     "rights": "All rights reserved 2025."
+  },
+  "loginPage": {
+    "title": "Access System",
+    "welcome": "Welcome back!",
+    "form": {
+      "emailLabel": "Email",
+      "emailPlaceholder": "Email address",
+      "passwordLabel": "Password",
+      "passwordPlaceholder": "Password",
+      "submitButton": "Login",
+      "submittingButton": "Logging in..."
+    },
+    "messages": {
+      "authNotReady": "Authentication services not ready. Please try again.",
+      "fillFields": "Please fill in both email and password.",
+      "genericError": "Login error. Please check your credentials.",
+      "invalidCredentials": "Invalid email or password.",
+      "tooManyRequests": "Too many login attempts. Please try again later."
+    },
+    "pwa": {
+      "installPrompt": "For a smoother and more immersive experience, install our app on your device.",
+      "installButton": "Install App"
+    }
   }
 }

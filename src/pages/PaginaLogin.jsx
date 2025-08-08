@@ -3,12 +3,14 @@
 import React, { useState, useContext } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { useTranslation } from 'react-i18next';
 import AuthContext from '../context/AuthContext';
 import MessageBox from '../components/app/MessageBox';
 import { useInstallPrompt } from '../hooks/useInstallPrompt';
 
 export default function PaginaLogin() {
     const { auth, isAuthReady } = useContext(AuthContext);
+    const { t } = useTranslation('site');
     const navigate = useNavigate();
     const location = useLocation();
     const from = location.state?.from?.pathname || '/app';
@@ -31,12 +33,12 @@ export default function PaginaLogin() {
         e.preventDefault();
 
         if (!auth || !isAuthReady) {
-            showMessage('Serviços de autenticação não prontos. Tente novamente.', true);
+            showMessage(t('loginPage.messages.authNotReady'), true);
             return;
         }
 
         if (!email || !password) {
-            showMessage('Por favor, preencha o e-mail e a senha.', true);
+            showMessage(t('loginPage.messages.fillFields'), true);
             return;
         }
 
@@ -46,11 +48,11 @@ export default function PaginaLogin() {
             navigate(from, { replace: true });
         } catch (error) {
             console.error('Erro no login:', error);
-            let errorMessage = 'Erro ao fazer login. Verifique suas credenciais.';
+            let errorMessage = t('loginPage.messages.genericError');
             if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                errorMessage = 'E-mail ou senha inválidos.';
+                errorMessage = t('loginPage.messages.invalidCredentials');
             } else if (error.code === 'auth/too-many-requests') {
-                errorMessage = 'Muitas tentativas de login. Tente novamente mais tarde.';
+                errorMessage = t('loginPage.messages.tooManyRequests');
             }
             showMessage(errorMessage, true);
         } finally {
@@ -58,7 +60,6 @@ export default function PaginaLogin() {
         }
     };
 
-    // Estilos atualizados com o tema
     const inputStyle = "appearance-none relative block w-full px-3 py-3 border border-early-frost placeholder-gray-500 text-rich-soil focus:outline-none focus:ring-apricot-orange focus:border-apricot-orange focus:z-10 sm:text-sm font-comfortaa";
 
     return (
@@ -67,11 +68,9 @@ export default function PaginaLogin() {
             <div className="max-w-md w-full space-y-8">
                 <div className="bg-white p-8 rounded-2xl shadow-lg">
                     <div className="text-center">
-                        {/* Título com a fonte e cor do tema */}
-                        <h2 className="font-lexend text-subtitulo text-rain-forest">Acessar Sistema</h2>
-                        {/* Texto de apoio com a fonte e cor do tema */}
+                        <h2 className="font-lexend text-subtitulo text-rain-forest">{t('loginPage.title')}</h2>
                         <p className="mt-2 font-comfortaa text-corpo text-rich-soil">
-                            Bem-vindo de volta!
+                            {t('loginPage.welcome')}
                         </p>
                     </div>
 
@@ -83,7 +82,7 @@ export default function PaginaLogin() {
                         <input type="hidden" name="remember" defaultValue="true" />
                         <div className="rounded-md shadow-sm -space-y-px">
                             <div>
-                                <label htmlFor="email-address" className="sr-only">Email</label>
+                                <label htmlFor="email-address" className="sr-only">{t('loginPage.form.emailLabel')}</label>
                                 <input
                                     id="email-address"
                                     name="email"
@@ -91,13 +90,13 @@ export default function PaginaLogin() {
                                     autoComplete="email"
                                     required
                                     className={`${inputStyle} rounded-t-md`}
-                                    placeholder="Endereço de e-mail"
+                                    placeholder={t('loginPage.form.emailPlaceholder')}
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                 />
                             </div>
                             <div>
-                                <label htmlFor="password" className="sr-only">Senha</label>
+                                <label htmlFor="password" className="sr-only">{t('loginPage.form.passwordLabel')}</label>
                                 <input
                                     id="password"
                                     name="password"
@@ -105,7 +104,7 @@ export default function PaginaLogin() {
                                     autoComplete="current-password"
                                     required
                                     className={`${inputStyle} rounded-b-md`}
-                                    placeholder="Senha"
+                                    placeholder={t('loginPage.form.passwordPlaceholder')}
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                 />
@@ -113,13 +112,12 @@ export default function PaginaLogin() {
                         </div>
 
                         <div>
-                             {/* Botão principal com as cores de ação do tema */}
                             <button
                                 type="submit"
                                 className="group relative w-full flex justify-center py-3 px-4 border border-transparent text-base font-medium rounded-md text-white bg-apricot-orange hover:bg-golden-orange focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-apricot-orange disabled:bg-early-frost disabled:cursor-not-allowed font-lexend"
                                 disabled={!isAuthReady || loadingLogin}
                             >
-                                {loadingLogin ? 'Entrando...' : 'Entrar'}
+                                {loadingLogin ? t('loginPage.form.submittingButton') : t('loginPage.form.submitButton')}
                             </button>
                         </div>
                     </form>
@@ -128,16 +126,14 @@ export default function PaginaLogin() {
 
             {installPrompt && (
                 <div className="max-w-md w-full text-center mt-8 bg-white p-6 rounded-2xl shadow-lg">
-                     {/* Textos da seção de PWA com as fontes do tema */}
                     <p className="font-comfortaa text-sm text-rich-soil">
-                        Para uma experiência mais fluida e imersiva, instale nosso aplicativo em seu dispositivo.
+                        {t('loginPage.pwa.installPrompt')}
                     </p>
-                     {/* Botão de instalação com cores do tema */}
                     <button
                         onClick={handleInstallClick}
                         className="mt-4 w-full sm:w-auto inline-flex justify-center py-2 px-6 border border-transparent text-sm font-medium rounded-md text-white bg-rain-forest hover:bg-abundant-green focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-rain-forest font-lexend"
                     >
-                        Instalar Aplicativo
+                        {t('loginPage.pwa.installButton')}
                     </button>
                 </div>
             )}
