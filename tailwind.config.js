@@ -28,8 +28,8 @@ export default {
         acao: ["1.5rem", "1.4"], // 24px. Para botões e chamadas de ação.
         subtitulo: ["2.25rem", "1.25"], // 36px. Para subtítulos.
         titulo: ["3.5rem", "1.2"], // 56px. Para títulos principais.
-        teste1: ["3.5rem", "1.2"],
-        teste2: ["3.5rem", "1.2"],
+        teste1: ["3rem", "1.2"], // 48px
+        teste2: ["2rem", "1.2"], // 32px
       },
     },
   },

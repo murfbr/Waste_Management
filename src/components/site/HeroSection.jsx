@@ -16,7 +16,7 @@ export default function HeroSection() {
         <div className="flex md:flex-row flex-col items-center gap-12">
           {/* Texto e Botões */}
           <div className="w-full md:w-1/2 lg:flex-grow lg:pr-24 md:pr-16 flex flex-col items-center md:items-start text-center md:text-left mb-16 md:mb-0">
-            <h1 className="font-lexend text-titulo font-extrabold text-blue-coral mb-6 w-full">
+            <h1 className="font-lexend text-teste1 font-extrabold text-blue-coral mb-6 w-full">
               <img className="w-32 h-auto mb-6 object-contain mx-auto md:mx-0" alt="Ctrl Waste logo" src={logoAzulLaranja} />
               {t('hero.title')}
             </h1>
