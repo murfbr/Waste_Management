@@ -1,6 +1,6 @@
 import React, { useRef, useLayoutEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import SociosImg from '../../pages/site/img/Socios.png';
+import SociosImg from '../../pages/site/img/socios.png';
 
 export default function AboutHero() {
   const { t } = useTranslation('site');

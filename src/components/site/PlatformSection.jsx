@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import dashboardImg from '../../pages/site/img/composicaogeracao3.png';
-import pesagemImg from '../../pages/site/img/usuario.png';
+import pesagemImg from '../../pages/site/img/pesagem3.png';
 import mtrImg from '../../pages/site/img/mtr.png';
 
 const FeatureDetail = ({ title, children, imageUrl, reverse = false }) => (
