@@ -6,9 +6,11 @@ import AuthContext from '../../context/AuthContext';
 import { addPendingRecord } from '../../services/offlineSyncService';
 import { wasteTypeColors } from '../../utils/wasteTypeColors'; 
 
-// As chaves de fallback agora são neutras e serão traduzidas na tela
-const SUBTIPOS_RECICLAVEIS_FALLBACK = ["paper", "glass", "metal", "plastic", "batteries", "electronics"];
-const SUBTIPOS_ORGANICOS_FALLBACK = ["general", "preService", "postService"];
+// --- CORREÇÃO APLICADA AQUI ---
+// Padronizando os valores de fallback para serem consistentes com ClienteForm.jsx
+// Isso garante que o valor 'Geral' seja o mesmo em todo o app.
+const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
+const SUBTIPOS_ORGANICOS_FALLBACK = ["Geral", "Pré-serviço", "Pós-serviço"];
 
 export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSuccessfulSubmit, formResetKey }) { 
   const { t, i18n } = useTranslation('wasteRegister');
@@ -103,8 +105,11 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
         setSelectedSubType('');
     } else {
         setSelectedMainCategory(categoria);
+        // --- CORREÇÃO APLICADA AQUI ---
+        // Ao selecionar 'Orgânico', o subtipo 'Geral' é pré-selecionado.
+        // Usar 'Geral' (com 'G' maiúsculo) garante que a comparação de estilo no botão funcione.
         if (categoria === 'Orgânico' && clienteSelecionado?.fazSeparacaoOrganicosCompleta) {
-            setSelectedSubType('general'); // Usa a chave neutra
+            setSelectedSubType('Geral'); 
         } else {
             setSelectedSubType('');
         }
@@ -168,8 +173,9 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     let tipoParaExibir = selectedMainCategory;
 
     if (selectedSubType) {
-      recordData.wasteSubType = selectedSubType; // Salva a chave neutra no DB
-      // Para exibição no modal de limite, traduzimos o subtipo
+      recordData.wasteSubType = selectedSubType; // Salva o valor correto, ex: 'Geral'
+      // Para exibição no modal de limite, o subtipo é concatenado.
+      // O sistema de tradução usará o próprio subtipo como fallback, o que é o comportamento desejado.
       const translatedSubType = t(`wasteFormComponent.fallbackSubtypes.${selectedMainCategory.toLowerCase()}.${selectedSubType}`, selectedSubType);
       tipoParaExibir = `${selectedMainCategory} (${translatedSubType})`;
     }
@@ -190,7 +196,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     const result = await addPendingRecord(recordData);
 
     if (result.success) {
-      setFormSuccess(result.message); // A mensagem de sucesso já vem do service
+      setFormSuccess(result.message); 
       if (onSuccessfulSubmit) onSuccessfulSubmit();
       
       setSelectedMainCategory('');
@@ -314,7 +320,9 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
                             : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
                         }`}
                   >
-                    {t(`wasteFormComponent.fallbackSubtypes.recyclable.${subtipoKey}`, subtipoKey)}
+                    {/* --- CORREÇÃO APLICADA AQUI --- */}
+                    {/* O texto do botão agora é o próprio valor, que já está no formato correto */}
+                    {subtipoKey}
                   </button>
                 ))}
               </div>
@@ -335,7 +343,9 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
                             : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
                         }`}
                   >
-                    {t(`wasteFormComponent.fallbackSubtypes.organic.${subtipoKey}`, subtipoKey)}
+                    {/* --- CORREÇÃO APLICADA AQUI --- */}
+                    {/* O texto do botão agora é o próprio valor, que já está no formato correto */}
+                    {subtipoKey}
                   </button>
                 ))}
               </div>
