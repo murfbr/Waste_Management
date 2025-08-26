@@ -10,7 +10,11 @@
     "plastico": "Plástico",
     "vidro": "Vidrio",
     "metal": "Metal",
-    "papelao": "Cartón"
+    "papelao": "Cartón",
+    "madeira": "Madera",
+    "perigosos": "Peligrosos",
+    "baterias": "Baterías",
+    "eletronicos": "Electrónicos"
   },
   "destinations": {
     "recuperacao": "Recuperación",

@@ -2,7 +2,7 @@
   "wasteTypes": {
     "reciclavel": "Recyclable",
     "organico": "Organic",
-    "rejeito": "Reject",
+    "rejeito": "Disposal",
     "compostavel": "Compostable"
   },
   "wasteSubTypes": {
@@ -10,7 +10,11 @@
     "plastico": "Plastic",
     "vidro": "Glass",
     "metal": "Metal",
-    "papelao": "Cardboard"
+    "papelao": "Cardboard",
+    "madeira": "Wood",
+    "perigosos": "Hazardous",
+    "baterias": "Batteries",
+    "eletronicos": "Electronics"
   },
   "destinations": {
     "recuperacao": "Recovery",
