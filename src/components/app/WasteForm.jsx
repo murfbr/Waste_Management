@@ -286,7 +286,8 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
               <button
                 key={`type-${tipo}`} type="button" onClick={() => handleSelectMainCategory(tipo)}
                 style={getButtonStyles(tipo, selectedMainCategory === tipo)}
-                className={`relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2 
+                // --- ALTERAÇÃO APLICADA AQUI ---
+                className={`flex-grow basis-full sm:basis-[45%] md:basis-[30%] relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2 
                     ${selectedMainCategory === tipo 
                         ? 'ring-rich-soil shadow-lg' 
                         : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
@@ -305,7 +306,8 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
                   <button
                     key={`subtype-${subtipoKey}`} type="button" onClick={() => setSelectedSubType(subtipoKey)}
                     style={getButtonStyles(subtipoKey, selectedSubType === subtipoKey)}
-                    className={`relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
+                    // --- ALTERAÇÃO APLICADA AQUI ---
+                    className={`flex-grow basis-full sm:basis-[45%] md:basis-[30%] relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
                         ${selectedSubType === subtipoKey
                             ? 'ring-rich-soil shadow-lg'
                             : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
@@ -326,7 +328,8 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
                   <button
                     key={`subtype-${subtipoKey}`} type="button" onClick={() => setSelectedSubType(subtipoKey)}
                     style={getButtonStyles(subtipoKey, selectedSubType === subtipoKey)}
-                    className={`relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
+                    // --- ALTERAÇÃO APLICADA AQUI ---
+                    className={`flex-grow basis-full sm:basis-[45%] md:basis-[30%] relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
                         ${selectedSubType === subtipoKey
                             ? 'ring-rich-soil shadow-lg'
                             : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
@@ -351,7 +354,8 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
               <button
                 key={`area-${areaOption}`} type="button"
                 onClick={() => { setAreaLancamento(areaOption); if (formError) setFormError(''); if (formSuccess) setFormSuccess(''); }}
-                className={`relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-150 ease-in-out focus:outline-none
+                // --- ALTERAÇÃO APLICADA AQUI ---
+                className={`flex-grow basis-full sm:basis-[45%] md:basis-[30%] relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-150 ease-in-out focus:outline-none
                     ${areaLancamento === areaOption
                         ? 'bg-blue-coral text-white border-blue-coral shadow-lg'
                         : 'bg-white text-rich-soil border-early-frost hover:bg-gray-50 hover:scale-[1.02] hover:z-10'
