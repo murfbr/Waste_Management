@@ -6,9 +6,6 @@ import AuthContext from '../../context/AuthContext';
 import { addPendingRecord } from '../../services/offlineSyncService';
 import { wasteTypeColors } from '../../utils/wasteTypeColors'; 
 
-// --- CORREÇÃO APLICADA AQUI ---
-// Padronizando os valores de fallback para serem consistentes com ClienteForm.jsx
-// Isso garante que o valor 'Geral' seja o mesmo em todo o app.
 const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
 const SUBTIPOS_ORGANICOS_FALLBACK = ["Geral", "Pré-serviço", "Pós-serviço"];
 
@@ -16,7 +13,6 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
   const { t, i18n } = useTranslation('wasteRegister');
   const { currentUser, appId } = useContext(AuthContext);
 
-  // Mapeia o código de idioma do i18next para um locale de formatação de número
   const localeMap = {
     pt: 'pt-BR',
     en: 'en-US',
@@ -105,9 +101,6 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
         setSelectedSubType('');
     } else {
         setSelectedMainCategory(categoria);
-        // --- CORREÇÃO APLICADA AQUI ---
-        // Ao selecionar 'Orgânico', o subtipo 'Geral' é pré-selecionado.
-        // Usar 'Geral' (com 'G' maiúsculo) garante que a comparação de estilo no botão funcione.
         if (categoria === 'Orgânico' && clienteSelecionado?.fazSeparacaoOrganicosCompleta) {
             setSelectedSubType('Geral'); 
         } else {
@@ -173,9 +166,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     let tipoParaExibir = selectedMainCategory;
 
     if (selectedSubType) {
-      recordData.wasteSubType = selectedSubType; // Salva o valor correto, ex: 'Geral'
-      // Para exibição no modal de limite, o subtipo é concatenado.
-      // O sistema de tradução usará o próprio subtipo como fallback, o que é o comportamento desejado.
+      recordData.wasteSubType = selectedSubType; 
       const translatedSubType = t(`wasteFormComponent.fallbackSubtypes.${selectedMainCategory.toLowerCase()}.${selectedSubType}`, selectedSubType);
       tipoParaExibir = `${selectedMainCategory} (${translatedSubType})`;
     }
@@ -290,12 +281,12 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
       {opcoesTipoResiduo.length > 0 ? (
         <div>
           <label className={labelStyle}>{t('wasteFormComponent.wasteTypeLabel')}</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="flex flex-wrap justify-center gap-3">
             {opcoesTipoResiduo.map((tipo) => (
               <button
                 key={`type-${tipo}`} type="button" onClick={() => handleSelectMainCategory(tipo)}
                 style={getButtonStyles(tipo, selectedMainCategory === tipo)}
-                className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2 
+                className={`relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2 
                     ${selectedMainCategory === tipo 
                         ? 'ring-rich-soil shadow-lg' 
                         : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
@@ -309,19 +300,17 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
           {showRecyclableSubTypes && (
              <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-early-frost">
               <label className={subLabelStyle}>{t('wasteFormComponent.recyclableLabel')}</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="flex flex-wrap justify-center gap-3">
                 {opcoesSubtipoReciclavel.map((subtipoKey) => (
                   <button
                     key={`subtype-${subtipoKey}`} type="button" onClick={() => setSelectedSubType(subtipoKey)}
                     style={getButtonStyles(subtipoKey, selectedSubType === subtipoKey)}
-                    className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
+                    className={`relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
                         ${selectedSubType === subtipoKey
                             ? 'ring-rich-soil shadow-lg'
                             : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
                         }`}
                   >
-                    {/* --- CORREÇÃO APLICADA AQUI --- */}
-                    {/* O texto do botão agora é o próprio valor, que já está no formato correto */}
                     {subtipoKey}
                   </button>
                 ))}
@@ -332,19 +321,17 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
           {showOrganicSubTypes && (
              <div className="mt-6 p-4 bg-gray-50 rounded-lg border border-early-frost">
               <label className={subLabelStyle}>{t('wasteFormComponent.organicLabel')}</label>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+              <div className="flex flex-wrap justify-center gap-3">
                 {opcoesSubtipoOrganico.map((subtipoKey) => (
                   <button
                     key={`subtype-${subtipoKey}`} type="button" onClick={() => setSelectedSubType(subtipoKey)}
                     style={getButtonStyles(subtipoKey, selectedSubType === subtipoKey)}
-                    className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
+                    className={`relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
                         ${selectedSubType === subtipoKey
                             ? 'ring-rich-soil shadow-lg'
                             : 'ring-transparent hover:scale-[1.02] hover:shadow-md hover:z-10'
                         }`}
                   >
-                    {/* --- CORREÇÃO APLICADA AQUI --- */}
-                    {/* O texto do botão agora é o próprio valor, que já está no formato correto */}
                     {subtipoKey}
                   </button>
                 ))}
@@ -359,12 +346,12 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
       {opcoesArea.length > 0 && (
         <div>
           <label className={labelStyle}>{t('wasteFormComponent.areaLabel')}</label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+          <div className="flex flex-wrap justify-center gap-3">
             {opcoesArea.map((areaOption) => (
               <button
                 key={`area-${areaOption}`} type="button"
                 onClick={() => { setAreaLancamento(areaOption); if (formError) setFormError(''); if (formSuccess) setFormSuccess(''); }}
-                className={`relative flex items-center justify-center w-full p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-150 ease-in-out focus:outline-none
+                className={`relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-150 ease-in-out focus:outline-none
                     ${areaLancamento === areaOption
                         ? 'bg-blue-coral text-white border-blue-coral shadow-lg'
                         : 'bg-white text-rich-soil border-early-frost hover:bg-gray-50 hover:scale-[1.02] hover:z-10'
