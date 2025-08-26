@@ -1,0 +1,30 @@
+{
+  "wasteTypes": {
+    "reciclavel": "Recyclable",
+    "organico": "Organic",
+    "rejeito": "Reject",
+    "compostavel": "Compostable"
+  },
+  "wasteSubTypes": {
+    "papel": "Paper",
+    "plastico": "Plastic",
+    "vidro": "Glass",
+    "metal": "Metal",
+    "papelao": "Cardboard"
+  },
+  "destinations": {
+    "recuperacao": "Recovery",
+    "descarte": "Disposal",
+    "aterroSanitario": "Sanitary Landfill",
+    "incineracao": "Incineration",
+    "compostagem": "Composting",
+    "triagem": "Sorting",
+    "naoEspecificado": "Not Specified",
+    "reciclagem": "Recycling",
+    "biometanizacao": "Biomethanization"
+  },
+  "chartLabels": {
+    "recovery": "Recovery",
+    "disposal": "Disposal"
+  }
+}

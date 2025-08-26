@@ -16,17 +16,6 @@ import DashboardFilters from '../../components/app/filters/DashboardFilters';
 import DestinacaoChart from '../../components/app/charts/DestinacaoChart';
 import LazySection from '../../components/app/LazySection';
 
-// PADRONIZADO: Única função robusta para criar chaves camelCase a partir de strings do DB
-const toCamelCaseKey = (str) => {
-    if (!str) return 'naoEspecificado';
-    // Remove acentos e converte para minúsculas
-    const s = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    // Divide por espaço ou hífen
-    const parts = s.split(/[\s-]+/);
-    // Junta as partes, capitalizando a primeira letra de cada parte exceto a primeira
-    return parts[0] + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
-};
-
 const RealtimeIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
       <path d="M10 3.5a1.5 1.5 0 011.5 1.5v.586a1.5 1.5 0 003 0V5a1.5 1.5 0 011.5-1.5h.5a1.5 1.5 0 010 3h-.5a1.5 1.5 0 01-1.5-1.5v-.586a1.5 1.5 0 00-3 0V5a1.5 1.5 0 01-1.5 1.5H10a1.5 1.5 0 01-1.5-1.5V5a1.5 1.5 0 00-3 0v.586a1.5 1.5 0 01-1.5 1.5h-.5a1.5 1.5 0 010-3h.5A1.5 1.5 0 015 5v-.586a1.5 1.5 0 00-3 0V5a1.5 1.5 0 01-1.5 1.5H.5a1.5 1.5 0 010-3h.5A1.5 1.5 0 013.5 5v.586a1.5 1.5 0 003 0V5A1.5 1.5 0 018 3.5h2zM.5 10.5a1.5 1.5 0 011.5-1.5h16a1.5 1.5 0 010 3H2a1.5 1.5 0 01-1.5-1.5zm1.5 5.5a1.5 1.5 0 000-3h14a1.5 1.5 0 000 3H2z" />
@@ -36,7 +25,9 @@ const RealtimeIcon = () => (
 const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const TODOS_OS_MESES_INDICES = Array.from({ length: 12 }, (_, i) => i);
 
-const processDataForAggregatedPieChart = (records, t) => {
+// ... (todas as funções processDataFor... continuam aqui, sem mudanças)
+const processDataForAggregatedPieChart = (records) => {
+  console.log('[LAZY LOAD] Executando cálculo para Gráfico de Pizza por TIPO...');
   if (!Array.isArray(records) || records.length === 0) return [];
   const aggregation = records.reduce((acc, record) => {
     if (!record || !record.wasteType) return acc;
@@ -44,34 +35,24 @@ const processDataForAggregatedPieChart = (records, t) => {
     let subType = record.wasteSubType;
     const weight = parseFloat(record.peso || 0);
     if (isNaN(weight)) return acc;
-
-    let translatedMainType;
     if (mainType.startsWith('Reciclável')) {
       if (!subType) { const match = mainType.match(/\((.*)\)/); if (match) subType = match[1]; }
-      translatedMainType = t('charts:wasteTypes.reciclavel');
+      mainType = 'Reciclável';
     } else if (mainType.startsWith('Orgânico')) {
       if (!subType) { const match = mainType.match(/\((.*)\)/); if (match) subType = match[1]; }
-      translatedMainType = t('charts:wasteTypes.organico');
-    } else {
-      // PADRONIZADO: Usando toCamelCaseKey
-      translatedMainType = t(`charts:wasteTypes.${toCamelCaseKey(mainType)}`, mainType);
+      mainType = 'Orgânico';
     }
-    
-    // PADRONIZADO: Usando toCamelCaseKey
-    const translatedSubType = subType ? t(`charts:wasteSubTypes.${toCamelCaseKey(subType)}`, subType) : translatedMainType;
-
-    if (!acc[translatedMainType]) {
-      acc[translatedMainType] = { name: translatedMainType, value: 0, subtypes: {} };
+    if (!acc[mainType]) {
+      acc[mainType] = { name: mainType, value: 0, subtypes: {} };
     }
-    acc[translatedMainType].value += weight;
-
-    if (!acc[translatedMainType].subtypes[translatedSubType]) {
-      acc[translatedMainType].subtypes[translatedSubType] = { name: translatedSubType, value: 0 };
+    acc[mainType].value += weight;
+    const subTypeNameForList = subType || mainType;
+    if (!acc[mainType].subtypes[subTypeNameForList]) {
+      acc[mainType].subtypes[subTypeNameForList] = { name: subTypeNameForList, value: 0 };
     }
-    acc[translatedMainType].subtypes[translatedSubType].value += weight;
+    acc[mainType].subtypes[subTypeNameForList].value += weight;
     return acc;
   }, {});
-
   for (const mainType in aggregation) {
       const subtypes = aggregation[mainType].subtypes;
       const subtypeKeys = Object.keys(subtypes);
@@ -85,28 +66,21 @@ const processDataForAggregatedPieChart = (records, t) => {
     subtypes: Object.values(mainCategory.subtypes).map(sub => ({ ...sub, value: parseFloat(sub.value.toFixed(2)) })).sort((a, b) => b.value - a.value)
   }));
 };
-
-const processDataForAreaChartWithBreakdown = (records, t) => {
+const processDataForAreaChartWithBreakdown = (records) => {
+    console.log('[LAZY LOAD] Executando cálculo para Gráfico de Pizza por ÁREA...');
     if (!Array.isArray(records) || records.length === 0) return [];
     const aggregation = records.reduce((acc, record) => {
         if (!record || !record.areaLancamento || !record.wasteType) return acc;
         const areaName = record.areaLancamento;
         const weight = parseFloat(record.peso || 0);
         if (isNaN(weight)) return acc;
-        
         let mainWasteType = record.wasteType;
-        let translatedWasteType;
-        if (mainWasteType.startsWith('Reciclável')) { translatedWasteType = t('charts:wasteTypes.reciclavel'); } 
-        else if (mainWasteType.startsWith('Orgânico')) { translatedWasteType = t('charts:wasteTypes.organico'); }
-        else { 
-            // PADRONIZADO: Usando toCamelCaseKey
-            translatedWasteType = t(`charts:wasteTypes.${toCamelCaseKey(mainWasteType)}`, mainWasteType); 
-        }
-        
+        if (mainWasteType.startsWith('Reciclável')) { mainWasteType = 'Reciclável'; } 
+        else if (mainWasteType.startsWith('Orgânico')) { mainWasteType = 'Orgânico'; }
         if (!acc[areaName]) { acc[areaName] = { name: areaName, value: 0, breakdown: {} }; }
         acc[areaName].value += weight;
-        if (!acc[areaName].breakdown[translatedWasteType]) { acc[areaName].breakdown[translatedWasteType] = { name: translatedWasteType, value: 0 }; }
-        acc[areaName].breakdown[translatedWasteType].value += weight;
+        if (!acc[areaName].breakdown[mainWasteType]) { acc[areaName].breakdown[mainWasteType] = { name: mainWasteType, value: 0 }; }
+        acc[areaName].breakdown[mainWasteType].value += weight;
         return acc;
     }, {});
     return Object.values(aggregation).map(areaData => ({
@@ -115,8 +89,8 @@ const processDataForAreaChartWithBreakdown = (records, t) => {
         breakdown: Object.values(areaData.breakdown).map(b => ({ ...b, value: parseFloat(b.value.toFixed(2)) })).filter(b => b.value > 0).sort((a, b) => b.value - a.value)
     }));
 };
-
-const processDataForDesvioDeAterro = (records, rejectCategoryName) => {
+const processDataForDesvioDeAterro = (records, rejectCategoryName = "Rejeito") => {
+    console.log('[LAZY LOAD] Executando cálculo para Gráfico de Desvio de Aterro...');
     if (!Array.isArray(records) || records.length === 0) return [];
     const dailyDataAggregated = records.reduce((acc, record) => {
         if (!record || !record.timestamp) return acc;
@@ -127,9 +101,7 @@ const processDataForDesvioDeAterro = (records, rejectCategoryName) => {
         if (isNaN(weight)) return acc;
         acc[dateKey] = acc[dateKey] || { total: 0, rejeito: 0 };
         acc[dateKey].total += weight;
-        if (record.wasteType === rejectCategoryName) { 
-            acc[dateKey].rejeito += weight; 
-        }
+        if (record.wasteType === rejectCategoryName) { acc[dateKey].rejeito += weight; }
         return acc;
     }, {});
     const sortedDailyData = Object.entries(dailyDataAggregated).map(([dateKey, data]) => {
@@ -148,8 +120,8 @@ const processDataForDesvioDeAterro = (records, rejectCategoryName) => {
         return { ...dataPoint, mediaTaxaDesvio: parseFloat(mediaTaxaDesvio.toFixed(2)) };
     });
 };
-
 const processDataForMonthlyYearlyComparison = (records, year1, year2) => {
+  console.log('[LAZY LOAD] Executando cálculo para Gráfico de Comparação Mensal...');
   if (!Array.isArray(records)) return { data: [], years: [] };
   const monthlyData = {};
   records.forEach(record => {
@@ -178,8 +150,8 @@ const processDataForMonthlyYearlyComparison = (records, year1, year2) => {
   if (year1 !== year2 && chartData.some(d => d[year2.toString()] !== undefined)) actualYearsInData.push(year2.toString());
   return { data: chartData, years: actualYearsInData };
 };
-
 const processDataForSummaryCards = (records) => {
+  console.log('[LAZY LOAD] Executando cálculo para Cards de Sumário...');
   if (!Array.isArray(records) || records.length === 0) return [];
   let totalGeralKg = 0, totalOrganicoKg = 0, totalReciclavelKg = 0, totalRejeitoKg = 0;
   records.forEach(record => {
@@ -218,7 +190,7 @@ const SectionTitle = ({ title, isExpanded, onClick }) => (
 );
 
 export default function PaginaDashboard() {
-  const { t } = useTranslation(['dashboard', 'charts']);
+  const { t } = useTranslation('dashboard');
   const { db, userProfile, userAllowedClientes, loadingAuth, loadingAllowedClientes } = useContext(AuthContext);
   
   const now = new Date();
@@ -234,9 +206,12 @@ export default function PaginaDashboard() {
   const [empresasColeta, setEmpresasColeta] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
 
+  // --- INÍCIO DA NOVA LÓGICA ---
+  // Estados para controlar a visibilidade de cada seção lazy-loaded
   const [isMonthlyComparisonVisible, setIsMonthlyComparisonVisible] = useState(false);
   const [isCompositionVisible, setIsCompositionVisible] = useState(false);
   const [isDestinationVisible, setIsDestinationVisible] = useState(false);
+  // --- FIM DA NOVA LÓGICA ---
 
   const dashboardMode = useMemo(() => {
     if (!selectedClienteIds.length || !userAllowedClientes.length) {
@@ -305,8 +280,12 @@ export default function PaginaDashboard() {
 
 
   const destinacaoData = useMemo(() => {
+    // --- INÍCIO DA NOVA LÓGICA ---
+    // Adiciona uma guarda: só calcula se a seção estiver visível
     if (!isDestinationVisible) return [];
-    
+    console.log('[LAZY LOAD] Executando cálculo para Gráfico de Destinação...');
+    // --- FIM DA NOVA LÓGICA ---
+
     if (recordsFullyFiltered.length === 0 || empresasColeta.length === 0) {
         return [];
     }
@@ -322,25 +301,24 @@ export default function PaginaDashboard() {
         if (!empresa?.destinacoes || !record.wasteType) return;
 
         let mainWasteType = record.wasteType;
-        if (mainWasteType.startsWith('Reciclável')) { mainWasteType = 'Reciclável'; }
-        else if (mainWasteType.startsWith('Orgânico')) { mainWasteType = 'Orgânico'; }
+        if (mainWasteType.startsWith('Reciclável')) {
+            mainWasteType = 'Reciclável';
+        } else if (mainWasteType.startsWith('Orgânico')) {
+            mainWasteType = 'Orgânico';
+        }
 
         const destinacoesDoTipo = empresa.destinacoes[mainWasteType] || [];
         const isDisposal = destinacoesDoTipo.some(dest => disposalDestinations.includes(dest));
-        
-        const destinationName = destinacoesDoTipo[0] || 'Não especificado';
-        
-        const destinationKey = toCamelCaseKey(destinationName);
-        const translatedDestination = t(`charts:destinations.${destinationKey}`, destinationName);
-        
+        const destinationName = destinacoesDoTipo[0] || 'Não especificado'; 
+
         const weight = record.peso;
 
         if (isDisposal) {
             disposalData.value += weight;
-            disposalData.breakdown[translatedDestination] = (disposalData.breakdown[translatedDestination] || 0) + weight;
+            disposalData.breakdown[destinationName] = (disposalData.breakdown[destinationName] || 0) + weight;
         } else {
             recoveryData.value += weight;
-            recoveryData.breakdown[translatedDestination] = (recoveryData.breakdown[translatedDestination] || 0) + weight;
+            recoveryData.breakdown[destinationName] = (recoveryData.breakdown[destinationName] || 0) + weight;
         }
     });
     
@@ -353,7 +331,7 @@ export default function PaginaDashboard() {
     const result = [];
     if (recoveryData.value > 0) {
         result.push({
-            name: 'recovery', 
+            name: 'recovery',
             value: parseFloat(recoveryData.value.toFixed(2)),
             breakdown: formatBreakdown(recoveryData.breakdown)
         });
@@ -367,7 +345,7 @@ export default function PaginaDashboard() {
     }
 
     return result;
-  }, [recordsFullyFiltered, empresasColeta, isDestinationVisible, t]);
+  }, [recordsFullyFiltered, empresasColeta, isDestinationVisible]); // Adiciona a dependência
 
 
   const handleClienteSelectionChange = (clienteId) => {
@@ -428,23 +406,28 @@ export default function PaginaDashboard() {
     setSelectedMonths(months);
   };
 
+  // --- INÍCIO DA LÓGICA ALTERADA ---
+  // A seção de Sumário não é lazy-loaded, então seu cálculo permanece como estava.
   const summaryData = useMemo(() => processDataForSummaryCards(recordsFullyFiltered), [recordsFullyFiltered]);
 
   const wasteTypePieData = useMemo(() => {
     if (!isCompositionVisible) return [];
-    return processDataForAggregatedPieChart(recordsFullyFiltered, t);
-  }, [recordsFullyFiltered, isCompositionVisible, t]);
+    return processDataForAggregatedPieChart(recordsFullyFiltered);
+  }, [recordsFullyFiltered, isCompositionVisible]);
 
   const areaPieData = useMemo(() => {
     if (!isCompositionVisible) return [];
-    return processDataForAreaChartWithBreakdown(recordsFullyFiltered, t);
-  }, [recordsFullyFiltered, isCompositionVisible, t]);
+    return processDataForAreaChartWithBreakdown(recordsFullyFiltered);
+  }, [recordsFullyFiltered, isCompositionVisible]);
 
   const desvioDeAterroData = useMemo(() => {
     if (!isDestinationVisible) return [];
     return processDataForDesvioDeAterro(recordsFullyFiltered, "Rejeito");
   }, [recordsFullyFiltered, isDestinationVisible]);
 
+  // A lógica de comparação anual é um desafio com lazy loading.
+  // Vamos mantê-la simples por enquanto, sabendo que ela só terá os dados do período filtrado.
+  // Uma solução futura seria ter uma busca de dados separada para ela.
   const comparisonYears = useMemo(() => {
     const sortedYears = [...availableYears].sort((a, b) => b - a);
     if (sortedYears.length === 0) return [new Date().getFullYear()];
@@ -456,6 +439,7 @@ export default function PaginaDashboard() {
     if (!isMonthlyComparisonVisible) return { data: [], years: [] };
     return processDataForMonthlyYearlyComparison(allWasteRecords, comparisonYears[0], comparisonYears[1] || comparisonYears[0]);
   }, [allWasteRecords, comparisonYears, isMonthlyComparisonVisible]);
+  // --- FIM DA NOVA LÓGICA ---
 
 
   if (loadingAuth || loadingAllowedClientes) { return <div className="p-8 text-center text-rich-soil">A carregar...</div>; }
@@ -463,7 +447,7 @@ export default function PaginaDashboard() {
   return (
     <div className="bg-gray-50 font-comfortaa min-h-screen p-4 md:p-6 space-y-6">
       <div className="bg-blue-coral text-white py-3 px-6 rounded-md shadow-lg flex justify-center items-center relative">
-        <h1 className="font-lexend text-subtitulo font-bold text-center">{t('dashboard:paginaDashboard.header.title')}</h1>
+        <h1 className="font-lexend text-subtitulo font-bold text-center">{t('paginaDashboard.header.title')}</h1>
         {dashboardMode === 'realtime' && (
           <div 
             className="absolute right-4 flex items-center bg-red-500 text-white text-xs font-bold px-2.5 py-1 rounded-full animate-pulse"
@@ -499,25 +483,28 @@ export default function PaginaDashboard() {
       />
       
       <div className="mt-8 space-y-6">
-        {loadingRecords || loadingEmpresas ? (<div className="text-center p-8 text-rich-soil">{t('dashboard:paginaDashboard.filters.loadingData')}</div>) :
-         !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.selectClient')}</div>) :
-         !allWasteRecords.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.noData')}</div>) : (
+        {loadingRecords || loadingEmpresas ? (<div className="text-center p-8 text-rich-soil">{t('paginaDashboard.filters.loadingData')}</div>) :
+         !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('paginaDashboard.filters.selectClient')}</div>) :
+         !allWasteRecords.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('paginaDashboard.filters.noData')}</div>) : (
           <>
+            {/* A primeira seção (Visão Geral) carrega imediatamente */}
             <section>
-                <SectionTitle title={t('dashboard:paginaDashboard.sections.overview')} isExpanded={sectionsVisibility.summary} onClick={() => toggleSection('summary')} />
+                <SectionTitle title={t('paginaDashboard.sections.overview')} isExpanded={sectionsVisibility.summary} onClick={() => toggleSection('summary')} />
                 {sectionsVisibility.summary && <SummaryCards summaryData={summaryData} isLoading={loadingRecords} />}
             </section>
             
+            {/* --- INÍCIO DA NOVA LÓGICA --- */}
+            {/* As seções seguintes são envolvidas pelo LazySection */}
             <LazySection onVisible={() => setIsMonthlyComparisonVisible(true)}>
               <section>
-                  <SectionTitle title={t('dashboard:paginaDashboard.sections.monthlyGeneration')} isExpanded={sectionsVisibility.monthlyComparison} onClick={() => toggleSection('monthlyComparison')} />
+                  <SectionTitle title={t('paginaDashboard.sections.monthlyGeneration')} isExpanded={sectionsVisibility.monthlyComparison} onClick={() => toggleSection('monthlyComparison')} />
                   {sectionsVisibility.monthlyComparison && <MonthlyComparison chartData={monthlyComparisonChartData} yearsToCompare={actualYearsInComparisonData} isLoading={loadingRecords} />}
               </section>
             </LazySection>
 
             <LazySection onVisible={() => setIsCompositionVisible(true)}>
               <section>
-                  <SectionTitle title={t('dashboard:paginaDashboard.sections.generationComposition')} isExpanded={sectionsVisibility.composition} onClick={() => toggleSection('composition')} />
+                  <SectionTitle title={t('paginaDashboard.sections.generationComposition')} isExpanded={sectionsVisibility.composition} onClick={() => toggleSection('composition')} />
                   {sectionsVisibility.composition && (
                       <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-8">
                           <WasteTypePieChart data={wasteTypePieData} isLoading={loadingRecords} />
@@ -529,7 +516,7 @@ export default function PaginaDashboard() {
 
             <LazySection onVisible={() => setIsDestinationVisible(true)}>
               <section>
-                  <SectionTitle title={t('dashboard:paginaDashboard.sections.destinationComposition')} isExpanded={sectionsVisibility.destination} onClick={() => toggleSection('destination')} />
+                  <SectionTitle title={t('paginaDashboard.sections.destinationComposition')} isExpanded={sectionsVisibility.destination} onClick={() => toggleSection('destination')} />
                   {sectionsVisibility.destination && (
                       <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <DesvioDeAterro data={desvioDeAterroData} isLoading={loadingRecords} />
@@ -538,6 +525,7 @@ export default function PaginaDashboard() {
                   )}
               </section>
             </LazySection>
+            {/* --- FIM DA NOVA LÓGICA --- */}
           </>
         )}
       </div>
