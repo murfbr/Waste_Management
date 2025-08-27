@@ -9,7 +9,8 @@
     "users": "Users",
     "clients": "Clients",
     "collectors": "Collection Providers",
-    "mtrManagement": "Gestão MTR/CDF"
+    "mtrManagement": "Gestão MTR/CDF",
+    "masterTools": "Master Tools"
   },
   "user": {
     "level": "Level"

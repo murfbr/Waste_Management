@@ -29,6 +29,7 @@ const PaginaDocumentacao = React.lazy(() => import('../pages/app/PaginaDocumenta
 const PaginaEconomiaCircular = React.lazy(() => import('../pages/app/PaginaEconomiaCircular'));
 const PaginaGlossario = React.lazy(() => import('../pages/app/PaginaGlossario'));
 const PaginaGestaoMTR = React.lazy(() => import('../pages/app/PaginaGestaoMTR'));
+const PaginaAdminMaster = React.lazy(() => import('../pages/app/PaginaAdminMaster'));
 
 const PageLoader = () => (
   <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -98,6 +99,7 @@ export default function AppRoutes() {
               <Route path="admin/clientes" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminClientes /></ProtectedRoute>} />
               <Route path="admin/empresas-coleta" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminEmpresasColeta /></ProtectedRoute>} />
               <Route path="admin/gestao-mtr" element={<ProtectedRoute allowedRoles={['master']}><PaginaGestaoMTR /></ProtectedRoute>} />
+              <Route path="admin/master-tools" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminMaster /></ProtectedRoute>} />
           </Route>
 
           {/* ROTAS PRIVADAS (APP) INTERNACIONAIS */}
@@ -113,6 +115,7 @@ export default function AppRoutes() {
               <Route path="admin/clientes" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminClientes /></ProtectedRoute>} />
               <Route path="admin/empresas-coleta" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminEmpresasColeta /></ProtectedRoute>} />
               <Route path="admin/gestao-mtr" element={<ProtectedRoute allowedRoles={['master']}><PaginaGestaoMTR /></ProtectedRoute>} />
+              <Route path="admin/master-tools" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminMaster /></ProtectedRoute>} />
             </Route>
           ))}
 

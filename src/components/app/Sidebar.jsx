@@ -41,6 +41,7 @@ const CloseIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColo
 const MtrIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>;
 const FornecedorIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 17H5.714C4.767 17 4 16.233 4 15.286V8.714C4 7.767 4.767 7 5.714 7H15l4 4v4.286zM4 12h15"></path></svg>;
 const GlossarioIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 20L12 4L20 20M7 14H17" /></svg>;
+const ToolsIcon = () => <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>;
 
 const NavItem = ({ to, icon, text, isCollapsed, onClick }) => {
   return (
@@ -238,6 +239,7 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
                 <>
                   <NavItem to={`${langPrefix}/app/admin/clientes`} icon={<AdminClientesIcon />} text={t('navigation.clients')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
                   <NavItem to={`${langPrefix}/app/admin/empresas-coleta`} icon={<FornecedorIcon />} text={t('navigation.collectors')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
+                  <NavItem to={`${langPrefix}/app/admin/master-tools`} icon={<ToolsIcon />} text={t('navigation.masterTools')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}
             </>
