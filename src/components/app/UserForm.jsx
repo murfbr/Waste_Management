@@ -90,7 +90,7 @@ export default function UserForm({
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 rounded-lg shadow space-y-4 mb-8 border border-indigo-300">
       <h2 className="text-xl font-semibold text-gray-700 mb-1">
-        {isEditing ? `A Editar Utilizador: ${initialData.email}` : 'Criar Novo Utilizador'}
+        {isEditing ? `A Editar Usuário: ${initialData.email}` : 'Criar Novo Usuário'}
       </h2>
       
       <div>
@@ -139,14 +139,14 @@ export default function UserForm({
           )}
         </div>
       )}
-      {role === 'master' && <p className="text-sm text-gray-600">Utilizadores "master" têm acesso a todos os clientes por defeito.</p>}
+      {role === 'master' && <p className="text-sm text-gray-600">Usuárioes "master" têm acesso a todos os clientes por defeito.</p>}
 
       <div className="flex justify-end space-x-3 pt-2">
         <button type="button" onClick={onCancel} className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">
           Cancelar
         </button>
         <button type="submit" className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50" disabled={isSubmitting}>
-          {isSubmitting ? "A Salvar..." : (isEditing ? "Atualizar Utilizador" : "Criar Utilizador")}
+          {isSubmitting ? "A Salvar..." : (isEditing ? "Atualizar Usuário" : "Criar Usuário")}
         </button>
       </div>
     </form>
