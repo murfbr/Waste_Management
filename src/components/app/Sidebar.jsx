@@ -5,7 +5,7 @@ import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import AuthContext from '../../context/AuthContext';
 import { signOut } from 'firebase/auth';
-import ConfirmationModal from './ConfirmationModal'; 
+import ConfirmationModal from './ConfirmationModal';
 import logoSvg from '../Simbolo-Laranja-SVG.svg';
 
 // --- HOOK CUSTOMIZADO PARA CLIQUE FORA ---
@@ -48,7 +48,7 @@ const NavItem = ({ to, icon, text, isCollapsed, onClick }) => {
       to={to} 
       onClick={onClick}
       className={({ isActive }) =>
-        `flex items-center p-2.5 rounded-md transition duration-200 space-x-4 font-lexend text-corpo ` +
+        `flex items-center p-2.5 rounded-md transition duration-200 font-lexend text-corpo ${isCollapsed ? 'justify-center space-x-0' : 'space-x-4'} ` +
         (isActive
           ? 'bg-apricot-orange text-white'
           : 'text-white hover:bg-white/10')
@@ -183,24 +183,29 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
         `}
         aria-label="Sidebar principal"
       >
+        <button
+            onClick={onToggleCollapse}
+            className="absolute top-1/2 right-0 hidden md:flex items-center justify-center w-6 h-12 transform translate-x-1/2 -translate-y-1/2 bg-blue-coral hover:bg-apricot-orange text-white rounded-r-lg cursor-pointer transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-apricot-orange z-40"
+            title={isCollapsed ? t('menu.expand') : t('menu.collapse')}
+        >
+            {isCollapsed ? <ChevronDoubleRightIcon className="w-5 h-5" /> : <ChevronDoubleLeftIcon className="w-5 h-5" />}
+        </button>
+
         <div className={`p-4 flex items-center border-b border-white/20 flex-shrink-0 ${isCollapsed ? 'justify-center' : 'justify-between'}`}>
-          
           <img 
             src={logoSvg} 
             alt="CtrlWaste" 
             title="CtrlWaste"
             className={`h-8 w-auto transition-opacity duration-200 ${isCollapsed ? 'hidden' : 'inline-block'}`}
           />
-           
            <span className={`font-lexend text-2xl font-bold text-white transition-opacity duration-200 ${isCollapsed ? 'inline-block' : 'hidden'}`}>
             <img 
-            src={logoSvg} 
-            alt="CtrlWaste" 
-            className="h-8 w-auto"
-            title="CtrlWaste"
-          />
+              src={logoSvg} 
+              alt="CtrlWaste" 
+              className="h-8 w-auto"
+              title="CtrlWaste"
+            />
            </span>
-
           <button onClick={toggleSidebar} className="md:hidden p-1 text-white/80 hover:text-white" aria-label="Fechar menu">
             <CloseIcon />
           </button>
@@ -215,20 +220,13 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
               {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
                 <NavItem to={`${langPrefix}/app/dashboard`} icon={<DashboardIcon />} text={t('navigation.dashboards')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
               )}
-              
               {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
                 <>
                   <hr className={`my-2 border-white/20 ${isCollapsed && 'mx-4'}`} />
                   {!isCollapsed && <p className="px-4 pt-2 pb-1 text-xs font-lexend text-white/70 uppercase">{t('navigation.info')}</p>}
-                  
-                  {/* #############DESATIVADO TEMPORARIAMENTE ############### */}
-                  {/* <NavItem to={`${langPrefix}/app/documentacao`} icon={<DocsIcon />} text={t('navigation.documentation')} isCollapsed={isCollapsed} onClick={handleLinkClick} /> */}
-
                   <NavItem to={`${langPrefix}/app/glossario`} icon={<GlossarioIcon />} text={t('navigation.glossary')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}
-              
-              
               {(userProfile.role === 'master' || userProfile.role === 'gerente') && (
                 <>
                   <hr className={`my-2 border-white/20 ${isCollapsed && 'mx-4'}`} />
@@ -236,15 +234,10 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
                   <NavItem to={`${langPrefix}/app/admin/usuarios`} icon={<AdminUsersIcon />} text={t('navigation.users')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
                 </>
               )}
-
-              
               {userProfile.role === 'master' && (
                 <>
                   <NavItem to={`${langPrefix}/app/admin/clientes`} icon={<AdminClientesIcon />} text={t('navigation.clients')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
                   <NavItem to={`${langPrefix}/app/admin/empresas-coleta`} icon={<FornecedorIcon />} text={t('navigation.collectors')} isCollapsed={isCollapsed} onClick={handleLinkClick} />
-                  
-                  {/* #############DESATIVADO TEMPORARIAMENTE ############### */}
-                  {/* <NavItem to={`${langPrefix}/app/admin/gestao-mtr`} icon={<MtrIcon />} text={t('navigation.mtrManagement')} isCollapsed={isCollapsed} onClick={handleLinkClick} /> */}
                 </>
               )}
             </>
@@ -254,14 +247,6 @@ export default function Sidebar({ isOpen, toggleSidebar, isCollapsed, onToggleCo
         </nav>
 
         <div className="p-2 border-t border-white/20 flex-shrink-0">
-          <button
-            onClick={onToggleCollapse}
-            className="hidden md:flex items-center justify-center w-full p-2.5 rounded-md transition duration-200 hover:bg-white/10 mb-2"
-            title={isCollapsed ? t('menu.expand') : t('menu.collapse')}
-          >
-            {isCollapsed ? <ChevronDoubleRightIcon className="w-6 h-6" /> : <ChevronDoubleLeftIcon className="w-6 h-6" />}
-          </button>
-
           <LanguageSelector isCollapsed={isCollapsed} />
         
           <div className={`font-comfortaa mt-2 ${isCollapsed ? 'hidden' : 'block'}`}>
