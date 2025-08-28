@@ -19,7 +19,7 @@ const teamMembers = [
   },
   {
     name: 'Julia Pfeiffer',
-    role: 'CMO',
+    role: 'CCO',
     imageUrl: JuliaImg,
     bioKey: 'teamSection.members.julia.bio',
   },
