@@ -20,7 +20,7 @@ export default function HowItWorksSection() {
   const steps = t('howItWorks.steps', { returnObjects: true });
 
   return (
-    <section className="bg-gray-100 py-24 sm:py-32">
+    <section className="bg-gray-100 py-16 sm:py-16">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="lg:text-center">
           <h2 className="font-lexend text-subtitulo font-bold tracking-tight text-blue-coral">

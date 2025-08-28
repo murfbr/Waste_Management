@@ -132,14 +132,14 @@ export default function KeyFeaturesSection() {
   const { t } = useTranslation('site');
 
   return (
-    <section className="bg-white py-24 sm:py-32">
+    <section className="bg-white py-16 sm:py-16">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-2xl lg:text-center">
           <h2 className="font-lexend text-subtitulo font-bold tracking-tight text-blue-coral">
             {t("keyFeatures.title")}
           </h2>
         </div>
-        <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-24 lg:max-w-none">
+        <div className="mx-auto mt-16 max-w-2xl sm:mt-20 lg:mt-16 lg:max-w-none">
           <div className="grid grid-cols-1 gap-x-8 gap-y-16 lg:grid-cols-3">
             <FeatureCard
               icon={<ExportIcon />}

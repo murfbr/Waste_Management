@@ -22,7 +22,7 @@ export default function IncludedSection() {
   const icons = ['📱', '⚖️', '⏱️'];
 
   return (
-    <section className="bg-white py-24 sm:py-32">
+    <section className="bg-white py-16 sm:py-16">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-16 gap-y-12">
           <div>
@@ -38,7 +38,7 @@ export default function IncludedSection() {
               ))}
             </ul>
           </div>
-          <div className="bg-gray-50 rounded-2xl p-8">
+          <div className="bg-gray-50 rounded-2xl">
             <h2 className="font-lexend text-subtitulo font-bold text-blue-coral">
               {t('requirements.title')}
             </h2>

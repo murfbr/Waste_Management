@@ -29,8 +29,8 @@ export default function TeamSection() {
   const { t } = useTranslation('site');
 
   return (
-    <section className="bg-white py-24 sm:py-32">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+    <section className="bg-white py-16 sm:py-16">
+      <div className="mx-auto max-w-7xl px-4 lg:px-4">
         <div className="mx-auto max-w-2xl lg:mx-0">
           <h2 className="font-lexend text-subtitulo font-bold tracking-tight text-blue-coral">
             {t('teamSection.title')}

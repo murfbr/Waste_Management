@@ -8,7 +8,7 @@ export default function ProductHeroSection() {
 
   return (
     <div className="bg-blue-coral">
-      <div className="max-w-7xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:px-8 text-center">
+      <div className="max-w-7xl mx-auto py-12 px-4 sm:py-16 sm:px-6 lg:px-8 text-center">
         <h2 className="font-lexend text-titulo font-extrabold text-white">
           {t('productHero.title')}
         </h2>
