@@ -127,7 +127,7 @@ export default function Footer() {
                 <span className="font-comfortaa">contato@ctrlwaste.com.br</span>
               </a>
               <a 
-                href="tel:+5511999999999" 
+                href="https://wa.me/5521995091590?text=Ol%C3%A1%21%20Gostaria%20de%20mais%20informa%C3%A7%C3%B5es." 
                 className="flex items-center space-x-3 text-early-frost hover:text-apricot-orange transition-colors duration-300"
               >
                 <PhoneIcon size={18} />
