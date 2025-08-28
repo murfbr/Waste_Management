@@ -180,31 +180,31 @@
     "paragraph3": "Mais do que monitorar, ajudamos você a tomar decisões com base em dados reais - um passo essencial para alcançar metas de ESG, certificações e ganhos operacionais."
   },
   "valuesSection": {
-  "title": "Nossos valores",
-  "description": "Acreditamos que a tecnologia deve servir a um propósito maior. Nossos valores guiam cada linha de código, cada funcionalidade e cada interação que temos com nossos clientes e com o nosso futuro.",
-  "subtitle": "Nossos Princípios",
-  "values": [
-    { "text": "Sustentabilidade prática e mensurável", "icon": "🌱" },
-    { "text": "Inovação com propósito", "icon": "🚀" },
-    { "text": "Excelência no que entregamos", "icon": "💡" },
-    { "text": "Transparência nos dados e processos", "icon": "🔍" },
-    { "text": "Escalabilidade que acompanha seu crescimento", "icon": "📈" }
-  ]
-},
-"teamSection": {
-  "title": "Quem somos",
-  "members": {
-    "pedro": {
-      "bio": "Pedro é engenheiro de bioprocessos (UFRJ), mestre em Ciência da Sustentabilidade (PUC-Rio) e especialista em Design de Sustentabilidade. Fundador da consultoria HUBIS, foi reconhecido por liderar projetos premiados de impacto ambiental e social. No Ctrl+Waste, une visão estratégica, inovação e propósito para transformar o setor de resíduos com soluções escaláveis e sustentáveis."
-    },
-    "gustavo": {
-      "bio": "Gustavo é especialista em tecnologia com experiência em desenvolvimento e gestão de projetos digitais. Com vivência internacional na Irlanda e atuação em diversos setores, traz uma abordagem centrada no usuário e na eficiência. No Ctrl+Waste, é responsável pelas soluções tecnológicas que impulsionam impacto ambiental com inovação acessível."
-    },
-    "julia": {
-      "bio": "Com formação em Publicidade e especializações em Branding (University of Amsterdam) e Business Management (ESS – Praga), Julia integra criatividade, estratégia e sustentabilidade. Sua trajetória inclui projetos premiados que conectam marketing e ESG. No Ctrl+Waste, lidera a construção da marca e a estratégia comercial, promovendo crescimento ético e impacto positivo."
+    "title": "Nossos valores",
+    "description": "Acreditamos que a tecnologia deve servir a um propósito maior. Nossos valores guiam cada linha de código, cada funcionalidade e cada interação que temos com nossos clientes e com o nosso futuro.",
+    "subtitle": "Nossos Princípios",
+    "values": [
+      { "text": "Sustentabilidade prática e mensurável", "icon": "🌱" },
+      { "text": "Inovação com propósito", "icon": "🚀" },
+      { "text": "Excelência no que entregamos", "icon": "💡" },
+      { "text": "Transparência nos dados e processos", "icon": "🔍" },
+      { "text": "Escalabilidade que acompanha seu crescimento", "icon": "📈" }
+    ]
+  },
+  "teamSection": {
+    "title": "Quem somos",
+    "members": {
+      "pedro": {
+        "bio": "Pedro é engenheiro de bioprocessos (UFRJ), mestre em Ciência da Sustentabilidade (PUC-Rio) e especialista em Design de Sustentabilidade. Fundador da consultoria HUBIS, foi reconhecido por liderar projetos premiados de impacto ambiental e social. No Ctrl+Waste, une visão estratégica, inovação e propósito para transformar o setor de resíduos com soluções escaláveis e sustentáveis."
+      },
+      "gustavo": {
+        "bio": "Gustavo é especialista em tecnologia com experiência em desenvolvimento e gestão de projetos digitais. Com vivência internacional na Irlanda e atuação em diversos setores, traz uma abordagem centrada no usuário e na eficiência. No Ctrl+Waste, é responsável pelas soluções tecnológicas que impulsionam impacto ambiental com inovação acessível."
+      },
+      "julia": {
+        "bio": "Com formação em Publicidade e especializações em Branding (University of Amsterdam) e Business Management (ESS – Praga), Julia integra criatividade, estratégia e sustentabilidade. Sua trajetória inclui projetos premiados que conectam marketing e ESG. No Ctrl+Waste, lidera a construção da marca e a estratégia comercial, promovendo crescimento ético e impacto positivo."
+      }
     }
-  }
-},
+  },
   "footer": {
     "slogan": "Otimizando a gestão de resíduos.",
     "links": {
@@ -212,6 +212,10 @@
       "product": "O Produto",
       "contact": "Contato"
     },
+    "navigation": "Navegação",
+    "contact": "Contato",
+    "privacy": "Privacidade",
+    "terms": "Termos",
     "rights": "Todos os direitos reservados 2025."
   },
   "loginPage": {
@@ -232,6 +236,7 @@
       "invalidCredentials": "E-mail ou senha inválidos.",
       "tooManyRequests": "Muitas tentativas de login. Tente novamente mais tarde."
     },
+
     "pwa": {
       "installPrompt": "Para uma experiência mais fluida e imersiva, instale nosso aplicativo em seu dispositivo.",
       "installButton": "Instalar Aplicativo"

@@ -180,31 +180,31 @@
     "paragraph3": "More than just monitoring, we help you make decisions based on real data — a key step toward achieving ESG goals, certifications, and operational gains."
   },
   "valuesSection": {
-  "title": "Our values",
-  "description": "We believe technology should serve a greater purpose. Our values guide every line of code, every feature, and every interaction we have with our customers and our future.",
-  "subtitle": "Our Principles",
-  "values": [
-    { "text": "Practical and measurable sustainability", "icon": "🌱" },
-    { "text": "Innovation with purpose", "icon": "🚀" },
-    { "text": "Excellence in what we deliver", "icon": "💡" },
-    { "text": "Transparency in data and processes", "icon": "🔍" },
-    { "text": "Scalability that grows with your business", "icon": "📈" }
-  ]
-},
-"teamSection": {
-  "title": "Who we are",
-  "members": {
-    "pedro": {
-      "bio": "Pedro is a bioprocess engineer (UFRJ), with a master's degree in Sustainability Science (PUC-Rio), and a specialist in Sustainability Design. Founder of the consultancy HUBIS, he has been recognized for leading award-winning projects with environmental and social impact. At Ctrl+Waste, he combines strategic vision, innovation, and purpose to transform the waste sector with scalable and sustainable solutions."
-    },
-    "gustavo": {
-      "bio": "Gustavo is a technology specialist with experience in digital project development and management. With international experience in Ireland and experience in various sectors, he brings a user-centric and efficiency-focused approach. At Ctrl+Waste, he is responsible for technological solutions that drive environmental impact with accessible innovation."
-    },
-    "julia": {
-      "bio": "With a degree in Advertising and specializations in Branding (University of Amsterdam) and Business Management (ESS – Prague), Julia integrates creativity, strategy, and sustainability. Her career includes award-winning projects that connect marketing and ESG. At Ctrl+Waste, she leads brand building and commercial strategy, promoting ethical growth and positive impact."
+    "title": "Our values",
+    "description": "We believe technology should serve a greater purpose. Our values guide every line of code, every feature, and every interaction we have with our customers and our future.",
+    "subtitle": "Our Principles",
+    "values": [
+      { "text": "Practical and measurable sustainability", "icon": "🌱" },
+      { "text": "Innovation with purpose", "icon": "🚀" },
+      { "text": "Excellence in what we deliver", "icon": "💡" },
+      { "text": "Transparency in data and processes", "icon": "🔍" },
+      { "text": "Scalability that grows with your business", "icon": "📈" }
+    ]
+  },
+  "teamSection": {
+    "title": "Who we are",
+    "members": {
+      "pedro": {
+        "bio": "Pedro is a bioprocess engineer (UFRJ), with a master's degree in Sustainability Science (PUC-Rio), and a specialist in Sustainability Design. Founder of the consultancy HUBIS, he has been recognized for leading award-winning projects with environmental and social impact. At Ctrl+Waste, he combines strategic vision, innovation, and purpose to transform the waste sector with scalable and sustainable solutions."
+      },
+      "gustavo": {
+        "bio": "Gustavo is a technology specialist with experience in digital project development and management. With international experience in Ireland and experience in various sectors, he brings a user-centric and efficiency-focused approach. At Ctrl+Waste, he is responsible for technological solutions that drive environmental impact with accessible innovation."
+      },
+      "julia": {
+        "bio": "With a degree in Advertising and specializations in Branding (University of Amsterdam) and Business Management (ESS – Prague), Julia integrates creativity, strategy, and sustainability. Her career includes award-winning projects that connect marketing and ESG. At Ctrl+Waste, she leads brand building and commercial strategy, promoting ethical growth and positive impact."
+      }
     }
-  }
-},
+  },
   "footer": {
     "slogan": "Optimizing waste management.",
     "links": {
@@ -212,6 +212,10 @@
       "product": "The Product",
       "contact": "Contact"
     },
+    "navigation": "Browse",
+    "contact": "Contact",
+    "privacy": "Privacy",
+    "terms": "terms",
     "rights": "All rights reserved 2025."
   },
   "loginPage": {

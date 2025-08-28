@@ -212,6 +212,10 @@
       "product": "El Producto",
       "contact": "Contacto"
     },
+    "navigation": "Navegar",
+    "contact": "Contacto",
+    "privacy": "Privacidade",
+    "terms": "termos",
     "rights": "Todos los derechos reservados 2025."
   },
   "loginPage": {
