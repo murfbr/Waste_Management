@@ -45,7 +45,7 @@ export default function AboutHero() {
             <img
               src={SociosImg}
               alt="Sócios Ctrl+Waste"
-              className="rounded-2xl object-cover object-center"
+              className="rounded-2xl object-cover object-top"
               style={{
                 height: textHeight ? `${textHeight}px` : 'auto',
                 width: '100%',
