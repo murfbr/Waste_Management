@@ -19,13 +19,12 @@ const FeatureDetail = ({ title, children, imageUrl, reverse = false }) => (
 );
 
 export default function PlatformSection() {
-  // --- CORREÇÃO APLICADA AQUI ---
   const { t } = useTranslation('site');
 
   return (
     <section className="body-font bg-white">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
-        <div className="text-center mb-20">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
+        <div className="text-center mb-12">
           <h2 className="font-lexend text-subtitulo font-bold text-blue-coral mb-4">
             {t('platform.sectionTitle')}
           </h2>
@@ -34,7 +33,7 @@ export default function PlatformSection() {
           </div>
         </div>
 
-        <div className="space-y-20">
+        <div className="space-y-12">
           <FeatureDetail title={t('platform.features.dashboards.title')} imageUrl={dashboardImg}>
             <p>{t('platform.features.dashboards.text1')}</p>
             <ul className="list-disc list-inside space-y-2">
