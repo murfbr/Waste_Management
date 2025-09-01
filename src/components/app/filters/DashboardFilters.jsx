@@ -25,8 +25,6 @@ export default function DashboardFilters({
     availableAreas, // A prop que estamos investigando
     onQuickPeriodSelect,
 }) {
-    // --- LINHA DE DEPURAÇÃO ---
-    console.log("Dentro do DashboardFilters, a prop 'availableAreas' é:", availableAreas);
 
     const { t } = useTranslation('dashboard');
     const [isExpanded, setIsExpanded] = useState(true);

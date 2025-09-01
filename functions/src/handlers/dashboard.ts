@@ -10,7 +10,7 @@ const Firestore = admin.firestore;
 
 /**
  * Interface para a estrutura do documento de resumo que será salvo no Firestore.
- * Contém todos os dados pré-calculados que o dashboard precisa.
+ * Contém todos os dados pré-calculados que o dashboard precisa, preservando as relações.
  */
 interface MonthlySummary {
     clienteId: string;
@@ -20,8 +20,43 @@ interface MonthlySummary {
     totalOrganicoKg: number;
     totalReciclavelKg: number;
     totalRejeitoKg: number;
-    composicaoPorTipo: { [wasteType: string]: { value: number, subtypes: { [subType: string]: number } } };
-    composicaoPorArea: { [area: string]: { value: number, breakdown: { [wasteType: string]: number } } };
+    composicaoPorTipo: { 
+        [wasteType: string]: { 
+            value: number, 
+            subtypes: { [subType: string]: number } 
+        } 
+    };
+    composicaoPorArea: {
+        [area: string]: {
+            value: number,
+            breakdown: {
+                [wasteType: string]: {
+                    value: number,
+                    subtypes: { [subType: string]: number }
+                }
+            }
+        }
+    };
+    composicaoPorDestinacao: {
+        recovery: {
+            value: number,
+            breakdown: {
+                [destination: string]: {
+                    value: number,
+                    wasteTypes: { [wasteType: string]: number }
+                }
+            }
+        };
+        disposal: {
+            value: number,
+            breakdown: {
+                [destination: string]: {
+                    value: number,
+                    wasteTypes: { [wasteType: string]: number }
+                }
+            }
+        };
+    };
     meta: {
         totalRegistros: number;
         primeiroRegistro: admin.firestore.Timestamp | null;
@@ -31,64 +66,68 @@ interface MonthlySummary {
 }
 
 /**
- * LÓGICA CENTRAL DE AGREGAÇÃO
- * Esta função agora lê o cadastro do cliente para inicializar o resumo.
- * @param clienteId O ID do cliente a ser processado.
- * @param ano O ano a ser processado.
- * @param mes O mês a ser processado (0-11).
- * @returns O objeto de resumo mensal pronto para ser salvo.
+ * LÓGICA CENTRAL DE AGREGAÇÃO (VERSÃO FINAL)
+ * Esta função agora gera um resumo completo preservando as relações entre os dados.
  */
 async function generateSummaryForClient(clienteId: string, ano: number, mes: number): Promise<MonthlySummary> {
     logger.info(`Iniciando geração de resumo para cliente ${clienteId}, período: ${mes + 1}/${ano}`);
 
-    // --- PASSO 1: Buscar os dados do cliente para usar como base ---
+    // --- PASSO 1: Buscar dados de apoio ---
     const clienteRef = db.collection("clientes").doc(clienteId);
-    const clienteDoc = await clienteRef.get();
+    const empresasColetaRef = db.collection("empresasColeta");
+
+    const [clienteDoc, empresasColetaSnapshot] = await Promise.all([
+        clienteRef.get(),
+        empresasColetaRef.get()
+    ]);
+
     if (!clienteDoc.exists) {
-        const errorMessage = `Cliente com ID ${clienteId} não encontrado.`;
-        logger.error(errorMessage);
-        throw new Error(errorMessage);
+        throw new Error(`Cliente com ID ${clienteId} não encontrado.`);
     }
-    const clienteData = clienteDoc.data();
-    // Assumindo que a lista de resíduos está em um campo chamado 'tiposDeResiduosPersonalizados'
-    // e que cada item da lista é um objeto com a propriedade 'nome'.
-    // **Ajuste o nome 'tiposDeResiduosPersonalizados' e 'tipo.nome' se necessário.**
-    const tiposDeResiduosBase: any[] = clienteData?.tiposDeResiduosPersonalizados || [];
-    
-    // --- PASSO 2: Inicializar o resumo com base nos tipos de resíduo do cliente ---
+
+    const empresasMap = new Map(empresasColetaSnapshot.docs.map(doc => [doc.id, doc.data()]));
+    const tiposDeResiduosBase: any[] = clienteDoc.data()?.tiposDeResiduosPersonalizados || [];
+
+    // --- PASSO 2: Inicializar o resumo ---
     const initialComposicaoPorTipo: { [wasteType: string]: { value: number, subtypes: { [subType: string]: number } } } = {};
     tiposDeResiduosBase.forEach(tipo => {
-        // Usamos 'tipo.nome' para pegar o nome do resíduo do objeto
         initialComposicaoPorTipo[tipo.nome] = { value: 0, subtypes: {} };
     });
+
+    const summary: MonthlySummary = {
+        clienteId, ano, mes, totalGeralKg: 0, totalOrganicoKg: 0, totalReciclavelKg: 0,
+        totalRejeitoKg: 0, composicaoPorTipo: initialComposicaoPorTipo,
+        composicaoPorArea: {},
+        composicaoPorDestinacao: {
+            recovery: { value: 0, breakdown: {} },
+            disposal: { value: 0, breakdown: {} }
+        },
+        meta: { totalRegistros: 0, primeiroRegistro: null, ultimoRegistro: null, geradoEm: Firestore.FieldValue.serverTimestamp() }
+    };
 
     // --- PASSO 3: Buscar os registros de resíduos do período ---
     const startDate = new Date(ano, mes, 1);
     const endDate = new Date(ano, mes + 1, 1);
-    const snapshot = await db.collection("allWasteRecords")
+    
+    // CORREÇÃO FINAL: Usar collectionGroup para buscar em subcoleções
+    const snapshot = await db.collectionGroup("wasteRecords")
         .where("clienteId", "==", clienteId)
         .where("timestamp", ">=", startDate.getTime())
         .where("timestamp", "<", endDate.getTime())
         .get();
 
-    // Inicializa o objeto de resumo principal
-    const summary: MonthlySummary = {
-        clienteId, ano, mes, totalGeralKg: 0, totalOrganicoKg: 0, totalReciclavelKg: 0,
-        totalRejeitoKg: 0, composicaoPorTipo: initialComposicaoPorTipo, composicaoPorArea: {},
-        meta: {
-            totalRegistros: snapshot.docs.length,
-            primeiroRegistro: snapshot.empty ? null : Firestore.Timestamp.fromMillis(snapshot.docs[0].data().timestamp),
-            ultimoRegistro: snapshot.empty ? null : Firestore.Timestamp.fromMillis(snapshot.docs[snapshot.docs.length - 1].data().timestamp),
-            geradoEm: Firestore.FieldValue.serverTimestamp()
-        }
-    };
-
     if (snapshot.empty) {
         logger.warn(`Nenhum registro encontrado para o cliente ${clienteId} no período. O resumo conterá apenas zeros.`);
-        return summary; // Retorna o resumo zerado, mas com as categorias já listadas.
+        return summary;
     }
+    
+    summary.meta.totalRegistros = snapshot.docs.length;
+    summary.meta.primeiroRegistro = Firestore.Timestamp.fromMillis(snapshot.docs[0].data().timestamp);
+    summary.meta.ultimoRegistro = Firestore.Timestamp.fromMillis(snapshot.docs[snapshot.docs.length - 1].data().timestamp);
+    
+    const disposalDestinations = ['Aterro Sanitário', 'Incineração'];
 
-    // --- PASSO 4: Iterar sobre cada registro para fazer a agregação ---
+    // --- PASSO 4: Iterar sobre cada registro para fazer a agregação aprimorada ---
     for (const doc of snapshot.docs) {
         const record = doc.data();
         const weight = parseFloat(record.peso || 0);
@@ -98,49 +137,66 @@ async function generateSummaryForClient(clienteId: string, ano: number, mes: num
         const wasteSubType = record.wasteSubType || wasteType;
         const area = record.areaLancamento || "Nao Especificado";
 
-        // Calcula Totais Gerais
+        // 4.1: Totais Gerais
         summary.totalGeralKg += weight;
         const typeLower = wasteType.toLowerCase();
-        if (typeLower.includes("orgânico") || typeLower.includes("compostavel")) {
-            summary.totalOrganicoKg += weight;
-        } else if (typeLower.includes("rejeito")) {
-            summary.totalRejeitoKg += weight;
-        } else {
-            summary.totalReciclavelKg += weight;
-        }
+        if (typeLower.includes("orgânico") || typeLower.includes("compostavel")) summary.totalOrganicoKg += weight;
+        else if (typeLower.includes("rejeito")) summary.totalRejeitoKg += weight;
+        else summary.totalReciclavelKg += weight;
 
-        // Calcula Composição por Tipo/Subtipo (com a lógica de flexibilidade)
+        // 4.2: Composição por Tipo/Subtipo
         if (!summary.composicaoPorTipo[wasteType]) {
-            // Este IF agora só será ativado se um resíduo aparecer nos registros
-            // mas não estiver no cadastro do cliente (um tipo novo).
-            logger.info(`Tipo de resíduo '${wasteType}' encontrado nos registros, mas não no cadastro do cliente. Adicionando dinamicamente.`);
             summary.composicaoPorTipo[wasteType] = { value: 0, subtypes: {} };
         }
         summary.composicaoPorTipo[wasteType].value += weight;
         summary.composicaoPorTipo[wasteType].subtypes[wasteSubType] = (summary.composicaoPorTipo[wasteType].subtypes[wasteSubType] || 0) + weight;
 
-        // Calcula Composição por Área
+        // 4.3: Composição por Área (Lógica Aprimorada)
         if (!summary.composicaoPorArea[area]) {
             summary.composicaoPorArea[area] = { value: 0, breakdown: {} };
         }
         summary.composicaoPorArea[area].value += weight;
-        summary.composicaoPorArea[area].breakdown[wasteType] = (summary.composicaoPorArea[area].breakdown[wasteType] || 0) + weight;
+        if (!summary.composicaoPorArea[area].breakdown[wasteType]) {
+            summary.composicaoPorArea[area].breakdown[wasteType] = { value: 0, subtypes: {} };
+        }
+        summary.composicaoPorArea[area].breakdown[wasteType].value += weight;
+        summary.composicaoPorArea[area].breakdown[wasteType].subtypes[wasteSubType] = (summary.composicaoPorArea[area].breakdown[wasteType].subtypes[wasteSubType] || 0) + weight;
+
+        // 4.4: Composição por Destinação (Lógica Aprimorada)
+        const empresa = empresasMap.get(record.empresaColetaId);
+        if (empresa?.destinacoes) {
+            let mainWasteType = wasteType;
+            if (mainWasteType.startsWith('Reciclável')) mainWasteType = 'Reciclável';
+            else if (mainWasteType.startsWith('Orgânico')) mainWasteType = 'Orgânico';
+
+            const destinacoesDoTipo = empresa.destinacoes[mainWasteType] || [];
+            const isDisposal = destinacoesDoTipo.some((dest: string) => disposalDestinations.includes(dest));
+            const destinationName = destinacoesDoTipo[0] || 'Não especificado';
+            
+            const category = isDisposal ? summary.composicaoPorDestinacao.disposal : summary.composicaoPorDestinacao.recovery;
+            category.value += weight;
+
+            if (!category.breakdown[destinationName]) {
+                category.breakdown[destinationName] = { value: 0, wasteTypes: {} };
+            }
+            category.breakdown[destinationName].value += weight;
+            category.breakdown[destinationName].wasteTypes[mainWasteType] = (category.breakdown[destinationName].wasteTypes[mainWasteType] || 0) + weight;
+        }
     }
     
-    // Arredondar valores
-    summary.totalGeralKg = parseFloat(summary.totalGeralKg.toFixed(2));
-    summary.totalOrganicoKg = parseFloat(summary.totalOrganicoKg.toFixed(2));
-    summary.totalReciclavelKg = parseFloat(summary.totalReciclavelKg.toFixed(2));
-    summary.totalRejeitoKg = parseFloat(summary.totalRejeitoKg.toFixed(2));
+    // --- PASSO 5: Arredondar valores ---
+    const round = (num: number) => parseFloat(num.toFixed(2));
+    summary.totalGeralKg = round(summary.totalGeralKg);
+    summary.totalOrganicoKg = round(summary.totalOrganicoKg);
+    summary.totalReciclavelKg = round(summary.totalReciclavelKg);
+    summary.totalRejeitoKg = round(summary.totalRejeitoKg);
 
-    logger.info(`Resumo para cliente ${clienteId} gerado com sucesso. Total: ${summary.totalGeralKg}kg`);
+    logger.info(`Resumo aprimorado para cliente ${clienteId} gerado com sucesso. Total: ${summary.totalGeralKg}kg`);
     return summary;
 }
 
 /**
  * FUNÇÃO #1: AGENDADA (AUTOMÁTICA)
- * Roda todo dia 2 de cada mês, às 5 da manhã, para processar o mês anterior.
- * Expressão Cron: Minuto (0), Hora (5), Dia do Mês (2), Mês (*), Dia da Semana (*)
  */
 export const generateMonthlySummariesScheduled = onSchedule("0 5 2 * *", async () => {
     logger.info("Executando tarefa agendada: Gerar Resumos Mensais.");
@@ -161,8 +217,6 @@ export const generateMonthlySummariesScheduled = onSchedule("0 5 2 * *", async (
             const clienteId = doc.id;
             const summaryData = await generateSummaryForClient(clienteId, ano, mes);
             const docId = `${clienteId}_${ano}_${mes}`;
-            
-            // Salva o resumo na nova coleção
             return db.collection("dashboardResumosMensais").doc(docId).set(summaryData);
         });
 
@@ -177,10 +231,8 @@ export const generateMonthlySummariesScheduled = onSchedule("0 5 2 * *", async (
 
 /**
  * FUNÇÃO #2: CHAMADA MANUAL (ON-DEMAND)
- * Permite que um admin gere/recalcule o resumo para um cliente/mês específico.
  */
 export const generateMonthlySummaryOnDemand = onCall(functionOptions, async (request: CallableRequest) => {
-    // Verificação de permissão (apenas admin/master)
     if (!request.auth) {
       throw new HttpsError("unauthenticated", "O usuário precisa estar autenticado.");
     }
@@ -206,6 +258,9 @@ export const generateMonthlySummaryOnDemand = onCall(functionOptions, async (req
 
     } catch (error) {
         logger.error(`Falha ao gerar resumo sob demanda para ${clienteId}:`, error);
-        throw new HttpsError("internal", "Ocorreu um erro ao gerar o resumo.");
+        if (error instanceof Error) {
+            throw new HttpsError("internal", error.message);
+        }
+        throw new HttpsError("internal", "Ocorreu um erro desconhecido ao gerar o resumo.");
     }
 });

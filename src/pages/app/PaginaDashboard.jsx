@@ -6,24 +6,21 @@ import { useTranslation } from 'react-i18next';
 // Importações dos componentes
 import AuthContext from '../../context/AuthContext';
 import ClienteSelectorDropdown from '../../components/app/ClienteSelectorDropdown';
-import useWasteData from '../../hooks/useWasteData';
+import useHybridWasteData from '../../hooks/useHybridWasteData'; // MUDANÇA AQUI
 import MonthlyComparison from '../../components/app/charts/MonthlyComparison';
 import DesvioDeAterro from '../../components/app/charts/DesvioDeAterro';
 import WasteTypePieChart from '../../components/app/charts/WasteTypePieChart';
 import AreaPieChart from '../../components/app/charts/AreaPieChart';
 import SummaryCards from '../../components/app/charts/SummaryCards';
-import DashboardFilters from '../../components/app/filters/DashboardFilters'; 
+import DashboardFilters from '../../components/app/filters/DashboardFilters';
 import DestinacaoChart from '../../components/app/charts/DestinacaoChart';
 import LazySection from '../../components/app/LazySection';
 
 // PADRONIZADO: Única função robusta para criar chaves camelCase a partir de strings do DB
 const toCamelCaseKey = (str) => {
     if (!str) return 'naoEspecificado';
-    // Remove acentos e converte para minúsculas
     const s = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-    // Divide por espaço ou hífen
     const parts = s.split(/[\s-]+/);
-    // Junta as partes, capitalizando a primeira letra de cada parte exceto a primeira
     return parts[0] + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
 };
 
@@ -53,11 +50,9 @@ const processDataForAggregatedPieChart = (records, t) => {
       if (!subType) { const match = mainType.match(/\((.*)\)/); if (match) subType = match[1]; }
       translatedMainType = t('charts:wasteTypes.organico');
     } else {
-      // PADRONIZADO: Usando toCamelCaseKey
       translatedMainType = t(`charts:wasteTypes.${toCamelCaseKey(mainType)}`, mainType);
     }
     
-    // PADRONIZADO: Usando toCamelCaseKey
     const translatedSubType = subType ? t(`charts:wasteSubTypes.${toCamelCaseKey(subType)}`, subType) : translatedMainType;
 
     if (!acc[translatedMainType]) {
@@ -99,7 +94,6 @@ const processDataForAreaChartWithBreakdown = (records, t) => {
         if (mainWasteType.startsWith('Reciclável')) { translatedWasteType = t('charts:wasteTypes.reciclavel'); } 
         else if (mainWasteType.startsWith('Orgânico')) { translatedWasteType = t('charts:wasteTypes.organico'); }
         else { 
-            // PADRONIZADO: Usando toCamelCaseKey
             translatedWasteType = t(`charts:wasteTypes.${toCamelCaseKey(mainWasteType)}`, mainWasteType); 
         }
         
@@ -149,8 +143,8 @@ const processDataForDesvioDeAterro = (records, rejectCategoryName) => {
     });
 };
 
-const processDataForMonthlyYearlyComparison = (records, year1, year2) => {
-  if (!Array.isArray(records)) return { data: [], years: [] };
+const processDataForMonthlyYearlyComparison = (records) => {
+  if (!Array.isArray(records) || !records.length) return { data: [], years: [] };
   const monthlyData = {};
   records.forEach(record => {
     if (!record || !record.timestamp || typeof record.peso !== 'number') return;
@@ -159,24 +153,27 @@ const processDataForMonthlyYearlyComparison = (records, year1, year2) => {
     const recordMonth = recordDate.getMonth();
     const weight = parseFloat(record.peso || 0);
     if (isNaN(weight)) return;
-    if (recordYear === year1 || recordYear === year2) {
-      if (!monthlyData[recordMonth]) { monthlyData[recordMonth] = {}; }
-      if (!monthlyData[recordMonth][recordYear]) { monthlyData[recordMonth][recordYear] = 0; }
-      monthlyData[recordMonth][recordYear] += weight;
-    }
+
+    if (!monthlyData[recordMonth]) { monthlyData[recordMonth] = {}; }
+    if (!monthlyData[recordMonth][recordYear]) { monthlyData[recordMonth][recordYear] = 0; }
+    monthlyData[recordMonth][recordYear] += weight;
   });
+
+  const yearsInDate = [...new Set(records.map(r => new Date(r.timestamp).getFullYear()))].sort((a,b) => b - a);
+
   const chartData = MESES_COMPLETOS.map((monthName, index) => {
     const dataPoint = { month: monthName };
     if (monthlyData[index]) {
-      if (monthlyData[index][year1] !== undefined) dataPoint[year1.toString()] = parseFloat(monthlyData[index][year1].toFixed(2));
-      if (year1 !== year2 && monthlyData[index][year2] !== undefined) dataPoint[year2.toString()] = parseFloat(monthlyData[index][year2].toFixed(2));
+        yearsInDate.forEach(year => {
+            if (monthlyData[index][year] !== undefined) {
+                dataPoint[year.toString()] = parseFloat(monthlyData[index][year].toFixed(2));
+            }
+        });
     }
     return dataPoint;
   });
-  const actualYearsInData = [];
-  if (chartData.some(d => d[year1.toString()] !== undefined)) actualYearsInData.push(year1.toString());
-  if (year1 !== year2 && chartData.some(d => d[year2.toString()] !== undefined)) actualYearsInData.push(year2.toString());
-  return { data: chartData, years: actualYearsInData };
+
+  return { data: chartData, years: yearsInDate.map(y => y.toString()) };
 };
 
 const processDataForSummaryCards = (records) => {
@@ -238,6 +235,7 @@ export default function PaginaDashboard() {
   const [isCompositionVisible, setIsCompositionVisible] = useState(false);
   const [isDestinationVisible, setIsDestinationVisible] = useState(false);
 
+  // MUDANÇA AQUI: Lógica do dashboardMode re-adicionada
   const dashboardMode = useMemo(() => {
     if (!selectedClienteIds.length || !userAllowedClientes.length) {
       return 'ondemand';
@@ -249,7 +247,27 @@ export default function PaginaDashboard() {
     return isRealtime ? 'realtime' : 'ondemand';
   }, [selectedClienteIds, userAllowedClientes]);
   
-  const { allWasteRecords, loadingRecords } = useWasteData(selectedClienteIds, selectedYears, selectedMonths, dashboardMode);
+  // MUDANÇA AQUI: Chamada para o novo hook
+  const { allWasteRecords: allWasteRecordsForSelectedYears, loadingRecords } = useHybridWasteData(
+    selectedClienteIds, 
+    selectedYears, 
+    TODOS_OS_MESES_INDICES,
+    dashboardMode
+  );
+
+  useEffect(() => {
+    if (loadingRecords || allWasteRecordsForSelectedYears.length === 0) {
+        return;
+    }
+    const entriesPerMonth = {};
+    allWasteRecordsForSelectedYears.forEach(record => {
+        const date = new Date(record.timestamp);
+        const key = `${MESES_COMPLETOS[date.getMonth()]}/${date.getFullYear()}`;
+        entriesPerMonth[key] = (entriesPerMonth[key] || 0) + 1;
+    });
+    console.log("Número de 'registros' (reais ou agregados) por mês:", entriesPerMonth);
+  }, [allWasteRecordsForSelectedYears, loadingRecords]);
+
 
   const [sectionsVisibility, setSectionsVisibility] = useState({ summary: true, monthlyComparison: true, composition: true, destination: true });
   const toggleSection = (section) => setSectionsVisibility(prev => ({ ...prev, [section]: !prev[section] }));
@@ -289,19 +307,29 @@ export default function PaginaDashboard() {
   }, [selectedClienteIds, userAllowedClientes]);
   
   useEffect(() => {
-    if (allWasteRecords.length > 0) {
-      const yearsFromData = Array.from(new Set(allWasteRecords.map(r => new Date(r.timestamp).getFullYear()))).sort((a, b) => b - a);
+    if (allWasteRecordsForSelectedYears.length > 0) {
+      const yearsFromData = Array.from(new Set(allWasteRecordsForSelectedYears.map(r => new Date(r.timestamp).getFullYear()))).sort((a, b) => b - a);
       setAvailableYears(yearsFromData);
     }
-  }, [allWasteRecords]);
+  }, [allWasteRecordsForSelectedYears]);
 
   const recordsFullyFiltered = useMemo(() => {
-    if (loadingRecords || allWasteRecords.length === 0) return [];
-    return allWasteRecords.filter(record => {
+    if (loadingRecords || allWasteRecordsForSelectedYears.length === 0) return [];
+    return allWasteRecordsForSelectedYears.filter(record => {
+      const recordDate = new Date(record.timestamp);
+      const monthMatch = selectedMonths.length === 12 || selectedMonths.includes(recordDate.getMonth());
       const areaMatch = selectedAreas.length === 0 || selectedAreas.includes(record.areaLancamento);
-      return areaMatch;
+      return monthMatch && areaMatch;
     });
-  }, [allWasteRecords, selectedAreas, loadingRecords]);
+  }, [allWasteRecordsForSelectedYears, selectedMonths, selectedAreas, loadingRecords]);
+
+  const recordsForMonthlyComparison = useMemo(() => {
+    if (loadingRecords || allWasteRecordsForSelectedYears.length === 0) return [];
+    return allWasteRecordsForSelectedYears.filter(record => {
+        const areaMatch = selectedAreas.length === 0 || selectedAreas.includes(record.areaLancamento);
+        return areaMatch;
+    });
+  }, [allWasteRecordsForSelectedYears, selectedAreas, loadingRecords]);
 
 
   const destinacaoData = useMemo(() => {
@@ -445,17 +473,10 @@ export default function PaginaDashboard() {
     return processDataForDesvioDeAterro(recordsFullyFiltered, "Rejeito");
   }, [recordsFullyFiltered, isDestinationVisible]);
 
-  const comparisonYears = useMemo(() => {
-    const sortedYears = [...availableYears].sort((a, b) => b - a);
-    if (sortedYears.length === 0) return [new Date().getFullYear()];
-    if (sortedYears.length === 1) return [sortedYears[0]];
-    return [sortedYears[0], sortedYears[1]];
-  }, [availableYears]);
-
   const { data: monthlyComparisonChartData, years: actualYearsInComparisonData } = useMemo(() => {
     if (!isMonthlyComparisonVisible) return { data: [], years: [] };
-    return processDataForMonthlyYearlyComparison(allWasteRecords, comparisonYears[0], comparisonYears[1] || comparisonYears[0]);
-  }, [allWasteRecords, comparisonYears, isMonthlyComparisonVisible]);
+    return processDataForMonthlyYearlyComparison(recordsForMonthlyComparison);
+  }, [recordsForMonthlyComparison, isMonthlyComparisonVisible]);
 
 
   if (loadingAuth || loadingAllowedClientes) { return <div className="p-8 text-center text-rich-soil">A carregar...</div>; }
@@ -501,7 +522,7 @@ export default function PaginaDashboard() {
       <div className="mt-8 space-y-6">
         {loadingRecords || loadingEmpresas ? (<div className="text-center p-8 text-rich-soil">{t('dashboard:paginaDashboard.filters.loadingData')}</div>) :
          !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.selectClient')}</div>) :
-         !allWasteRecords.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.noData')}</div>) : (
+         !allWasteRecordsForSelectedYears.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.noData')}</div>) : (
           <>
             <section>
                 <SectionTitle title={t('dashboard:paginaDashboard.sections.overview')} isExpanded={sectionsVisibility.summary} onClick={() => toggleSection('summary')} />
