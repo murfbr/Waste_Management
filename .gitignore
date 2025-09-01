@@ -72,3 +72,6 @@ firestore-debug.log
 # # # Ficheiros Temporários de Exportação do Firebase # # #
 # Ignora as pastas temporárias que o emulador cria durante a exportação.
 firebase-export-*/
+
+#Ignora a pasta old
+zzz_old/
