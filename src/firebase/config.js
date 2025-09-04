@@ -28,3 +28,5 @@ if (!firebaseConfig.apiKey) {
 
 // Exporta as configurações e o appId específico do Firestore.
 export { firebaseConfig, appId };
+export const sheetsWebAppUrl = "https://script.google.com/macros/s/AKfycbyDWhO9MKOX4ehZSXxytD5STP2esofmyFK48ET91zKO4ajHRALUrQQySXwiQpncPZpVUQ/exec";
+export const sheetsWebAppToken = "123mudar";

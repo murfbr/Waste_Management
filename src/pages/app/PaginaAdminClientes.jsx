@@ -142,10 +142,8 @@ export default function PaginaAdminClientes() {
   };
   
   const handleCancelForm = () => { 
-    setShowForm(false); 
-    setEditingClienteId(null); 
-    setEditingClienteData(null);
-  };
+  setShowForm(false); 
+};
   
   const handleOpenDeleteModal = (cliente) => {
     setClienteParaDeletar(cliente);
@@ -176,46 +174,68 @@ export default function PaginaAdminClientes() {
     }
   };
 
+  // ##################################################################
+  // ############## INÍCIO DA FUNÇÃO COM O CÓDIGO CORRIGIDO #############
+  // ##################################################################
   const handleFormSubmit = async (formData) => {
     if (!db || !masterCurrentUser || !masterProfile || masterProfile.role !== 'master') {
       return showMessage("Ação não permitida.", true);
     }
+    
+    // Separa os dados do formulário
     const { configINEA, ...clienteDataPrincipal } = formData;
+    
+    // Prepara uma versão do configINEA para salvar no documento principal.
+    // A senha será tratada pela Cloud Function, então a removemos daqui por enquanto.
+    const configIneaToSave = { ...configINEA };
+    delete configIneaToSave.ineaSenha;
+
+    // Monta o objeto final para salvar, agora INCLUINDO o configIneaToSave.
     const clienteDataToSave = { 
       ...clienteDataPrincipal, 
+      configINEA: configIneaToSave, // Esta linha corrige o bug
       ultimaModificacao: serverTimestamp(), 
       modificadoPor: masterCurrentUser.uid 
     };
+
     try {
       let clienteId = editingClienteId;
       if (editingClienteId) { 
+        // Atualiza o documento principal do cliente
         await updateDoc(doc(db, "clientes", editingClienteId), clienteDataToSave); 
         showMessage("Dados do cliente atualizados com sucesso!");
       } else { 
+        // Cria um novo cliente
         clienteDataToSave.criadoPor = masterCurrentUser.uid; 
         clienteDataToSave.dataCriacao = serverTimestamp();
         const docRef = await addDoc(collection(db, "clientes"), clienteDataToSave); 
         clienteId = docRef.id;
         showMessage("Cliente adicionado com sucesso!");
       }
+
       await refreshAllowedClientes();
-      if (clienteId && configINEA && (configINEA.login || configINEA.senha || configINEA.cnpj || configINEA.codUnidade)) {
-        showMessage("A salvar credenciais da integração INEA...", false, 3000);
+
+      // Se uma nova senha foi digitada, chama a Cloud Function para salvá-la de forma segura
+      if (clienteId && configINEA && configINEA.ineaSenha) {
+        showMessage("Salvando credenciais da integração INEA...", false, 3000);
         await saveIneaCredentials({
           clienteId: clienteId,
-          login: configINEA.login,
-          senha: configINEA.senha,
-          cnpj: configINEA.cnpj,
-          codUnidade: configINEA.codUnidade,
+          login: configINEA.ineaLogin,
+          senha: configINEA.ineaSenha,
+          codUnidade: configINEA.ineaCodigoDaUnidade,
         });
         showMessage("Credenciais INEA salvas com sucesso!", false);
       }
+
       handleCancelForm(); 
     } catch (e) { 
       console.error("Erro ao salvar cliente ou credenciais:", e); 
       showMessage(`Erro ao salvar: ${e.message}`, true); 
     }
   };
+  // ################################################################
+  // ############## FIM DA FUNÇÃO COM O CÓDIGO CORRIGIDO ##############
+  // ################################################################
   
   const handleFileChange = (event) => setImportFile(event.target.files[0]);
   const handleOpenImportModal = (cliente) => { 
@@ -284,21 +304,7 @@ export default function PaginaAdminClientes() {
   return (
     <div className="space-y-8">
       <h1 className="text-3xl font-bold text-gray-800">Gerir Clientes</h1>
-
-{/*       
-      #################BLOCO COMENTADO PARA NÃO APARECER ATÉ TERMOS RETORNO DO INEA#########################
-      <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-800 p-4 mt-6 rounded-md shadow-sm" role="alert">
-        <p className="font-bold">Ferramenta de Diagnóstico</p>
-        <p className="text-sm">Se estiver com erros 500 ao salvar, use este botão para verificar se a chave de criptografia está configurada corretamente no ambiente das Cloud Functions.</p>
-        <button
-          onClick={handleCheckConfig}
-          className="mt-2 px-3 py-1 bg-yellow-500 hover:bg-yellow-600 text-white font-semibold rounded-md shadow-sm"
-        >
-          Verificar Configuração da Chave
-        </button>
-        {configCheckResult && <p className="mt-2 text-sm font-mono bg-yellow-200 p-2 rounded">{configCheckResult}</p>}
-      </div> */}
-
+      
       <MessageBox message={message} isError={isError} onClose={() => setMessage('')} />
 
       {!showForm && !clienteParaImportar && (
@@ -341,9 +347,6 @@ export default function PaginaAdminClientes() {
         onClose={() => setIsTemplateModalOpen(false)}
       />
 
-      {/* ////////////////////////////////////////////////////// */}
-      {/* /// CORREÇÃO: Bloco de importação de histórico RESTAURADO /// */}
-      {/* ////////////////////////////////////////////////////// */}
       {clienteParaImportar && !showForm && (
           <div className="bg-white p-6 rounded-xl shadow-lg mt-8 border border-blue-300">
             <h2 className="text-xl font-semibold text-gray-800 mb-2">Importar Histórico para: <span className="text-blue-600">{clienteParaImportar.nome}</span></h2>

@@ -1,6 +1,6 @@
-// src/components/app/ClienteForm.jsx
-
 import React, { useState, useEffect, useMemo } from 'react';
+import { validaDocumento } from '../../utils/validadorCPF-CNPJ.js';
+import ViewPasswordButton from './admin/ViewPasswordButton';
 
 const CATEGORIAS_PRINCIPAIS_PADRAO = ["Reciclável", "Orgânico", "Rejeito"];
 const SUBTIPOS_RECICLAVEIS_COMUNS = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
@@ -21,9 +21,6 @@ export default function ClienteForm({
     isEditing,
     availableCategorias = [], 
     onNewCategoriaAdded,
-    editingClienteId,
-    onTestConnection,
-    testConnectionStatus,
     clientTemplates = []
 }) {
   const [nome, setNome] = useState('');
@@ -47,17 +44,19 @@ export default function ClienteForm({
   const [outrosSubtiposOrganicosInput, setOutrosSubtiposOrganicosInput] = useState('');
   const [contratosColetaForm, setContratosColetaForm] = useState([{ empresaColetaId: '', tiposResiduoColetados: [] }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [ineaLogin, setIneaLogin] = useState('');
-  const [ineaSenha, setIneaSenha] = useState('');
-  const [ineaCnpj, setIneaCnpj] = useState('');
-  const [ineaCodUnidade, setIneaCodUnidade] = useState('');
   const [limitesPorResiduo, setLimitesPorResiduo] = useState({...LIMITES_PADRAO});
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
-  
-  // --- INÍCIO DA NOVA LÓGICA ---
   const [realtimeDashboardEnabled, setRealtimeDashboardEnabled] = useState(false);
-  // --- FIM DA NOVA LÓGICA ---
 
+  const [ineaLogin, setIneaLogin] = useState('');
+  const [ineaSenha, setIneaSenha] = useState('');
+  const [ineaCodigoDaUnidade, setIneaCodigoDaUnidade] = useState('');
+  const [ineaResponsavel, setIneaResponsavel] = useState('');
+  const [ineaCargo, setIneaCargo] = useState('');
+
+  const [isCnpjValid, setIsCnpjValid] = useState(true);
+  const [isCpfValid, setIsCpfValid] = useState(true);
+  
   const arrayFromString = (str) => str.split(',').map(item => item.trim()).filter(item => item.length > 0);
 
   const resetForm = () => {
@@ -73,12 +72,12 @@ export default function ClienteForm({
     setSubtiposComunsOrganicosSelecionados([]);
     setOutrosSubtiposOrganicosInput('');
     setContratosColetaForm([{ empresaColetaId: '', tiposResiduoColetados: [] }]);
-    setIneaLogin(''); setIneaSenha(''); setIneaCnpj(''); setIneaCodUnidade('');
+    setIneaLogin(''); setIneaSenha(''); setIneaCodigoDaUnidade(''); setIneaResponsavel(''); setIneaCargo('');
     setLimitesPorResiduo({...LIMITES_PADRAO});
     setSelectedTemplateId('');
-    // --- INÍCIO DA NOVA LÓGICA ---
     setRealtimeDashboardEnabled(false);
-    // --- FIM DA NOVA LÓGICA ---
+    setIsCnpjValid(true);
+    setIsCpfValid(true);
   };
 
   useEffect(() => {
@@ -119,19 +118,22 @@ export default function ClienteForm({
               tiposResiduoColetados: Array.isArray(c.tiposResiduoColetados) ? c.tiposResiduoColetados : [] 
             }))
           : [{ empresaColetaId: '', tiposResiduoColetados: [] }]);
+      
       if (initialData.configINEA) {
-        setIneaLogin(initialData.configINEA.login || '');
-        setIneaCnpj(initialData.configINEA.cnpj || '');
-        setIneaCodUnidade(initialData.configINEA.codUnidade || '');
+        setIneaLogin(initialData.configINEA.ineaLogin || '');
+        setIneaCodigoDaUnidade(initialData.configINEA.ineaCodigoDaUnidade || '');
+        setIneaResponsavel(initialData.configINEA.ineaResponsavel || '');
+        setIneaCargo(initialData.configINEA.ineaCargo || '');
         setIneaSenha('');
       } else {
-        setIneaLogin(''); setIneaSenha(''); setIneaCnpj(''); setIneaCodUnidade('');
+        setIneaLogin(''); setIneaCodigoDaUnidade(''); setIneaResponsavel(''); setIneaCargo(''); setIneaSenha('');
       }
+
       setLimitesPorResiduo({ ...LIMITES_PADRAO, ...(initialData.limitesPorResiduo || {}) });
-      // --- INÍCIO DA NOVA LÓGICA ---
-      // Popula o estado do checkbox com o dado do cliente, ou 'false' se não existir.
       setRealtimeDashboardEnabled(initialData.realtimeDashboardEnabled || false);
-      // --- FIM DA NOVA LÓGICA ---
+      setIsCnpjValid(true);
+      setIsCpfValid(true);
+
     } else {
       resetForm();
     }
@@ -161,6 +163,12 @@ export default function ClienteForm({
 
   const handleLocalSubmit = async (e) => {
     e.preventDefault();
+
+    if (!isCnpjValid || !isCpfValid) {
+      alert("Existem campos inválidos (CPF ou CNPJ). Por favor, corrija antes de salvar.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     if (!nome.trim()) { alert("O nome do cliente é obrigatório."); setIsSubmitting(false); return; }
@@ -219,28 +227,45 @@ export default function ClienteForm({
       tiposOrganicosPersonalizados: finaisTiposOrganicosPersonalizados,
       contratosColeta: contratosColetaForm.filter(c => c.empresaColetaId && c.tiposResiduoColetados.length > 0),
       configINEA: {
-        login: ineaLogin.trim(),
-        senha: ineaSenha,
-        cnpj: ineaCnpj.trim(),
-        codUnidade: ineaCodUnidade.trim(),
+        ineaLogin: ineaLogin.trim(),
+        ineaSenha: ineaSenha,
+        ineaCodigoDaUnidade: ineaCodigoDaUnidade.trim(),
+        ineaResponsavel: ineaResponsavel.trim(),
+        ineaCargo: ineaCargo.trim(),
       },
       limitesPorResiduo: limitesNumericos,
-      // --- INÍCIO DA NOVA LÓGICA ---
-      // Adiciona o novo campo ao objeto de dados a ser salvo.
       realtimeDashboardEnabled: realtimeDashboardEnabled,
-      // --- FIM DA NOVA LÓGICA ---
     };
+
+    if (isEditing && !ineaSenha) {
+      delete clienteData.configINEA.ineaSenha;
+    }
 
     await onSubmit(clienteData);
     setIsSubmitting(false);
   };
   
-  const handleLimiteChange = (categoria, valor) => {
-    if (/^[0-9]*[.,]?[0-9]*$/.test(valor)) {
-        setLimitesPorResiduo(prev => ({ ...prev, [categoria]: valor }));
+  const handleCnpjChange = (e) => {
+    const value = e.target.value;
+    setCnpj(value);
+    if (value.trim()) {
+      setIsCnpjValid(validaDocumento(value));
+    } else {
+      setIsCnpjValid(true);
     }
   };
 
+  const handleCpfChange = (e) => {
+    const value = e.target.value;
+    setIneaLogin(value);
+    if (value.trim()) {
+      setIsCpfValid(validaDocumento(value));
+    } else {
+      setIsCpfValid(true);
+    }
+  };
+
+  const handleLimiteChange = (categoria, valor) => { if (/^[0-9]*[.,]?[0-9]*$/.test(valor)) { setLimitesPorResiduo(prev => ({ ...prev, [categoria]: valor })); } };
   const handleContratoChange = (index, field, value) => { const uC = [...contratosColetaForm]; uC[index][field] = value; if (field === 'empresaColetaId') uC[index].tiposResiduoColetados = []; setContratosColetaForm(uC); };
   const handleContratoTipoResiduoChange = (cI, tipo) => { const uC = [...contratosColetaForm]; const cT = uC[cI].tiposResiduoColetados || []; uC[cI].tiposResiduoColetados = cT.includes(tipo) ? cT.filter(t => t !== tipo) : [...cT, tipo]; setContratosColetaForm(uC); };
   const addContratoForm = () => { setContratosColetaForm([...contratosColetaForm, { empresaColetaId: '', tiposResiduoColetados: [] }]); };
@@ -248,9 +273,8 @@ export default function ClienteForm({
   const handleCategoriaPrincipalChange = (categoria) => { setCategoriasPrincipaisSelecionadas(prev => prev.includes(categoria) ? prev.filter(c => c !== categoria) : [...prev, categoria]); };
   const handleSubtipoComumChange = (subtipo, type) => { if (type === 'reciclavel') { setSubtiposComunsReciclaveisSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); } else if (type === 'organico') { setSubtiposComunsOrganicosSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); } };
   const opcoesResiduoContrato = useMemo(() => { const outrasCategorias = arrayFromString(outrasCategoriasInput); const todasCategorias = Array.from(new Set([...categoriasPrincipaisSelecionadas, ...outrasCategorias])); const categoriasBaseContrato = ["Reciclável", "Orgânico", "Rejeito"]; return todasCategorias.filter(op => categoriasBaseContrato.includes(op)); }, [categoriasPrincipaisSelecionadas, outrasCategoriasInput]);
-  const handleTestButtonClick = () => { if (onTestConnection) { onTestConnection(editingClienteId); } };
   
-  const inputStyle = "mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
+  const inputStyle = "mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
   const labelStyle = "block text-sm font-medium text-gray-700";
   const checkboxStyle = "h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500";
   const dropdownCategorias = availableCategorias;
@@ -262,18 +286,9 @@ export default function ClienteForm({
       {!isEditing && (
         <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
           <label htmlFor="template-selector" className={labelStyle}>Usar um modelo (Opcional)</label>
-          <select
-            id="template-selector"
-            value={selectedTemplateId}
-            onChange={(e) => setSelectedTemplateId(e.target.value)}
-            className={inputStyle}
-          >
+          <select id="template-selector" value={selectedTemplateId} onChange={(e) => setSelectedTemplateId(e.target.value)} className={inputStyle} >
             <option value="">Nenhum - Começar do zero</option>
-            {clientTemplates.map(template => (
-              <option key={template.id} value={template.id}>
-                {template.name} ({template.category})
-              </option>
-            ))}
+            {clientTemplates.map(template => ( <option key={template.id} value={template.id}> {template.name} ({template.category}) </option> ))}
           </select>
           <p className="text-xs text-gray-500 mt-1">Selecionar um modelo preencherá os campos de "Categoria do Cliente" e "Áreas Internas" automaticamente.</p>
         </div>
@@ -283,22 +298,15 @@ export default function ClienteForm({
           <legend className="text-lg font-semibold text-indigo-700 px-2">Informações Básicas</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pt-3">
             <div><label htmlFor="form-cliente-nome" className={labelStyle}>Nome do Cliente*</label><input type="text" id="form-cliente-nome" value={nome} onChange={(e) => setNome(e.target.value)} required className={inputStyle} /></div>
-            <div><label htmlFor="form-cliente-cnpj" className={labelStyle}>CNPJ</label><input type="text" id="form-cliente-cnpj" value={cnpj} onChange={(e) => setCnpj(e.target.value)} className={inputStyle} /></div>
+            <div>
+              <label htmlFor="form-cliente-cnpj" className={labelStyle}>CNPJ</label>
+              <input type="text" id="form-cliente-cnpj" value={cnpj} onChange={handleCnpjChange} className={`${inputStyle} ${!isCnpjValid ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'}`} />
+              {!isCnpjValid && <p className="text-red-600 text-xs mt-1">CNPJ inválido.</p>}
+            </div>
             <div><label htmlFor="form-cliente-rede" className={labelStyle}>Rede / Grupo</label><input type="text" id="form-cliente-rede" value={rede} onChange={(e) => setRede(e.target.value)} className={inputStyle} /></div>
             <div>
               <label htmlFor="form-cliente-categoriaCliente" className={labelStyle}>Categoria do Cliente</label>
-              <select 
-                id="form-cliente-categoriaCliente" 
-                value={selectedCategoriaCliente} 
-                onChange={(e) => {
-                  const { value } = e.target;
-                  setSelectedCategoriaCliente(value);
-                  if (value !== NOVA_CATEGORIA_VALUE) {
-                    setNovaCategoriaInput('');
-                  }
-                }} 
-                className={inputStyle}
-              >
+              <select id="form-cliente-categoriaCliente" value={selectedCategoriaCliente} onChange={(e) => { const { value } = e.target; setSelectedCategoriaCliente(value); if (value !== NOVA_CATEGORIA_VALUE) { setNovaCategoriaInput(''); } }} className={inputStyle} >
                 <option value="">Sem Categoria (começar do zero)</option>
                 {dropdownCategorias.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
                 <option value={NOVA_CATEGORIA_VALUE}>+ Nova Categoria...</option>
@@ -328,14 +336,7 @@ export default function ClienteForm({
                     {CATEGORIAS_PRINCIPAIS_PADRAO.map(categoria => (<label key={categoria} htmlFor={`form-cliente-cat-${categoria}`} className="flex items-center"><input type="checkbox" id={`form-cliente-cat-${categoria}`} value={categoria} checked={categoriasPrincipaisSelecionadas.includes(categoria)} onChange={() => handleCategoriaPrincipalChange(categoria)} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{categoria}</span></label>))}
                     <div className="flex items-center pt-2 sm:pt-0">
                         <label htmlFor="form-cliente-outrasCategorias" className="text-sm text-gray-700 mr-2 whitespace-nowrap">Outras (por vírgula):</label>
-                        <input
-                            type="text"
-                            id="form-cliente-outrasCategorias"
-                            value={outrasCategoriasInput}
-                            onChange={(e) => setOutrasCategoriasInput(e.target.value)}
-                            placeholder="Ex: Isopor, Lixo Eletrônico"
-                            className="p-2 border border-gray-300 rounded-md shadow-sm sm:text-sm w-full"
-                        />
+                        <input type="text" id="form-cliente-outrasCategorias" value={outrasCategoriasInput} onChange={(e) => setOutrasCategoriasInput(e.target.value)} placeholder="Ex: Isopor, Lixo Eletrônico" className="p-2 border border-gray-300 rounded-md shadow-sm sm:text-sm w-full" />
                     </div>
                 </div>
             </div>
@@ -348,24 +349,15 @@ export default function ClienteForm({
               {fazSeparacaoOrganicosCompleta && ( <div className="mt-3 pl-2"> <label className={labelStyle}>Sub-tipos de Orgânicos Detalhados*</label> <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2"> {SUBTIPOS_ORGANICOS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsOrganicosSelecionados.includes(subtipo)} onChange={() => handleSubtipoComumChange(subtipo, 'organico')} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))} </div> <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposOrganicosInput} onChange={(e) => setOutrosSubtiposOrganicosInput(e.target.value)} placeholder="Ex: Aparas, Cinzas" className={`${inputStyle} mt-1`} /></div> </div> )}
             </div>
             
-            {/* --- INÍCIO DA NOVA LÓGICA --- */}
             <div className="border border-gray-200 p-3 rounded-md mt-4 bg-amber-50">
               <label htmlFor="realtimeDashboardEnabled" className="flex items-center text-sm font-medium text-gray-700">
-                <input 
-                  type="checkbox" 
-                  id="realtimeDashboardEnabled" 
-                  checked={realtimeDashboardEnabled} 
-                  onChange={(e) => setRealtimeDashboardEnabled(e.target.checked)} 
-                  className={`${checkboxStyle} mr-2`} 
-                />
+                <input type="checkbox" id="realtimeDashboardEnabled" checked={realtimeDashboardEnabled} onChange={(e) => setRealtimeDashboardEnabled(e.target.checked)} className={`${checkboxStyle} mr-2`} />
                 Habilitar dashboard em tempo real?
               </label>
               <p className="text-xs text-gray-600 mt-1 pl-6">
                 Atenção: Causa um custo maior de leituras no banco de dados. Use apenas para clientes que necessitem de monitoramento ao vivo em eventos.
               </p>
             </div>
-            {/* --- FIM DA NOVA LÓGICA --- */}
-
           </div>
         </fieldset>
 
@@ -376,15 +368,7 @@ export default function ClienteForm({
                 {categoriasParaLimites.map((categoria) => (
                     <div key={`limite-${categoria}`} className="flex items-center space-x-2">
                         <label htmlFor={`limite-${categoria}`} className="text-sm font-medium text-gray-700 whitespace-nowrap">{categoria}:</label>
-                        <input
-                            type="text"
-                            inputMode="decimal"
-                            id={`limite-${categoria}`}
-                            value={limitesPorResiduo[categoria] || ''}
-                            onChange={(e) => handleLimiteChange(categoria, e.target.value)}
-                            placeholder="kg"
-                            className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                        />
+                        <input type="text" inputMode="decimal" id={`limite-${categoria}`} value={limitesPorResiduo[categoria] || ''} onChange={(e) => handleLimiteChange(categoria, e.target.value)} placeholder="kg" className="w-full p-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm" />
                     </div>
                 ))}
             </div>
@@ -411,26 +395,43 @@ export default function ClienteForm({
         </fieldset>
 
         <fieldset className="border border-gray-300 p-4 rounded-lg">
-            <legend className="text-lg font-semibold text-indigo-700 px-2">Integração INEA (MTR)</legend>
+            <legend className="text-lg font-semibold text-indigo-700 px-2">Informações para Preenchimento MTR (INEA)</legend>
+            <p className="text-sm text-gray-500 mb-4">Dados utilizados para o preenchimento manual do MTR no sistema do INEA.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pt-3">
-                <div><label htmlFor="form-cliente-inea-login" className={labelStyle}>Login INEA (CPF)</label><input type="text" id="form-cliente-inea-login" value={ineaLogin} onChange={(e) => setIneaLogin(e.target.value)} className={inputStyle} placeholder="CPF do responsável" /></div>
-                <div><label htmlFor="form-cliente-inea-senha" className={labelStyle}>Senha INEA</label><input type="password" id="form-cliente-inea-senha" value={ineaSenha} onChange={(e) => setIneaSenha(e.target.value)} className={inputStyle} placeholder={isEditing ? "Preencha apenas para alterar" : ""} /></div>
-                <div><label htmlFor="form-cliente-inea-cnpj" className={labelStyle}>CNPJ (para a API)</label><input type="text" id="form-cliente-inea-cnpj" value={ineaCnpj} onChange={(e) => setIneaCnpj(e.target.value)} className={inputStyle} placeholder="CNPJ ou CPF da unidade" /></div>
-                <div><label htmlFor="form-cliente-inea-codunidade" className={labelStyle}>Código da Unidade</label><input type="text" id="form-cliente-inea-codunidade" value={ineaCodUnidade} onChange={(e) => setIneaCodUnidade(e.target.value)} className={inputStyle} placeholder="Código numérico da unidade" /></div>
+                <div>
+                  <label htmlFor="form-cliente-inea-login" className={labelStyle}>Login INEA (CPF)</label>
+                  <input type="text" id="form-cliente-inea-login" value={ineaLogin} onChange={handleCpfChange} className={`${inputStyle} ${!isCpfValid ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'}`} placeholder="CPF do responsável pelo login" />
+                  {!isCpfValid && <p className="text-red-600 text-xs mt-1">CPF inválido.</p>}
+                </div>
+                <div><label htmlFor="form-cliente-inea-codunidade" className={labelStyle}>Código da Unidade</label><input type="text" id="form-cliente-inea-codunidade" value={ineaCodigoDaUnidade} onChange={(e) => setIneaCodigoDaUnidade(e.target.value)} className={inputStyle} placeholder="Código numérico da unidade no INEA" /></div>
+                <div>
+                  <label htmlFor="form-cliente-inea-responsavel" className={labelStyle}>Responsável pela Emissão</label>
+                  <input type="text" id="form-cliente-inea-responsavel" value={ineaResponsavel} onChange={(e) => setIneaResponsavel(e.target.value)} className={inputStyle} placeholder="Nome completo do responsável" />
+                </div>
+                <div><label htmlFor="form-cliente-inea-cargo" className={labelStyle}>Cargo do Responsável</label><input type="text" id="form-cliente-inea-cargo" value={ineaCargo} onChange={(e) => setIneaCargo(e.target.value)} className={inputStyle} placeholder="Ex: Gerente Ambiental" /></div>
+                <div className="md:col-span-2">
+                    <div className="flex justify-between items-center mb-1">
+                        <label htmlFor="form-cliente-inea-senha" className={labelStyle}>Senha INEA</label>
+                        {isEditing && initialData?.id && <ViewPasswordButton clienteId={initialData.id} />}
+                    </div>
+                    <input 
+                        type="password" 
+                        id="form-cliente-inea-senha" 
+                        value={ineaSenha} 
+                        onChange={(e) => setIneaSenha(e.target.value)} 
+                        className={inputStyle} 
+                        placeholder={isEditing ? "Preencha apenas para alterar a senha atual" : "Digite a nova senha"} 
+                        autoComplete="new-password"
+                    />
+                </div>
             </div>
-           <p className="text-xs text-gray-500 mt-3">Preencha estes campos para habilitar a emissão automática de MTRs para este cliente. A senha é armazenada de forma segura e criptografada.</p>
-          {isEditing && (
-            <div className="mt-4 flex items-center space-x-4">
-                <button type="button" onClick={handleTestButtonClick} disabled={testConnectionStatus?.loading} className="px-4 py-2 bg-blue-600 text-white font-semibold rounded-md shadow-sm hover:bg-blue-700 disabled:opacity-50"> {testConnectionStatus?.loading ? 'A Testar...' : 'Testar Conexão'} </button>
-                {testConnectionStatus?.message && (<p className={`text-sm ${testConnectionStatus.isError ? 'text-red-600' : 'text-green-600'}`}>{testConnectionStatus.message}</p>)}
-            </div>
-          )}
+           <p className="text-xs text-gray-500 mt-3">A senha é armazenada de forma segura. Discutiremos a melhor forma de gerenciá-la a seguir.</p>
       </fieldset>
 
       <div className="flex justify-end space-x-3 pt-4">
           <button type="button" onClick={onCancel} className="px-4 py-2 bg-white border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">Cancelar</button>
           <button type="submit" className="px-4 py-2 bg-indigo-600 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50" disabled={isSubmitting}>
-            {isSubmitting ? "A Salvar..." : (isEditing ? "Atualizar Cliente" : "Adicionar Cliente")}
+            {isSubmitting ? "Salvando..." : (isEditing ? "Atualizar Cliente" : "Adicionar Cliente")}
           </button>
       </div>
     </form>
