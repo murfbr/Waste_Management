@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { validaDocumento } from '../../utils/validadorCPF-CNPJ.js';
-import ViewPasswordButton from './admin/ViewPasswordButton';
+import ViewPasswordButton from './admin/ViewPasswordButton.jsx';
 
 const CATEGORIAS_PRINCIPAIS_PADRAO = ["Reciclável", "Orgânico", "Rejeito"];
 const SUBTIPOS_RECICLAVEIS_COMUNS = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
@@ -57,7 +57,20 @@ export default function ClienteForm({
   const [isCnpjValid, setIsCnpjValid] = useState(true);
   const [isCpfValid, setIsCpfValid] = useState(true);
   
+  const [errors, setErrors] = useState({}); // NOVO: Estado para os erros de validação
+
   const arrayFromString = (str) => str.split(',').map(item => item.trim()).filter(item => item.length > 0);
+
+  // Função para limpar o erro de um campo específico
+  const clearError = (fieldName) => {
+    if (errors[fieldName]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[fieldName];
+        return newErrors;
+      });
+    }
+  };
 
   const resetForm = () => {
     setNome(''); setRede(''); setSelectedCategoriaCliente(''); setNovaCategoriaInput(''); 
@@ -78,6 +91,7 @@ export default function ClienteForm({
     setRealtimeDashboardEnabled(false);
     setIsCnpjValid(true);
     setIsCpfValid(true);
+    setErrors({});
   };
 
   useEffect(() => {
@@ -163,46 +177,51 @@ export default function ClienteForm({
 
   const handleLocalSubmit = async (e) => {
     e.preventDefault();
+    const newErrors = {};
+
+    // Validações
+    if (!nome.trim()) newErrors.nome = "O nome do cliente é obrigatório.";
+    
+    const areasArray = arrayFromString(areasPersonalizadasInput);
+    if (areasArray.length === 0) newErrors.areas = "Pelo menos uma Área Interna deve ser definida.";
+
+    const outrasCategorias = arrayFromString(outrasCategoriasInput);
+    const finaisCategoriasPrincipais = Array.from(new Set([...categoriasPrincipaisSelecionadas, ...outrasCategorias]));
+    if (finaisCategoriasPrincipais.length === 0) newErrors.categorias = "Selecione ou defina pelo menos uma Categoria Principal.";
+    
+    let finaisTiposReciclaveisPersonalizados = [];
+    if (fazSeparacaoReciclaveisCompleta) {
+        finaisTiposReciclaveisPersonalizados = [...subtiposComunsReciclaveisSelecionados, ...arrayFromString(outrosSubtiposReciclaveisInput)];
+        if (finaisTiposReciclaveisPersonalizados.length === 0) newErrors.subtiposReciclaveis = "Defina pelo menos um sub-tipo de reciclável.";
+    }
+
+    let finaisTiposOrganicosPersonalizados = [];
+    if (fazSeparacaoOrganicosCompleta) {
+        finaisTiposOrganicosPersonalizados = [...subtiposComunsOrganicosSelecionados, ...arrayFromString(outrosSubtiposOrganicosInput)];
+        if (finaisTiposOrganicosPersonalizados.length === 0) newErrors.subtiposOrganicos = "Defina pelo menos um sub-tipo de orgânico.";
+    }
+    
+    let categoriaFinalCliente = selectedCategoriaCliente;
+    if (selectedCategoriaCliente === NOVA_CATEGORIA_VALUE) {
+        if (!novaCategoriaInput.trim()) newErrors.novaCategoria = "Insira o nome da nova categoria.";
+        else categoriaFinalCliente = novaCategoriaInput.trim();
+    }
+    
+    setErrors(newErrors);
+    if (Object.keys(newErrors).length > 0) {
+      return;
+    }
 
     if (!isCnpjValid || !isCpfValid) {
-      alert("Existem campos inválidos (CPF ou CNPJ). Por favor, corrija antes de salvar.");
       return;
     }
 
     setIsSubmitting(true);
-
-    if (!nome.trim()) { alert("O nome do cliente é obrigatório."); setIsSubmitting(false); return; }
-    const areasArray = arrayFromString(areasPersonalizadasInput);
-    if (areasArray.length === 0) { alert("Pelo menos uma Área Interna do Cliente deve ser definida."); setIsSubmitting(false); return; }
     
-    const outrasCategorias = arrayFromString(outrasCategoriasInput);
-    const finaisCategoriasPrincipais = Array.from(new Set([...categoriasPrincipaisSelecionadas, ...outrasCategorias]));
-
-    if (finaisCategoriasPrincipais.length === 0) { alert("Selecione ou defina pelo menos uma Categoria Principal de Resíduo."); setIsSubmitting(false); return; }
-    let finaisTiposReciclaveisPersonalizados = [];
-    if (fazSeparacaoReciclaveisCompleta) {
-        finaisTiposReciclaveisPersonalizados = [...subtiposComunsReciclaveisSelecionados];
-        const outrosArray = arrayFromString(outrosSubtiposReciclaveisInput);
-        outrosArray.forEach(outro => { if (!finaisTiposReciclaveisPersonalizados.includes(outro)) { finaisTiposReciclaveisPersonalizados.push(outro); } });
-        if (finaisTiposReciclaveisPersonalizados.length === 0) { alert("Se 'Cliente detalha os tipos de recicláveis' está marcado, defina pelo menos um sub-tipo."); setIsSubmitting(false); return; }
-    }
-    let finaisTiposOrganicosPersonalizados = [];
-    if (fazSeparacaoOrganicosCompleta) {
-        finaisTiposOrganicosPersonalizados = [...subtiposComunsOrganicosSelecionados];
-        const outrosArray = arrayFromString(outrosSubtiposOrganicosInput);
-        outrosArray.forEach(outro => { if (!finaisTiposOrganicosPersonalizados.includes(outro)) { finaisTiposOrganicosPersonalizados.push(outro); } });
-        if (finaisTiposOrganicosPersonalizados.length === 0) { alert("Se 'Cliente detalha os tipos de orgânicos' está marcado, defina pelo menos um sub-tipo."); setIsSubmitting(false); return; }
+    if (onNewCategoriaAdded && selectedCategoriaCliente === NOVA_CATEGORIA_VALUE) {
+        onNewCategoriaAdded(categoriaFinalCliente);
     }
     
-    let categoriaFinalCliente = '';
-    if (selectedCategoriaCliente === NOVA_CATEGORIA_VALUE) {
-        if (!novaCategoriaInput.trim()) { alert("Por favor, insira o nome da nova categoria."); setIsSubmitting(false); return; }
-        categoriaFinalCliente = novaCategoriaInput.trim();
-        if (onNewCategoriaAdded) { onNewCategoriaAdded(categoriaFinalCliente); }
-    } else {
-        categoriaFinalCliente = selectedCategoriaCliente;
-    }
-
     const limitesNumericos = {};
     categoriasParaLimites.forEach(key => {
         const valor = parseFloat(String(limitesPorResiduo[key] || '0').replace(',', '.'));
@@ -270,8 +289,8 @@ export default function ClienteForm({
   const handleContratoTipoResiduoChange = (cI, tipo) => { const uC = [...contratosColetaForm]; const cT = uC[cI].tiposResiduoColetados || []; uC[cI].tiposResiduoColetados = cT.includes(tipo) ? cT.filter(t => t !== tipo) : [...cT, tipo]; setContratosColetaForm(uC); };
   const addContratoForm = () => { setContratosColetaForm([...contratosColetaForm, { empresaColetaId: '', tiposResiduoColetados: [] }]); };
   const removeContratoForm = (index) => { if (contratosColetaForm.length <= 1 && !isEditing && contratosColetaForm.length === 1 && contratosColetaForm[0].empresaColetaId === '' && contratosColetaForm[0].tiposResiduoColetados.length === 0) return; if (contratosColetaForm.length === 1) { setContratosColetaForm([{ empresaColetaId: '', tiposResiduoColetados: [] }]); return; } setContratosColetaForm(contratosColetaForm.filter((_, i) => i !== index)); };
-  const handleCategoriaPrincipalChange = (categoria) => { setCategoriasPrincipaisSelecionadas(prev => prev.includes(categoria) ? prev.filter(c => c !== categoria) : [...prev, categoria]); };
-  const handleSubtipoComumChange = (subtipo, type) => { if (type === 'reciclavel') { setSubtiposComunsReciclaveisSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); } else if (type === 'organico') { setSubtiposComunsOrganicosSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); } };
+  const handleCategoriaPrincipalChange = (categoria) => { setCategoriasPrincipaisSelecionadas(prev => prev.includes(categoria) ? prev.filter(c => c !== categoria) : [...prev, categoria]); clearError('categorias'); };
+  const handleSubtipoComumChange = (subtipo, type) => { if (type === 'reciclavel') { setSubtiposComunsReciclaveisSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); clearError('subtiposReciclaveis'); } else if (type === 'organico') { setSubtiposComunsOrganicosSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); clearError('subtiposOrganicos'); } };
   const opcoesResiduoContrato = useMemo(() => { const outrasCategorias = arrayFromString(outrasCategoriasInput); const todasCategorias = Array.from(new Set([...categoriasPrincipaisSelecionadas, ...outrasCategorias])); const categoriasBaseContrato = ["Reciclável", "Orgânico", "Rejeito"]; return todasCategorias.filter(op => categoriasBaseContrato.includes(op)); }, [categoriasPrincipaisSelecionadas, outrasCategoriasInput]);
   
   const inputStyle = "mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
@@ -297,7 +316,11 @@ export default function ClienteForm({
       <fieldset className="border border-gray-300 p-4 rounded-lg">
           <legend className="text-lg font-semibold text-indigo-700 px-2">Informações Básicas</legend>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pt-3">
-            <div><label htmlFor="form-cliente-nome" className={labelStyle}>Nome do Cliente*</label><input type="text" id="form-cliente-nome" value={nome} onChange={(e) => setNome(e.target.value)} required className={inputStyle} /></div>
+            <div>
+              <label htmlFor="form-cliente-nome" className={labelStyle}>Nome do Cliente*</label>
+              <input type="text" id="form-cliente-nome" value={nome} onChange={(e) => { setNome(e.target.value); clearError('nome'); }} required className={`${inputStyle} ${errors.nome ? 'border-red-500' : 'border-gray-300'}`} />
+              {errors.nome && <p className="text-red-600 text-xs mt-1">{errors.nome}</p>}
+            </div>
             <div>
               <label htmlFor="form-cliente-cnpj" className={labelStyle}>CNPJ</label>
               <input type="text" id="form-cliente-cnpj" value={cnpj} onChange={handleCnpjChange} className={`${inputStyle} ${!isCnpjValid ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'}`} />
@@ -315,7 +338,8 @@ export default function ClienteForm({
             {selectedCategoriaCliente === NOVA_CATEGORIA_VALUE && (
               <div> 
                 <label htmlFor="form-cliente-novaCategoria" className={labelStyle}>Nome da Nova Categoria*</label>
-                <input type="text" id="form-cliente-novaCategoria" value={novaCategoriaInput} onChange={(e) => setNovaCategoriaInput(e.target.value)} placeholder="Digite o nome da nova categoria" className={inputStyle} required />
+                <input type="text" id="form-cliente-novaCategoria" value={novaCategoriaInput} onChange={(e) => {setNovaCategoriaInput(e.target.value); clearError('novaCategoria')}} placeholder="Digite o nome da nova categoria" className={`${inputStyle} ${errors.novaCategoria ? 'border-red-500' : 'border-gray-300'}`} required />
+                {errors.novaCategoria && <p className="text-red-600 text-xs mt-1">{errors.novaCategoria}</p>}
               </div>
             )}
             <div className="md:col-span-2"><label htmlFor="form-cliente-endereco" className={labelStyle}>Endereço</label><input type="text" id="form-cliente-endereco" value={endereco} onChange={(e) => setEndereco(e.target.value)} className={inputStyle} /></div>
@@ -329,24 +353,29 @@ export default function ClienteForm({
         <fieldset className="border border-gray-300 p-4 rounded-lg">
           <legend className="text-lg font-semibold text-indigo-700 px-2">Configurações de Resíduos</legend>
           <div className="space-y-4 pt-3">
-            <div><label htmlFor="form-cliente-areasPersonalizadasInputForm" className={labelStyle}>Áreas Internas (separadas por vírgula)*</label><input type="text" id="form-cliente-areasPersonalizadasInputForm" value={areasPersonalizadasInput} onChange={(e) => setAreasPersonalizadasInput(e.target.value)} required placeholder="Ex: Cozinha, Recepção" className={inputStyle} /></div>
+            <div>
+              <label htmlFor="form-cliente-areasPersonalizadasInputForm" className={labelStyle}>Áreas Internas (separadas por vírgula)*</label>
+              <input type="text" id="form-cliente-areasPersonalizadasInputForm" value={areasPersonalizadasInput} onChange={(e) => {setAreasPersonalizadasInput(e.target.value); clearError('areas')}} required placeholder="Ex: Cozinha, Recepção" className={`${inputStyle} ${errors.areas ? 'border-red-500' : 'border-gray-300'}`} />
+              {errors.areas && <p className="text-red-600 text-xs mt-1">{errors.areas}</p>}
+            </div>
             <div>
                 <label className={labelStyle}>Categorias Principais de Resíduo Usadas*</label>
                 <div className="mt-2 space-y-2 sm:space-y-0 sm:flex sm:space-x-4 sm:flex-wrap items-center">
                     {CATEGORIAS_PRINCIPAIS_PADRAO.map(categoria => (<label key={categoria} htmlFor={`form-cliente-cat-${categoria}`} className="flex items-center"><input type="checkbox" id={`form-cliente-cat-${categoria}`} value={categoria} checked={categoriasPrincipaisSelecionadas.includes(categoria)} onChange={() => handleCategoriaPrincipalChange(categoria)} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{categoria}</span></label>))}
                     <div className="flex items-center pt-2 sm:pt-0">
                         <label htmlFor="form-cliente-outrasCategorias" className="text-sm text-gray-700 mr-2 whitespace-nowrap">Outras (por vírgula):</label>
-                        <input type="text" id="form-cliente-outrasCategorias" value={outrasCategoriasInput} onChange={(e) => setOutrasCategoriasInput(e.target.value)} placeholder="Ex: Isopor, Lixo Eletrônico" className="p-2 border border-gray-300 rounded-md shadow-sm sm:text-sm w-full" />
+                        <input type="text" id="form-cliente-outrasCategorias" value={outrasCategoriasInput} onChange={(e) => {setOutrasCategoriasInput(e.target.value); clearError('categorias')}} placeholder="Ex: Isopor, Lixo Eletrônico" className="p-2 border border-gray-300 rounded-md shadow-sm sm:text-sm w-full" />
                     </div>
                 </div>
+                {errors.categorias && <p className="text-red-600 text-xs mt-1">{errors.categorias}</p>}
             </div>
             <div className="border border-gray-200 p-3 rounded-md mt-4">
               <label htmlFor="fazSeparacaoReciclaveisCompleta" className="flex items-center text-sm font-medium text-gray-700"><input type="checkbox" id="fazSeparacaoReciclaveisCompleta" checked={fazSeparacaoReciclaveisCompleta} onChange={(e) => setFazSeparacaoReciclaveisCompleta(e.target.checked)} className={`${checkboxStyle} mr-2`} />Cliente detalha os tipos de <span className="font-bold ml-1">recicláveis</span>?</label>
-              {fazSeparacaoReciclaveisCompleta && ( <div className="mt-3 pl-2"> <label className={labelStyle}>Sub-tipos de Recicláveis Detalhados*</label> <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2"> {SUBTIPOS_RECICLAVEIS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsReciclaveisSelecionados.includes(subtipo)} onChange={() => handleSubtipoComumChange(subtipo, 'reciclavel')} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))} </div> <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposReciclaveisInput} onChange={(e) => setOutrosSubtiposReciclaveisInput(e.target.value)} placeholder="Ex: Isopor, Embalagem Longa Vida" className={`${inputStyle} mt-1`} /></div> </div> )}
+              {fazSeparacaoReciclaveisCompleta && ( <div className="mt-3 pl-2"> <label className={labelStyle}>Sub-tipos de Recicláveis Detalhados*</label> <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2"> {SUBTIPOS_RECICLAVEIS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsReciclaveisSelecionados.includes(subtipo)} onChange={() => handleSubtipoComumChange(subtipo, 'reciclavel')} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))} </div> <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposReciclaveisInput} onChange={(e) => {setOutrosSubtiposReciclaveisInput(e.target.value); clearError('subtiposReciclaveis')}} placeholder="Ex: Isopor, Embalagem Longa Vida" className={`${inputStyle} mt-1`} /></div> {errors.subtiposReciclaveis && <p className="text-red-600 text-xs mt-1">{errors.subtiposReciclaveis}</p>}</div> )}
             </div>
             <div className="border border-gray-200 p-3 rounded-md mt-4">
               <label htmlFor="fazSeparacaoOrganicosCompleta" className="flex items-center text-sm font-medium text-gray-700"><input type="checkbox" id="fazSeparacaoOrganicosCompleta" checked={fazSeparacaoOrganicosCompleta} onChange={(e) => setFazSeparacaoOrganicosCompleta(e.target.checked)} className={`${checkboxStyle} mr-2`} />Cliente detalha os tipos de <span className="font-bold ml-1">orgânicos</span>?</label>
-              {fazSeparacaoOrganicosCompleta && ( <div className="mt-3 pl-2"> <label className={labelStyle}>Sub-tipos de Orgânicos Detalhados*</label> <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2"> {SUBTIPOS_ORGANICOS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsOrganicosSelecionados.includes(subtipo)} onChange={() => handleSubtipoComumChange(subtipo, 'organico')} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))} </div> <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposOrganicosInput} onChange={(e) => setOutrosSubtiposOrganicosInput(e.target.value)} placeholder="Ex: Aparas, Cinzas" className={`${inputStyle} mt-1`} /></div> </div> )}
+              {fazSeparacaoOrganicosCompleta && ( <div className="mt-3 pl-2"> <label className={labelStyle}>Sub-tipos de Orgânicos Detalhados*</label> <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2"> {SUBTIPOS_ORGANICOS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsOrganicosSelecionados.includes(subtipo)} onChange={() => handleSubtipoComumChange(subtipo, 'organico')} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))} </div> <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposOrganicosInput} onChange={(e) => {setOutrosSubtiposOrganicosInput(e.target.value); clearError('subtiposOrganicos')}} placeholder="Ex: Aparas, Cinzas" className={`${inputStyle} mt-1`} /></div> {errors.subtiposOrganicos && <p className="text-red-600 text-xs mt-1">{errors.subtiposOrganicos}</p>} </div> )}
             </div>
             
             <div className="border border-gray-200 p-3 rounded-md mt-4 bg-amber-50">
@@ -425,7 +454,7 @@ export default function ClienteForm({
                     />
                 </div>
             </div>
-           <p className="text-xs text-gray-500 mt-3">A senha é armazenada de forma segura. Discutiremos a melhor forma de gerenciá-la a seguir.</p>
+           <p className="text-xs text-gray-500 mt-3">A senha é armazenada de forma segura.</p>
       </fieldset>
 
       <div className="flex justify-end space-x-3 pt-4">
