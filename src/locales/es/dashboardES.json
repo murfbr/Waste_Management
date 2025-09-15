@@ -34,7 +34,20 @@
     "monthSelector": {
       "label": "Mes",
       "allMonths": "Todos los Meses",
-      "months": [ "Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic" ]
+      "months": [
+        "Ene",
+        "Feb",
+        "Mar",
+        "Abr",
+        "May",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Sep",
+        "Oct",
+        "Nov",
+        "Dic"
+      ]
     },
     "areaSelector": {
       "label": "Área de Registro",
@@ -43,8 +56,8 @@
       "multipleSelected_other": "{{count}} áreas seleccionadas",
       "noneAvailable": "Ninguna área disponible."
     }
-},
-    "summaryCardsComponent": {
+  },
+  "summaryCardsComponent": {
     "loading": "Cargando indicadores...",
     "noData": "Datos insuficientes para los indicadores.",
     "totalWaste": "Residuos Totales",
@@ -58,9 +71,13 @@
     "noData": "No hay datos para el gráfico de volumen mensual comparativo.",
     "loading": "Cargando datos...",
     "yAxisLabel": "Peso (kg)",
-    "tooltipUnit": "kg"
+    "tooltipUnit": "kg",
+    "viewType": {
+      "total": "Total",
+      "composition": "Composición"
+    }
   },
-   "wasteTypePieChartComponent": {
+  "wasteTypePieChartComponent": {
     "chartTitle": "Composición por Tipo de Residuo",
     "loading": "Cargando datos...",
     "noData": "No hay datos para mostrar.",
@@ -72,7 +89,7 @@
     "noData": "No hay datos para mostrar.",
     "unit": "kg"
   },
-   "landfillDiversionComponent": {
+  "landfillDiversionComponent": {
     "chartTitle": "Tasa de Desvío de Relleno Sanitario",
     "noData": "No hay datos para el gráfico de Tasa de Desvío de Relleno.",
     "loading": "Cargando datos...",
@@ -88,7 +105,7 @@
     },
     "goalLine": "Meta {{value}}%"
   },
-   "destinationChartComponent": {
+  "destinationChartComponent": {
     "chartTitle": "Destino Final",
     "loading": "Calculando datos de destino...",
     "noData": "Datos insuficientes para calcular el destino.",

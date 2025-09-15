@@ -33,11 +33,16 @@ export default function RelatorioDiario({
       if (tipo === 'Orgânico') {
         sub = "-";
       }
-      const transp = it.empresaColetaId
-        ? empresasMap.get(it.empresaColetaId)?.nomeFantasia || "-"
-        : "-";
-      const key = `${dia}|${tipo}|${sub}|${transp}`;
-      if (!acc.has(key)) acc.set(key, { dia, tipo, sub, transp, totalKg: 0 });
+      // +++ Adicionamos o ID da empresa de coleta diretamente na chave de agrupamento
+      const empresaColetaId = it.empresaColetaId || 'N/A';
+      const transp = empresasMap.get(empresaColetaId)?.nomeFantasia || "-";
+      
+      const key = `${dia}|${tipo}|${sub}|${empresaColetaId}`;
+      
+      if (!acc.has(key)) {
+        // +++ Incluímos o ID no objeto para uso posterior
+        acc.set(key, { dia, tipo, sub, transp, empresaColetaId, totalKg: 0 });
+      }
       acc.get(key).totalKg += Number(it.peso) || 0;
     }
     return Array.from(acc.values()).sort((a, b) => {
@@ -60,26 +65,52 @@ export default function RelatorioDiario({
     setMensagemOk("");
     setExportandoSheets(true);
     try {
-      const headers = ["Data", "Tipo", "Subtipo", "Transportador", "Total_kg"];
-      const rows = (linhasInea || []).map((r) => [r.dia, r.tipo, r.sub, r.transp, Number(r.totalKg || 0).toFixed(2)]);
+      // A lógica para criar a tabela de dados continua a mesma e está funcionando bem.
+      const mapaModelosInea = new Map(
+        (clienteData.mapeamentoInea || []).map(m => [`${m.tipoResiduoApp}|${m.empresaColetaId}`, m])
+      );
+      const headers = ["Data", "Tipo", "Subtipo", "Transportador", "Nº do Modelo INEA", "Nome do Modelo INEA", "Destinação Sugerida", "Total_kg"];
+      const rows = (linhasInea || []).map((r) => {
+        const modelo = mapaModelosInea.get(`${r.tipo}|${r.empresaColetaId}`) || {};
+        const empresa = empresasMap.get(r.empresaColetaId);
+        const destinosDaEmpresa = empresa?.destinacoes?.[r.tipo] || [];
+        const destincaoSugerida = destinosDaEmpresa[0] || 'Não especificada';
+        return [r.dia, r.tipo, r.sub, r.transp, modelo.numeroModeloInea || 'Não Mapeado', modelo.nomeModeloInea || 'Não Mapeado', destincaoSugerida, Number(r.totalKg || 0).toFixed(2)];
+      });
+
+      // --- NOVA LÓGICA AQUI ---
+      // Montamos o painel de controle diretamente no frontend.
+      const infoBlock = [
+        ['Cliente:', clienteData.nome || ''],
+        ['CNPJ:', clienteData.cnpj || 'Não informado'],
+        ['Período do Relatório:', `${toLocalYMD(startDate)} a ${toLocalYMD(endDate)}`],
+        ['', ''], // Espaçador
+        ['Login INEA (CPF):', clienteData.configINEA?.ineaLogin || 'Não configurado'],
+        ['Código da Unidade INEA:', clienteData.configINEA?.ineaCodigoDaUnidade || 'Não configurado'],
+        ['Responsável pela Emissão:', clienteData.configINEA?.ineaResponsavel || 'Não configurado']
+      ];
+
       const sheetName = (startDate || new Date().toISOString().slice(0, 10)).slice(0, 7);
       const uniqueTitle = `INEA_${clienteData.id}_${clienteData?.nome || "Cliente"}`;
-
+      
       const payload = {
         token: sheetsWebAppToken || undefined,
         spreadsheetId: clienteData?.planilhaRelatorioDiarioId || null,
         sheetName,
         headers,
         rows,
-        metadata: { title: uniqueTitle, clientId: clienteData.id, clientName: clienteData?.nome || "", periodStart: startDate, periodEnd: endDate },
+        infoBlock: infoBlock, // Enviamos o painel já pronto.
+        metadata: { 
+          title: uniqueTitle,
+        },
       };
 
       const res = await fetch(sheetsWebAppUrl, { method: "POST", headers: { "Content-Type": "text/plain;charset=utf-8" }, body: JSON.stringify(payload) });
-      const data = await res.json().catch(() => ({}));
+      const data = await res.json().catch((err) => ({ ok: false, error: `Erro de parse: ${err}`}));
 
       if (!data || data.ok !== true) {
         console.error("Sheets export error:", data);
-        alert("Falha ao exportar para o Google Sheets.");
+        alert(`Falha ao exportar para o Google Sheets. Erro: ${data.error}`);
         return;
       }
 
@@ -100,6 +131,7 @@ export default function RelatorioDiario({
   }
 
   return (
+    // ... O restante do JSX do componente permanece o mesmo ...
     <div className="mt-8 border-t border-gray-200 pt-6">
       <h3 className="text-lg font-lexend font-semibold text-gray-700">2. Totais para INEA</h3>
       <p className="text-sm text-gray-500 mb-4">Dados agrupados para preenchimento do MTR. Os subtipos de 'Orgânico' são consolidados.</p>

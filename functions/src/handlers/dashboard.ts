@@ -37,6 +37,12 @@ interface MonthlySummary {
             }
         }
     };
+    // NOVO CAMPO ADICIONADO À INTERFACE
+    composicaoPorEmpresa: {
+        [empresaId: string]: {
+            [wasteType: string]: number
+        }
+    };
     composicaoPorDestinacao: {
         recovery: {
             value: number,
@@ -98,6 +104,7 @@ async function generateSummaryForClient(clienteId: string, ano: number, mes: num
         clienteId, ano, mes, totalGeralKg: 0, totalOrganicoKg: 0, totalReciclavelKg: 0,
         totalRejeitoKg: 0, composicaoPorTipo: initialComposicaoPorTipo,
         composicaoPorArea: {},
+        composicaoPorEmpresa: {}, // INICIALIZAÇÃO DO NOVO CAMPO
         composicaoPorDestinacao: {
             recovery: { value: 0, breakdown: {} },
             disposal: { value: 0, breakdown: {} }
@@ -109,7 +116,6 @@ async function generateSummaryForClient(clienteId: string, ano: number, mes: num
     const startDate = new Date(ano, mes, 1);
     const endDate = new Date(ano, mes + 1, 1);
     
-    // CORREÇÃO FINAL: Usar collectionGroup para buscar em subcoleções
     const snapshot = await db.collectionGroup("wasteRecords")
         .where("clienteId", "==", clienteId)
         .where("timestamp", ">=", startDate.getTime())
@@ -122,13 +128,15 @@ async function generateSummaryForClient(clienteId: string, ano: number, mes: num
     }
     
     summary.meta.totalRegistros = snapshot.docs.length;
-    summary.meta.primeiroRegistro = Firestore.Timestamp.fromMillis(snapshot.docs[0].data().timestamp);
-    summary.meta.ultimoRegistro = Firestore.Timestamp.fromMillis(snapshot.docs[snapshot.docs.length - 1].data().timestamp);
+    // Ordenação agora é necessária para garantir primeiro/último registro corretos
+    const sortedDocs = snapshot.docs.sort((a, b) => a.data().timestamp - b.data().timestamp);
+    summary.meta.primeiroRegistro = Firestore.Timestamp.fromMillis(sortedDocs[0].data().timestamp);
+    summary.meta.ultimoRegistro = Firestore.Timestamp.fromMillis(sortedDocs[sortedDocs.length - 1].data().timestamp);
     
     const disposalDestinations = ['Aterro Sanitário', 'Incineração'];
 
     // --- PASSO 4: Iterar sobre cada registro para fazer a agregação aprimorada ---
-    for (const doc of snapshot.docs) {
+    for (const doc of sortedDocs) { // Iterar sobre os documentos ordenados
         const record = doc.data();
         const weight = parseFloat(record.peso || 0);
         if (isNaN(weight)) continue;
@@ -136,22 +144,21 @@ async function generateSummaryForClient(clienteId: string, ano: number, mes: num
         const wasteType = record.wasteType || "Nao Especificado";
         const wasteSubType = record.wasteSubType || wasteType;
         const area = record.areaLancamento || "Nao Especificado";
+        const empresaId = record.empresaColetaId; // Pega o ID da empresa
 
-        // 4.1: Totais Gerais
+        // 4.1, 4.2, 4.3: Lógica existente (sem alterações)
         summary.totalGeralKg += weight;
         const typeLower = wasteType.toLowerCase();
         if (typeLower.includes("orgânico") || typeLower.includes("compostavel")) summary.totalOrganicoKg += weight;
         else if (typeLower.includes("rejeito")) summary.totalRejeitoKg += weight;
         else summary.totalReciclavelKg += weight;
-
-        // 4.2: Composição por Tipo/Subtipo
+        
         if (!summary.composicaoPorTipo[wasteType]) {
             summary.composicaoPorTipo[wasteType] = { value: 0, subtypes: {} };
         }
         summary.composicaoPorTipo[wasteType].value += weight;
         summary.composicaoPorTipo[wasteType].subtypes[wasteSubType] = (summary.composicaoPorTipo[wasteType].subtypes[wasteSubType] || 0) + weight;
-
-        // 4.3: Composição por Área (Lógica Aprimorada)
+        
         if (!summary.composicaoPorArea[area]) {
             summary.composicaoPorArea[area] = { value: 0, breakdown: {} };
         }
@@ -162,8 +169,20 @@ async function generateSummaryForClient(clienteId: string, ano: number, mes: num
         summary.composicaoPorArea[area].breakdown[wasteType].value += weight;
         summary.composicaoPorArea[area].breakdown[wasteType].subtypes[wasteSubType] = (summary.composicaoPorArea[area].breakdown[wasteType].subtypes[wasteSubType] || 0) + weight;
 
-        // 4.4: Composição por Destinação (Lógica Aprimorada)
-        const empresa = empresasMap.get(record.empresaColetaId);
+        // --- NOVA LÓGICA 4.4: Composição por Empresa ---
+        if (empresaId) {
+            let mainWasteType = wasteType;
+            if (mainWasteType.startsWith('Reciclável')) mainWasteType = 'Reciclável';
+            else if (mainWasteType.startsWith('Orgânico')) mainWasteType = 'Orgânico';
+
+            if (!summary.composicaoPorEmpresa[empresaId]) {
+                summary.composicaoPorEmpresa[empresaId] = {};
+            }
+            summary.composicaoPorEmpresa[empresaId][mainWasteType] = (summary.composicaoPorEmpresa[empresaId][mainWasteType] || 0) + weight;
+        }
+
+        // 4.5: Composição por Destinação (Lógica anterior, agora 4.5)
+        const empresa = empresasMap.get(empresaId);
         if (empresa?.destinacoes) {
             let mainWasteType = wasteType;
             if (mainWasteType.startsWith('Reciclável')) mainWasteType = 'Reciclável';

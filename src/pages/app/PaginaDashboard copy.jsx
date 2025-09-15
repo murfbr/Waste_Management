@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 // Importações dos componentes
 import AuthContext from '../../context/AuthContext';
 import ClienteSelectorDropdown from '../../components/app/ClienteSelectorDropdown';
-import useHybridWasteData from '../../hooks/useHybridWasteData';
+import useHybridWasteData from '../../hooks/useHybridWasteData'; // MUDANÇA AQUI
 import MonthlyComparison from '../../components/app/charts/MonthlyComparison';
 import DesvioDeAterro from '../../components/app/charts/DesvioDeAterro';
 import WasteTypePieChart from '../../components/app/charts/WasteTypePieChart';
@@ -143,12 +143,9 @@ const processDataForDesvioDeAterro = (records, rejectCategoryName) => {
     });
 };
 
-const processDataForMonthlyYearlyComparison = (records, t) => {
+const processDataForMonthlyYearlyComparison = (records) => {
   if (!Array.isArray(records) || !records.length) return { data: [], years: [] };
   const monthlyData = {};
-  const RECICLAVEL = t('charts:wasteTypes.reciclavel', 'Reciclável');
-  const ORGANICO = t('charts:wasteTypes.organico', 'Orgânico');
-  const REJEITO = t('charts:wasteTypes.rejeito', 'Rejeito');
   records.forEach(record => {
     if (!record || !record.timestamp || typeof record.peso !== 'number') return;
     const recordDate = new Date(record.timestamp);
@@ -158,21 +155,8 @@ const processDataForMonthlyYearlyComparison = (records, t) => {
     if (isNaN(weight)) return;
 
     if (!monthlyData[recordMonth]) { monthlyData[recordMonth] = {}; }
-    if (!monthlyData[recordMonth][recordYear]) {
-      monthlyData[recordMonth][recordYear] = {
-        total: 0,
-        breakdown: { [RECICLAVEL]: 0, [ORGANICO]: 0, [REJEITO]: 0 }
-      };
-    }
-    monthlyData[recordMonth][recordYear].total += weight;
-    const type = record.wasteType ? record.wasteType.toLowerCase() : '';
-    if (type.includes('orgânico') || type.includes('compostavel')) {
-        monthlyData[recordMonth][recordYear].breakdown[ORGANICO] += weight;
-    } else if (type.includes('rejeito')) {
-        monthlyData[recordMonth][recordYear].breakdown[REJEITO] += weight;
-    } else {
-        monthlyData[recordMonth][recordYear].breakdown[RECICLAVEL] += weight;
-    }
+    if (!monthlyData[recordMonth][recordYear]) { monthlyData[recordMonth][recordYear] = 0; }
+    monthlyData[recordMonth][recordYear] += weight;
   });
 
   const yearsInDate = [...new Set(records.map(r => new Date(r.timestamp).getFullYear()))].sort((a,b) => b - a);
@@ -182,15 +166,7 @@ const processDataForMonthlyYearlyComparison = (records, t) => {
     if (monthlyData[index]) {
         yearsInDate.forEach(year => {
             if (monthlyData[index][year] !== undefined) {
-                const yearData = monthlyData[index][year];
-                dataPoint[year.toString()] = {
-                    total: parseFloat(yearData.total.toFixed(2)),
-                    breakdown: {
-                        [RECICLAVEL]: parseFloat(yearData.breakdown[RECICLAVEL].toFixed(2)),
-                        [ORGANICO]: parseFloat(yearData.breakdown[ORGANICO].toFixed(2)),
-                        [REJEITO]: parseFloat(yearData.breakdown[REJEITO].toFixed(2)),
-                    }
-                };
+                dataPoint[year.toString()] = parseFloat(monthlyData[index][year].toFixed(2));
             }
         });
     }
@@ -201,7 +177,7 @@ const processDataForMonthlyYearlyComparison = (records, t) => {
 };
 
 const processDataForSummaryCards = (records) => {
-  if (!Array.isArray(records) || records.length === 0) return { totalGeralKg: 0, organico: {}, reciclavel: {}, rejeito: {} };
+  if (!Array.isArray(records) || records.length === 0) return [];
   let totalGeralKg = 0, totalOrganicoKg = 0, totalReciclavelKg = 0, totalRejeitoKg = 0;
   records.forEach(record => {
     const weight = parseFloat(record.peso || 0);
@@ -259,9 +235,7 @@ export default function PaginaDashboard() {
   const [isCompositionVisible, setIsCompositionVisible] = useState(false);
   const [isDestinationVisible, setIsDestinationVisible] = useState(false);
 
-  const [sectionsVisibility, setSectionsVisibility] = useState({ summary: true, monthlyComparison: true, composition: true, destination: true });
-  const toggleSection = (section) => setSectionsVisibility(prev => ({ ...prev, [section]: !prev[section] }));
-
+  // MUDANÇA AQUI: Lógica do dashboardMode re-adicionada
   const dashboardMode = useMemo(() => {
     if (!selectedClienteIds.length || !userAllowedClientes.length) {
       return 'ondemand';
@@ -273,19 +247,30 @@ export default function PaginaDashboard() {
     return isRealtime ? 'realtime' : 'ondemand';
   }, [selectedClienteIds, userAllowedClientes]);
   
-  const { wasteRecords: recordsFullyFiltered, loading: loadingRecords } = useHybridWasteData(
-    selectedClienteIds, 
-    selectedYears, 
-    selectedMonths,
-    dashboardMode
-  );
-
-  const { wasteRecords: recordsForComparison, loading: loadingComparisonRecords } = useHybridWasteData(
+  // MUDANÇA AQUI: Chamada para o novo hook
+  const { allWasteRecords: allWasteRecordsForSelectedYears, loadingRecords } = useHybridWasteData(
     selectedClienteIds, 
     selectedYears, 
     TODOS_OS_MESES_INDICES,
     dashboardMode
   );
+
+  useEffect(() => {
+    if (loadingRecords || allWasteRecordsForSelectedYears.length === 0) {
+        return;
+    }
+    const entriesPerMonth = {};
+    allWasteRecordsForSelectedYears.forEach(record => {
+        const date = new Date(record.timestamp);
+        const key = `${MESES_COMPLETOS[date.getMonth()]}/${date.getFullYear()}`;
+        entriesPerMonth[key] = (entriesPerMonth[key] || 0) + 1;
+    });
+    console.log("Número de 'registros' (reais ou agregados) por mês:", entriesPerMonth);
+  }, [allWasteRecordsForSelectedYears, loadingRecords]);
+
+
+  const [sectionsVisibility, setSectionsVisibility] = useState({ summary: true, monthlyComparison: true, composition: true, destination: true });
+  const toggleSection = (section) => setSectionsVisibility(prev => ({ ...prev, [section]: !prev[section] }));
 
   useEffect(() => {
     if (!db) return;
@@ -309,7 +294,7 @@ export default function PaginaDashboard() {
             setSelectAllClientesToggle(false);
         }
     }
-  }, [userAllowedClientes, loadingAllowedClientes, selectedClienteIds]);
+  }, [userAllowedClientes, loadingAllowedClientes]);
 
   useEffect(() => {
     if (userAllowedClientes.length > 0 && selectedClienteIds.length > 0) {
@@ -322,32 +307,35 @@ export default function PaginaDashboard() {
   }, [selectedClienteIds, userAllowedClientes]);
   
   useEffect(() => {
-    if (recordsForComparison.length > 0) {
-      const yearsFromData = Array.from(new Set(recordsForComparison.map(r => new Date(r.timestamp).getFullYear()))).sort((a, b) => b - a);
+    if (allWasteRecordsForSelectedYears.length > 0) {
+      const yearsFromData = Array.from(new Set(allWasteRecordsForSelectedYears.map(r => new Date(r.timestamp).getFullYear()))).sort((a, b) => b - a);
       setAvailableYears(yearsFromData);
     }
-  }, [recordsForComparison]);
+  }, [allWasteRecordsForSelectedYears]);
 
-  const recordsForMonthlyComparisonChart = useMemo(() => {
-    if (loadingComparisonRecords || recordsForComparison.length === 0) return [];
-    return recordsForComparison.filter(record => {
+  const recordsFullyFiltered = useMemo(() => {
+    if (loadingRecords || allWasteRecordsForSelectedYears.length === 0) return [];
+    return allWasteRecordsForSelectedYears.filter(record => {
+      const recordDate = new Date(record.timestamp);
+      const monthMatch = selectedMonths.length === 12 || selectedMonths.includes(recordDate.getMonth());
+      const areaMatch = selectedAreas.length === 0 || selectedAreas.includes(record.areaLancamento);
+      return monthMatch && areaMatch;
+    });
+  }, [allWasteRecordsForSelectedYears, selectedMonths, selectedAreas, loadingRecords]);
+
+  const recordsForMonthlyComparison = useMemo(() => {
+    if (loadingRecords || allWasteRecordsForSelectedYears.length === 0) return [];
+    return allWasteRecordsForSelectedYears.filter(record => {
         const areaMatch = selectedAreas.length === 0 || selectedAreas.includes(record.areaLancamento);
         return areaMatch;
     });
-  }, [recordsForComparison, selectedAreas, loadingComparisonRecords]);
+  }, [allWasteRecordsForSelectedYears, selectedAreas, loadingRecords]);
 
-  const recordsForOtherCharts = useMemo(() => {
-    if (loadingRecords || recordsFullyFiltered.length === 0) return [];
-    return recordsFullyFiltered.filter(record => {
-        const areaMatch = selectedAreas.length === 0 || selectedAreas.includes(record.areaLancamento);
-        return areaMatch;
-    });
-  }, [recordsFullyFiltered, selectedAreas, loadingRecords]);
 
   const destinacaoData = useMemo(() => {
     if (!isDestinationVisible) return [];
     
-    if (recordsForOtherCharts.length === 0 || empresasColeta.length === 0) {
+    if (recordsFullyFiltered.length === 0 || empresasColeta.length === 0) {
         return [];
     }
 
@@ -357,7 +345,7 @@ export default function PaginaDashboard() {
     const recoveryData = { value: 0, breakdown: {} };
     const disposalData = { value: 0, breakdown: {} };
 
-    recordsForOtherCharts.forEach(record => {
+    recordsFullyFiltered.forEach(record => {
         const empresa = empresasMap.get(record.empresaColetaId);
         if (!empresa?.destinacoes || !record.wasteType) return;
 
@@ -405,9 +393,10 @@ export default function PaginaDashboard() {
             breakdown: formatBreakdown(disposalData.breakdown)
         });
     }
-    
+
     return result;
-  }, [recordsForOtherCharts, empresasColeta, isDestinationVisible, t]);
+  }, [recordsFullyFiltered, empresasColeta, isDestinationVisible, t]);
+
 
   const handleClienteSelectionChange = (clienteId) => {
     setSelectedClienteIds(prev => {
@@ -467,27 +456,27 @@ export default function PaginaDashboard() {
     setSelectedMonths(months);
   };
 
-  const summaryData = useMemo(() => processDataForSummaryCards(recordsForOtherCharts), [recordsForOtherCharts]);
+  const summaryData = useMemo(() => processDataForSummaryCards(recordsFullyFiltered), [recordsFullyFiltered]);
 
   const wasteTypePieData = useMemo(() => {
     if (!isCompositionVisible) return [];
-    return processDataForAggregatedPieChart(recordsForOtherCharts, t);
-  }, [recordsForOtherCharts, isCompositionVisible, t]);
+    return processDataForAggregatedPieChart(recordsFullyFiltered, t);
+  }, [recordsFullyFiltered, isCompositionVisible, t]);
 
   const areaPieData = useMemo(() => {
     if (!isCompositionVisible) return [];
-    return processDataForAreaChartWithBreakdown(recordsForOtherCharts, t);
-  }, [recordsForOtherCharts, isCompositionVisible, t]);
+    return processDataForAreaChartWithBreakdown(recordsFullyFiltered, t);
+  }, [recordsFullyFiltered, isCompositionVisible, t]);
 
   const desvioDeAterroData = useMemo(() => {
     if (!isDestinationVisible) return [];
-    return processDataForDesvioDeAterro(recordsForOtherCharts, "Rejeito");
-  }, [recordsForOtherCharts, isDestinationVisible]);
+    return processDataForDesvioDeAterro(recordsFullyFiltered, "Rejeito");
+  }, [recordsFullyFiltered, isDestinationVisible]);
 
   const { data: monthlyComparisonChartData, years: actualYearsInComparisonData } = useMemo(() => {
     if (!isMonthlyComparisonVisible) return { data: [], years: [] };
-    return processDataForMonthlyYearlyComparison(recordsForMonthlyComparisonChart, t);
-  }, [recordsForMonthlyComparisonChart, isMonthlyComparisonVisible, t]);
+    return processDataForMonthlyYearlyComparison(recordsForMonthlyComparison);
+  }, [recordsForMonthlyComparison, isMonthlyComparisonVisible]);
 
 
   if (loadingAuth || loadingAllowedClientes) { return <div className="p-8 text-center text-rich-soil">A carregar...</div>; }
@@ -527,13 +516,13 @@ export default function PaginaDashboard() {
         onSelectedAreasChange={setSelectedAreas} 
         availableAreas={availableAreas} 
         onQuickPeriodSelect={handleQuickPeriodSelect}
-        isLoading={loadingRecords || loadingComparisonRecords || selectedYears.length === 0} 
+        isLoading={loadingRecords || selectedYears.length === 0} 
       />
       
       <div className="mt-8 space-y-6">
-        {loadingRecords || loadingComparisonRecords || loadingEmpresas ? (<div className="text-center p-8 text-rich-soil">{t('dashboard:paginaDashboard.filters.loadingData')}</div>) :
+        {loadingRecords || loadingEmpresas ? (<div className="text-center p-8 text-rich-soil">{t('dashboard:paginaDashboard.filters.loadingData')}</div>) :
          !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.selectClient')}</div>) :
-         recordsForComparison.length === 0 ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.noData')}</div>) : (
+         !allWasteRecordsForSelectedYears.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.noData')}</div>) : (
           <>
             <section>
                 <SectionTitle title={t('dashboard:paginaDashboard.sections.overview')} isExpanded={sectionsVisibility.summary} onClick={() => toggleSection('summary')} />
@@ -543,7 +532,7 @@ export default function PaginaDashboard() {
             <LazySection onVisible={() => setIsMonthlyComparisonVisible(true)}>
               <section>
                   <SectionTitle title={t('dashboard:paginaDashboard.sections.monthlyGeneration')} isExpanded={sectionsVisibility.monthlyComparison} onClick={() => toggleSection('monthlyComparison')} />
-                  {sectionsVisibility.monthlyComparison && <MonthlyComparison chartData={monthlyComparisonChartData} yearsToCompare={actualYearsInComparisonData} isLoading={loadingComparisonRecords} />}
+                  {sectionsVisibility.monthlyComparison && <MonthlyComparison chartData={monthlyComparisonChartData} yearsToCompare={actualYearsInComparisonData} isLoading={loadingRecords} />}
               </section>
             </LazySection>
 
@@ -576,4 +565,3 @@ export default function PaginaDashboard() {
     </div>
   );
 }
-

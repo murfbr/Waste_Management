@@ -15,36 +15,49 @@
       "noData": "Nenhum dado de resíduo registado para os clientes e período selecionados."
     }
   },
-       "filtersComponent": {
-      "title": "Filtros",
-      "quickPeriods": {
-        "label": "Períodos Rápidos",
-        "thisMonth": "Este Mês",
-        "last3Months": "Últimos 3 Meses",
-        "thisYear": "Este Ano",
-        "lastYear": "Ano Passado"
-      },
-      "yearSelector": {
-        "label": "Ano",
-        "placeholder": "Selecione o ano",
-        "multipleSelected_one": "{{count}} ano selecionado",
-        "multipleSelected_other": "{{count}} anos selecionados",
-        "noneAvailable": "Nenhum ano disponível."
-      },
-      "monthSelector": {
-        "label": "Mês",
-        "allMonths": "Todos os Meses",
-        "months": [ "Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez" ]
-      },
-      "areaSelector": {
-        "label": "Área de Lançamento",
-        "allAreas": "Todas as Áreas",
-        "multipleSelected_one": "{{count}} área selecionada",
-        "multipleSelected_other": "{{count}} áreas selecionadas",
-        "noneAvailable": "Nenhuma área disponível."
-      }
+  "filtersComponent": {
+    "title": "Filtros",
+    "quickPeriods": {
+      "label": "Períodos Rápidos",
+      "thisMonth": "Este Mês",
+      "last3Months": "Últimos 3 Meses",
+      "thisYear": "Este Ano",
+      "lastYear": "Ano Passado"
     },
-      "summaryCardsComponent": {
+    "yearSelector": {
+      "label": "Ano",
+      "placeholder": "Selecione o ano",
+      "multipleSelected_one": "{{count}} ano selecionado",
+      "multipleSelected_other": "{{count}} anos selecionados",
+      "noneAvailable": "Nenhum ano disponível."
+    },
+    "monthSelector": {
+      "label": "Mês",
+      "allMonths": "Todos os Meses",
+      "months": [
+        "Jan",
+        "Fev",
+        "Mar",
+        "Abr",
+        "Mai",
+        "Jun",
+        "Jul",
+        "Ago",
+        "Set",
+        "Out",
+        "Nov",
+        "Dez"
+      ]
+    },
+    "areaSelector": {
+      "label": "Área de Lançamento",
+      "allAreas": "Todas as Áreas",
+      "multipleSelected_one": "{{count}} área selecionada",
+      "multipleSelected_other": "{{count}} áreas selecionadas",
+      "noneAvailable": "Nenhuma área disponível."
+    }
+  },
+  "summaryCardsComponent": {
     "loading": "Carregando indicadores...",
     "noData": "Sem dados suficientes para os indicadores.",
     "totalWaste": "Total de Resíduos",
@@ -58,7 +71,11 @@
     "noData": "Sem dados para o gráfico de volume mensal comparativo.",
     "loading": "Carregando dados...",
     "yAxisLabel": "Peso (kg)",
-    "tooltipUnit": "kg"
+    "tooltipUnit": "kg",
+    "viewType": {
+      "total": "Total",
+      "composition": "Composição"
+    }
   },
   "wasteTypePieChartComponent": {
     "chartTitle": "Composição por Tipo de Resíduo",
@@ -66,13 +83,13 @@
     "noData": "Sem dados para exibir.",
     "unit": "kg"
   },
-   "areaPieChartComponent": {
+  "areaPieChartComponent": {
     "chartTitle": "Composição por Área",
     "loading": "Carregando dados...",
     "noData": "Sem dados para exibir.",
     "unit": "kg"
   },
-    "landfillDiversionComponent": {
+  "landfillDiversionComponent": {
     "chartTitle": "Taxa de Desvio de Aterro",
     "noData": "Sem dados para o gráfico Taxa de Desvio de Aterro.",
     "loading": "Carregando dados...",

@@ -5,25 +5,26 @@ import AuthContext from '../context/AuthContext';
 
 /**
  * Hook Híbrido que suporta os modos 'realtime' e 'ondemand'.
- * - Busca dados em tempo real (registros individuais) para o mês atual, se o modo for 'realtime'.
- * - Busca dados pré-agregados (resumos mensais) para os meses passados.
+ * - Busca dados em tempo real (registros individuais) para o mês atual.
+ * - Para meses passados, tenta buscar dados pré-agregados. Se o resumo for antigo (sem dados de empresa),
+ * ele faz um fallback para buscar os dados brutos daquele mês.
  * @param {string[]} selectedClienteIds - IDs dos clientes selecionados.
  * @param {number[]} selectedYears - Anos selecionados.
  * @param {number[]} selectedMonths - Meses selecionados (0-11).
  * @param {string} dashboardMode - 'realtime' ou 'ondemand'.
- * @returns {{allWasteRecords: object[], loadingRecords: boolean}}
+ * @returns {{wasteRecords: object[], loading: boolean}}
  */
 export default function useHybridWasteData(selectedClienteIds, selectedYears, selectedMonths, dashboardMode) {
   const { db } = useContext(AuthContext);
-  const [allWasteRecords, setAllWasteRecords] = useState([]);
-  const [loadingRecords, setLoadingRecords] = useState(true);
+  const [wasteRecords, setWasteRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoadingRecords(true);
+    setLoading(true);
 
     if (!db || selectedClienteIds.length === 0 || selectedYears.length === 0 || selectedMonths.length === 0) {
-      setAllWasteRecords([]);
-      setLoadingRecords(false);
+      setWasteRecords([]);
+      setLoading(false);
       return;
     }
 
@@ -31,59 +32,90 @@ export default function useHybridWasteData(selectedClienteIds, selectedYears, se
     const currentYear = now.getFullYear();
     const currentMonth = now.getMonth();
 
-    const isCurrentMonthSelected = selectedYears.includes(currentYear) && selectedMonths.includes(currentMonth);
-    const realtimeEnabled = dashboardMode === 'realtime' && isCurrentMonthSelected;
-
-    let unsubscribeRealtime = () => {}; // Função de cleanup vazia por padrão
+    let unsubscribeRealtime = () => {};
 
     const fetchData = async () => {
-      const pastMonthsPromises = [];
       let recordsFromPast = [];
+      const fallbackFetchPromises = []; // Para buscar dados brutos se o resumo for antigo
 
-      selectedClienteIds.forEach(clienteId => {
-        selectedYears.forEach(year => {
-          selectedMonths.forEach(month => {
-            // A lógica para meses passados NUNCA é em tempo real
-            if (year !== currentYear || month !== currentMonth) {
+      // Cria uma lista de promises para buscar os resumos dos meses passados
+      const pastMonthSummaryPromises = selectedClienteIds.flatMap(clienteId =>
+        selectedYears.flatMap(year =>
+          selectedMonths
+            .filter(month => year !== currentYear || month !== currentMonth)
+            .map(month => {
               const docId = `${clienteId}_${year}_${month}`;
-              const summaryDocRef = doc(db, "dashboardResumosMensais", docId);
-              pastMonthsPromises.push(getDoc(summaryDocRef));
-            }
-          });
-        });
-      });
+              return getDoc(doc(db, "dashboardResumosMensais", docId));
+            })
+        )
+      );
       
       try {
-        const pastMonthsResults = await Promise.all(pastMonthsPromises);
+        const pastMonthsResults = await Promise.all(pastMonthSummaryPromises);
+        
         pastMonthsResults.forEach(result => {
           if (result && result.exists()) {
               const summaryData = result.data();
-              const { ano, mes, composicaoPorArea } = summaryData;
-              for (const areaName in composicaoPorArea) {
+              const { ano, mes, composicaoPorEmpresa, composicaoPorArea, clienteId } = summaryData;
+
+              // Se o resumo tem a nova estrutura de dados por área, usamos ele.
+              if (composicaoPorArea && Object.keys(composicaoPorArea).length > 0) {
+                for (const areaName in composicaoPorArea) {
                   const areaData = composicaoPorArea[areaName];
-                  for (const mainType in areaData.breakdown) {
-                      const typeData = areaData.breakdown[mainType];
-                      for (const subType in typeData.subtypes) {
-                          const weight = typeData.subtypes[subType];
-                          if (weight > 0) {
-                              recordsFromPast.push({
-                                  peso: weight,
-                                  wasteType: mainType,
-                                  wasteSubType: subType,
-                                  areaLancamento: areaName,
-                                  timestamp: new Date(ano, mes, 15).getTime(),
-                                  empresaColetaId: 'agregado',
-                              });
-                          }
-                      }
+                  for (const wasteType in areaData.breakdown) {
+                    const typeData = areaData.breakdown[wasteType];
+                    for (const subType in typeData.subtypes) {
+                        const weight = typeData.subtypes[subType];
+                        // Heurística para encontrar o ID da empresa (pode não ser perfeito, mas funciona para destinação)
+                        const empresaId = composicaoPorEmpresa && Object.keys(composicaoPorEmpresa).length > 0
+                            ? Object.keys(composicaoPorEmpresa).find(id => composicaoPorEmpresa[id][wasteType]) || 'agregado'
+                            : 'agregado';
+
+                        if (weight > 0) {
+                            recordsFromPast.push({
+                                peso: weight,
+                                wasteType: wasteType,
+                                wasteSubType: subType,
+                                areaLancamento: areaName,
+                                timestamp: new Date(ano, mes, 15).getTime(),
+                                empresaColetaId: empresaId
+                            });
+                        }
+                    }
                   }
+                }
+              } else {
+                // FALLBACK: O resumo é antigo. Adicionamos uma promise para buscar os dados brutos.
+                console.warn(`Resumo antigo (sem composicaoPorArea) para ${clienteId} (${mes + 1}/${ano}). Buscando dados brutos como fallback.`);
+                const startDate = new Date(ano, mes, 1).getTime();
+                const endDate = new Date(ano, mes + 1, 1).getTime();
+                const recordsQuery = query(
+                  collectionGroup(db, "wasteRecords"),
+                  where("clienteId", "==", clienteId),
+                  where("timestamp", ">=", startDate),
+                  where("timestamp", "<", endDate)
+                );
+                fallbackFetchPromises.push(getDocs(recordsQuery));
               }
           }
         });
 
-        // Se o modo REALTIME estiver ativo para o mês atual, configura o listener
+        // Executa as buscas de fallback, se houver alguma
+        if (fallbackFetchPromises.length > 0) {
+            const fallbackResults = await Promise.all(fallbackFetchPromises);
+            fallbackResults.forEach(snapshot => {
+                snapshot.forEach(doc => {
+                    recordsFromPast.push({ id: doc.id, ...doc.data() });
+                });
+            });
+        }
+
+        // Lógica para o mês atual (realtime ou ondemand)
+        const isCurrentMonthSelected = selectedYears.includes(currentYear) && selectedMonths.includes(currentMonth);
+        const realtimeEnabled = dashboardMode === 'realtime' && isCurrentMonthSelected;
+        
         if (realtimeEnabled) {
-          setLoadingRecords(true);
+          setLoading(true);
           const startDate = new Date(currentYear, currentMonth, 1).getTime();
           const endDate = new Date(currentYear, currentMonth + 1, 1).getTime();
           const recordsQuery = query(
@@ -94,23 +126,17 @@ export default function useHybridWasteData(selectedClienteIds, selectedYears, se
           );
 
           unsubscribeRealtime = onSnapshot(recordsQuery, (querySnapshot) => {
-            const recordsFromCurrent = [];
-            querySnapshot.forEach(doc => {
-              recordsFromCurrent.push({ id: doc.id, ...doc.data() });
-            });
-            setAllWasteRecords([...recordsFromPast, ...recordsFromCurrent]);
-            setLoadingRecords(false);
-          }, (error) => {
-            console.error("Erro no listener em tempo real:", error);
-            setLoadingRecords(false);
+            const recordsFromCurrent = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setWasteRecords([...recordsFromPast, ...recordsFromCurrent]);
+            setLoading(false);
           });
 
-        } else { // Modo ONDEMAND (busca única para todos os meses selecionados)
+        } else {
           const currentMonthPromises = [];
           if (isCurrentMonthSelected) {
+            const startDate = new Date(currentYear, currentMonth, 1).getTime();
+            const endDate = new Date(currentYear, currentMonth + 1, 1).getTime();
             selectedClienteIds.forEach(clienteId => {
-              const startDate = new Date(currentYear, currentMonth, 1).getTime();
-              const endDate = new Date(currentYear, currentMonth + 1, 1).getTime();
               const recordsQuery = query(
                 collectionGroup(db, "wasteRecords"),
                 where("clienteId", "==", clienteId),
@@ -124,31 +150,27 @@ export default function useHybridWasteData(selectedClienteIds, selectedYears, se
           const currentMonthResults = await Promise.all(currentMonthPromises);
           const recordsFromCurrent = [];
           currentMonthResults.forEach(snapshot => {
-            if (snapshot) {
-              snapshot.forEach(doc => {
-                recordsFromCurrent.push({ id: doc.id, ...doc.data() });
-              });
-            }
+            snapshot.forEach(doc => recordsFromCurrent.push({ id: doc.id, ...doc.data() }));
           });
           
-          setAllWasteRecords([...recordsFromPast, ...recordsFromCurrent]);
-          setLoadingRecords(false);
+          setWasteRecords([...recordsFromPast, ...recordsFromCurrent]);
+          setLoading(false);
         }
       } catch (error) {
         console.error("Erro ao buscar dados do dashboard:", error);
-        setAllWasteRecords([]);
-        setLoadingRecords(false);
+        setWasteRecords([]);
+        setLoading(false);
       }
     };
 
     fetchData();
 
-    // Função de cleanup do useEffect: desinscreve do listener se ele foi ativado
     return () => {
       unsubscribeRealtime();
     };
 
   }, [db, selectedClienteIds, selectedYears, selectedMonths, dashboardMode]);
 
-  return { allWasteRecords, loadingRecords };
+  return { wasteRecords, loading };
 }
+
