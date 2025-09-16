@@ -5,96 +5,97 @@ from flask import Flask, request, jsonify
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# --- INICIALIZAÇÃO DO FLASK E FIREBASE (como antes) ---
+# Inicializa o aplicativo Flask
 app = Flask(__name__)
-service_account_info_json = os.getenv('FIREBASE_SERVICE_ACCOUNT')
 
+# --- INICIALIZAÇÃO DO FIREBASE COM COMENTÁRIOS DETALHADOS ---
+# Pega o conteúdo da variável de ambiente que criamos na Vercel.
+service_account_info_json = os.getenv('FIREBASE_SERVICE_ACCOUNT')
+db = None # Define db como None inicialmente para podermos verificar a conexão
+
+# Verifica se a variável de ambiente foi carregada corretamente.
 if service_account_info_json:
     try:
+        # Converte o texto JSON da variável de ambiente para um dicionário Python.
         service_account_info = json.loads(service_account_info_json)
+        # Usa o dicionário para criar as credenciais.
         cred = credentials.Certificate(service_account_info)
+        
+        # Inicializa o app do Firebase, mas somente se ainda não foi inicializado.
+        # Isso é importante para evitar erros em ambientes serverless.
         if not firebase_admin._apps:
             firebase_admin.initialize_app(cred)
+        
+        # Pega uma referência para o banco de dados Firestore.
         db = firestore.client()
-        print("Firebase inicializado com sucesso.")
     except Exception as e:
-        print(f"Erro ao inicializar o Firebase: {e}")
-        db = None
+        print(f"ERRO DE INICIALIZAÇÃO DO FIREBASE: {e}")
 else:
     print("Variável de ambiente FIREBASE_SERVICE_ACCOUNT não encontrada.")
-    db = None
 # --- FIM DA INICIALIZAÇÃO ---
 
+
+# Define a rota principal da nossa API.
+# A Vercel direcionará requisições para /api/generate_report para esta função.
+# O "methods=['POST']" significa que esta rota só aceita requisições do tipo POST,
+# que é o método que usaremos para enviar os filtros do front-end.
 @app.route('/api/generate_report', methods=['POST'])
 def handle_report_generation():
     if not db:
         return jsonify({"error": "A conexão com o banco de dados falhou."}), 500
 
-    # 1. RECEBER E VALIDAR OS FILTROS
-    try:
-        filters = request.json
-        # Agora vamos aceitar múltiplos clientes
-        cliente_ids = filters.get('selectedClienteIds', [])
-        anos = filters.get('selectedYears', [])
-        # No JS, os meses são 0-11. No Python datetime, são 1-12.
-        # Adicionamos +1 para compatibilizar.
-        meses = [m + 1 for m in filters.get('selectedMonths', [])]
-        
-        if not cliente_ids or not anos or not meses:
-            return jsonify({"error": "Filtros insuficientes (clientes, anos, meses)."}), 400
-            
-    except (TypeError, KeyError) as e:
-        return jsonify({"error": f"Filtro inválido ou ausente: {e}"}), 400
-
-    print(f"Iniciando busca para Clientes: {cliente_ids}, Anos: {anos}, Meses: {meses}")
+    # Pega os dados (filtros) que o front-end enviou na requisição.
+    filters = request.json
+    cliente_ids = filters.get('selectedClienteIds', [])
+    anos = filters.get('selectedYears', [])
+    # No JS, os meses são 0-11. No Python datetime, são 1-12.
+    # Adicionamos +1 para compatibilizar.
+    meses = [m + 1 for m in filters.get('selectedMonths', [])]
+    
+    # --- INÍCIO DOS LOGS DE DEBUG ---
+    print("--- INÍCIO DA EXECUÇÃO ---")
+    print(f"Filtros Recebidos: Clientes={cliente_ids}, Anos={anos}, Meses={meses}")
+    # --- FIM DOS LOGS DE DEBUG ---
 
     try:
-        # 2. BUSCAR DADOS DO FIRESTORE
-        records_ref = db.collection('waste_records')
+        query = db.collection('waste_records').where('clienteId', 'in', cliente_ids)
         
-        # O Firestore só permite o filtro 'in' em um único campo por query.
-        # Então filtramos por cliente primeiro.
-        query = records_ref.where('clienteId', 'in', cliente_ids)
+        # Convertemos o resultado para uma lista para podermos inspecionar
+        docs = list(query.stream())
         
-        docs = query.stream()
-        
-        # Filtramos o resto (ano e mês) em Python, pois é mais flexível
+        # --- LOG DE DEBUG 1 ---
+        print(f"LOG 1: Firestore retornou {len(docs)} documentos para o(s) cliente(s) selecionado(s) (ANTES da filtragem de data).")
+
         filtered_records = []
+        
+        # --- LOG DE DEBUG 2 ---
+        print("LOG 2: Verificando cada documento contra os filtros de data...")
         for doc in docs:
             record = doc.to_dict()
-            # O timestamp no seu exemplo é em milissegundos.
-            record_date = datetime.datetime.fromtimestamp(record['timestamp'] / 1000)
+            timestamp = record.get('timestamp', 0)
+            record_date = datetime.datetime.fromtimestamp(timestamp / 1000)
+            
+            # Mostrar a data de cada registro que está sendo verificado.
+            print(f"  - Verificando registro com data: {record_date.strftime('%Y-%m-%d')}")
             
             if record_date.year in anos and record_date.month in meses:
                  filtered_records.append(record)
+                 # --- LOG DE DEBUG 3 ---
+                 print(f"    --> ACEITO! Este registro está no período desejado.")
 
-        print(f"Encontrados {len(filtered_records)} registros correspondentes aos filtros.")
+        # --- LOG DE DEBUG 4 ---
+        print(f"LOG 4: Total de registros APÓS a filtragem de data: {len(filtered_records)}")
 
-        # 3. PROCESSAR OS DADOS (Lógica do Dashboard)
-        # Replicando a lógica dos 'Summary Cards'
-        total_geral_kg = 0
-        total_organico_kg = 0
-        total_reciclavel_kg = 0
-        total_rejeito_kg = 0
-
-        for record in filtered_records:
-            peso = record.get('peso', 0)
-            waste_type = record.get('wasteType', '').lower()
-            
-            total_geral_kg += peso
-            if 'orgânico' in waste_type:
-                total_organico_kg += peso
-            elif 'reciclável' in waste_type:
-                total_reciclavel_kg += peso
-            elif 'rejeito' in waste_type:
-                total_rejeito_kg += peso
+        # --- PROCESSAMENTO (idêntico ao da versão de debug anterior) ---
+        total_geral_kg = sum(rec.get('peso', 0) for rec in filtered_records)
+        total_organico_kg = sum(rec.get('peso', 0) for rec in filtered_records if 'orgânico' in rec.get('wasteType', '').lower())
+        total_reciclavel_kg = sum(rec.get('peso', 0) for rec in filtered_records if 'reciclável' in rec.get('wasteType', '').lower())
+        total_rejeito_kg = sum(rec.get('peso', 0) for rec in filtered_records if 'rejeito' in rec.get('wasteType', '').lower())
         
-        # Calcula as porcentagens
         p_organico = (total_organico_kg / total_geral_kg * 100) if total_geral_kg > 0 else 0
         p_reciclavel = (total_reciclavel_kg / total_geral_kg * 100) if total_geral_kg > 0 else 0
         p_rejeito = (total_rejeito_kg / total_geral_kg * 100) if total_geral_kg > 0 else 0
 
-        # Monta a estrutura de dados para o relatório
         report_data = {
             "visao_geral": {
                 "total_residuos": f"{total_geral_kg:.2f} Kg",
@@ -105,15 +106,12 @@ def handle_report_generation():
                 "rejeito_kg": f"{total_rejeito_kg:.2f} Kg",
                 "rejeito_percent": f"{p_rejeito:.2f}%"
             },
-            "debug_info": {
-                 "records_found": len(filtered_records)
-            }
+            "debug_info": { "records_found": len(filtered_records) }
         }
         
-        # Por enquanto, vamos retornar esses dados processados como JSON
-        # para confirmar que a lógica está correta.
+        print("--- FIM DA EXECUÇÃO ---")
         return jsonify(report_data)
 
     except Exception as e:
-        print(f"Erro durante a busca ou processamento no Firestore: {e}")
-        return jsonify({"error": "Ocorreu um erro ao processar os dados do relatório."}), 500
+        print(f"ERRO DURANTE EXECUÇÃO: {e}")
+        return jsonify({"error": "Ocorreu um erro ao processar os dados."}), 500
