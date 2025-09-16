@@ -58,7 +58,7 @@ def handle_report_generation():
     # --- FIM DOS LOGS DE DEBUG ---
 
     try:
-        query = db.collection('waste_records').where('clienteId', 'in', cliente_ids)
+        query = db.collection_group('wasteRecords').where('clienteId', 'in', cliente_ids)
         
         # Convertemos o resultado para uma lista para podermos inspecionar
         docs = list(query.stream())
