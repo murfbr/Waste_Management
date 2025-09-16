@@ -13,6 +13,10 @@ const LIMITES_PADRAO = {
     "Rejeito": 15,
 };
 
+const estadosBrasileiros = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'].sort();
+const estadosPrioritarios = ['RJ', 'SP'];
+
+
 export default function ClienteForm({ 
     initialData, 
     onSubmit, 
@@ -44,6 +48,7 @@ export default function ClienteForm({
   const [outrosSubtiposOrganicosInput, setOutrosSubtiposOrganicosInput] = useState('');
   const [contratosColetaForm, setContratosColetaForm] = useState([{ empresaColetaId: '', tiposResiduoColetados: [] }]);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState({});
   const [limitesPorResiduo, setLimitesPorResiduo] = useState({...LIMITES_PADRAO});
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [realtimeDashboardEnabled, setRealtimeDashboardEnabled] = useState(false);
@@ -57,11 +62,8 @@ export default function ClienteForm({
   const [isCnpjValid, setIsCnpjValid] = useState(true);
   const [isCpfValid, setIsCpfValid] = useState(true);
   
-  const [errors, setErrors] = useState({}); // NOVO: Estado para os erros de validação
-
   const arrayFromString = (str) => str.split(',').map(item => item.trim()).filter(item => item.length > 0);
 
-  // Função para limpar o erro de um campo específico
   const clearError = (fieldName) => {
     if (errors[fieldName]) {
       setErrors(prev => {
@@ -177,17 +179,23 @@ export default function ClienteForm({
 
   const handleLocalSubmit = async (e) => {
     e.preventDefault();
+    setIsSubmitting(true);
     const newErrors = {};
 
-    // Validações
     if (!nome.trim()) newErrors.nome = "O nome do cliente é obrigatório.";
-    
+    if (!cnpj.trim()) {
+        newErrors.cnpj = "O CNPJ é obrigatório.";
+    } else if (!isCnpjValid) {
+        newErrors.cnpj = "CNPJ inválido.";
+    }
+
     const areasArray = arrayFromString(areasPersonalizadasInput);
     if (areasArray.length === 0) newErrors.areas = "Pelo menos uma Área Interna deve ser definida.";
-
+    
     const outrasCategorias = arrayFromString(outrasCategoriasInput);
     const finaisCategoriasPrincipais = Array.from(new Set([...categoriasPrincipaisSelecionadas, ...outrasCategorias]));
-    if (finaisCategoriasPrincipais.length === 0) newErrors.categorias = "Selecione ou defina pelo menos uma Categoria Principal.";
+
+    if (finaisCategoriasPrincipais.length === 0) newErrors.categorias = "Selecione ou defina pelo menos uma Categoria Principal de Resíduo.";
     
     let finaisTiposReciclaveisPersonalizados = [];
     if (fazSeparacaoReciclaveisCompleta) {
@@ -203,25 +211,23 @@ export default function ClienteForm({
     
     let categoriaFinalCliente = selectedCategoriaCliente;
     if (selectedCategoriaCliente === NOVA_CATEGORIA_VALUE) {
-        if (!novaCategoriaInput.trim()) newErrors.novaCategoria = "Insira o nome da nova categoria.";
-        else categoriaFinalCliente = novaCategoriaInput.trim();
+        if (!novaCategoriaInput.trim()) { 
+            newErrors.novaCategoria = "Por favor, insira o nome da nova categoria.";
+        } else {
+            categoriaFinalCliente = novaCategoriaInput.trim();
+        }
     }
-    
+
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
+      setIsSubmitting(false);
       return;
     }
 
-    if (!isCnpjValid || !isCpfValid) {
-      return;
-    }
-
-    setIsSubmitting(true);
-    
     if (onNewCategoriaAdded && selectedCategoriaCliente === NOVA_CATEGORIA_VALUE) {
         onNewCategoriaAdded(categoriaFinalCliente);
     }
-    
+
     const limitesNumericos = {};
     categoriasParaLimites.forEach(key => {
         const valor = parseFloat(String(limitesPorResiduo[key] || '0').replace(',', '.'));
@@ -267,10 +273,11 @@ export default function ClienteForm({
   const handleCnpjChange = (e) => {
     const value = e.target.value;
     setCnpj(value);
+    clearError('cnpj');
     if (value.trim()) {
       setIsCnpjValid(validaDocumento(value));
     } else {
-      setIsCnpjValid(true);
+      setIsCnpjValid(true); // Evita mostrar erro de inválido quando o campo está vazio
     }
   };
 
@@ -289,8 +296,8 @@ export default function ClienteForm({
   const handleContratoTipoResiduoChange = (cI, tipo) => { const uC = [...contratosColetaForm]; const cT = uC[cI].tiposResiduoColetados || []; uC[cI].tiposResiduoColetados = cT.includes(tipo) ? cT.filter(t => t !== tipo) : [...cT, tipo]; setContratosColetaForm(uC); };
   const addContratoForm = () => { setContratosColetaForm([...contratosColetaForm, { empresaColetaId: '', tiposResiduoColetados: [] }]); };
   const removeContratoForm = (index) => { if (contratosColetaForm.length <= 1 && !isEditing && contratosColetaForm.length === 1 && contratosColetaForm[0].empresaColetaId === '' && contratosColetaForm[0].tiposResiduoColetados.length === 0) return; if (contratosColetaForm.length === 1) { setContratosColetaForm([{ empresaColetaId: '', tiposResiduoColetados: [] }]); return; } setContratosColetaForm(contratosColetaForm.filter((_, i) => i !== index)); };
-  const handleCategoriaPrincipalChange = (categoria) => { setCategoriasPrincipaisSelecionadas(prev => prev.includes(categoria) ? prev.filter(c => c !== categoria) : [...prev, categoria]); clearError('categorias'); };
-  const handleSubtipoComumChange = (subtipo, type) => { if (type === 'reciclavel') { setSubtiposComunsReciclaveisSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); clearError('subtiposReciclaveis'); } else if (type === 'organico') { setSubtiposComunsOrganicosSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); clearError('subtiposOrganicos'); } };
+  const handleCategoriaPrincipalChange = (categoria) => { setCategoriasPrincipaisSelecionadas(prev => prev.includes(categoria) ? prev.filter(c => c !== categoria) : [...prev, categoria]); };
+  const handleSubtipoComumChange = (subtipo, type) => { if (type === 'reciclavel') { setSubtiposComunsReciclaveisSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); } else if (type === 'organico') { setSubtiposComunsOrganicosSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); } };
   const opcoesResiduoContrato = useMemo(() => { const outrasCategorias = arrayFromString(outrasCategoriasInput); const todasCategorias = Array.from(new Set([...categoriasPrincipaisSelecionadas, ...outrasCategorias])); const categoriasBaseContrato = ["Reciclável", "Orgânico", "Rejeito"]; return todasCategorias.filter(op => categoriasBaseContrato.includes(op)); }, [categoriasPrincipaisSelecionadas, outrasCategoriasInput]);
   
   const inputStyle = "mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
@@ -322,14 +329,15 @@ export default function ClienteForm({
               {errors.nome && <p className="text-red-600 text-xs mt-1">{errors.nome}</p>}
             </div>
             <div>
-              <label htmlFor="form-cliente-cnpj" className={labelStyle}>CNPJ</label>
-              <input type="text" id="form-cliente-cnpj" value={cnpj} onChange={handleCnpjChange} className={`${inputStyle} ${!isCnpjValid ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'}`} />
-              {!isCnpjValid && <p className="text-red-600 text-xs mt-1">CNPJ inválido.</p>}
+              <label htmlFor="form-cliente-cnpj" className={labelStyle}>CNPJ*</label>
+              <input type="text" id="form-cliente-cnpj" value={cnpj} onChange={handleCnpjChange} required className={`${inputStyle} ${errors.cnpj || !isCnpjValid ? 'border-red-500' : 'border-gray-300'}`} />
+              {errors.cnpj && <p className="text-red-600 text-xs mt-1">{errors.cnpj}</p>}
+              {!errors.cnpj && !isCnpjValid && cnpj && <p className="text-red-600 text-xs mt-1">CNPJ inválido.</p>}
             </div>
             <div><label htmlFor="form-cliente-rede" className={labelStyle}>Rede / Grupo</label><input type="text" id="form-cliente-rede" value={rede} onChange={(e) => setRede(e.target.value)} className={inputStyle} /></div>
             <div>
               <label htmlFor="form-cliente-categoriaCliente" className={labelStyle}>Categoria do Cliente</label>
-              <select id="form-cliente-categoriaCliente" value={selectedCategoriaCliente} onChange={(e) => { const { value } = e.target; setSelectedCategoriaCliente(value); if (value !== NOVA_CATEGORIA_VALUE) { setNovaCategoriaInput(''); } }} className={inputStyle} >
+              <select id="form-cliente-categoriaCliente" value={selectedCategoriaCliente} onChange={(e) => { const { value } = e.target; setSelectedCategoriaCliente(value); if (value !== NOVA_CATEGORIA_VALUE) { setNovaCategoriaInput(''); } clearError('novaCategoria'); }} className={inputStyle} >
                 <option value="">Sem Categoria (começar do zero)</option>
                 {dropdownCategorias.map(cat => (<option key={cat} value={cat}>{cat}</option>))}
                 <option value={NOVA_CATEGORIA_VALUE}>+ Nova Categoria...</option>
@@ -338,13 +346,32 @@ export default function ClienteForm({
             {selectedCategoriaCliente === NOVA_CATEGORIA_VALUE && (
               <div> 
                 <label htmlFor="form-cliente-novaCategoria" className={labelStyle}>Nome da Nova Categoria*</label>
-                <input type="text" id="form-cliente-novaCategoria" value={novaCategoriaInput} onChange={(e) => {setNovaCategoriaInput(e.target.value); clearError('novaCategoria')}} placeholder="Digite o nome da nova categoria" className={`${inputStyle} ${errors.novaCategoria ? 'border-red-500' : 'border-gray-300'}`} required />
+                <input type="text" id="form-cliente-novaCategoria" value={novaCategoriaInput} onChange={(e) => { setNovaCategoriaInput(e.target.value); clearError('novaCategoria'); }} placeholder="Digite o nome da nova categoria" className={`${inputStyle} ${errors.novaCategoria ? 'border-red-500' : 'border-gray-300'}`} required />
                 {errors.novaCategoria && <p className="text-red-600 text-xs mt-1">{errors.novaCategoria}</p>}
               </div>
             )}
             <div className="md:col-span-2"><label htmlFor="form-cliente-endereco" className={labelStyle}>Endereço</label><input type="text" id="form-cliente-endereco" value={endereco} onChange={(e) => setEndereco(e.target.value)} className={inputStyle} /></div>
-            <div><label htmlFor="form-cliente-cidade" className={labelStyle}>Cidade</label><input type="text" id="form-cliente-cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} className={inputStyle} /></div>
-            <div><label htmlFor="form-cliente-estado" className={labelStyle}>Estado (UF)</label><input type="text" id="form-cliente-estado" value={estado} onChange={(e) => setEstado(e.target.value)} maxLength="2" className={inputStyle} /></div>
+            
+            <div className="md:col-span-2 flex items-start space-x-4">
+              <div className="flex-grow" style={{ flexBasis: '70%' }}>
+                <label htmlFor="form-cliente-cidade" className={labelStyle}>Cidade</label>
+                <input type="text" id="form-cliente-cidade" value={cidade} onChange={(e) => setCidade(e.target.value)} className={inputStyle} />
+              </div>
+              <div className="flex-shrink" style={{ flexBasis: '30%' }}>
+                <label htmlFor="form-cliente-estado" className={labelStyle}>Estado (UF)</label>
+                <select id="form-cliente-estado" value={estado} onChange={(e) => setEstado(e.target.value)} className={inputStyle}>
+                  <option value="">Selecione...</option>
+                  {estadosPrioritarios.map(uf => (
+                    <option key={`prioritario-${uf}`} value={uf}>{uf}</option>
+                  ))}
+                  <option disabled style={{ borderTop: '1px solid #ccc', marginTop: '4px', paddingTop: '4px' }}> </option>
+                  {estadosBrasileiros.map(uf => (
+                    <option key={`geral-${uf}`} value={uf}>{uf}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             <div className="md:col-span-2"><label htmlFor="form-cliente-logoUrl" className={labelStyle}>URL da Logo</label><input type="url" id="form-cliente-logoUrl" value={logoUrl} onChange={(e) => setLogoUrl(e.target.value)} placeholder="https://exemplo.com/logo.png" className={inputStyle} /></div>
             <div className="mt-2 self-center"><label htmlFor="form-cliente-ativoClienteForm" className="flex items-center text-sm font-medium text-gray-700"><input type="checkbox" id="form-cliente-ativoClienteForm" checked={ativo} onChange={(e) => setAtivo(e.target.checked)} className={`${checkboxStyle} mr-2`} />Cliente Ativo</label></div>
           </div>
@@ -354,28 +381,28 @@ export default function ClienteForm({
           <legend className="text-lg font-semibold text-indigo-700 px-2">Configurações de Resíduos</legend>
           <div className="space-y-4 pt-3">
             <div>
-              <label htmlFor="form-cliente-areasPersonalizadasInputForm" className={labelStyle}>Áreas Internas (separadas por vírgula)*</label>
-              <input type="text" id="form-cliente-areasPersonalizadasInputForm" value={areasPersonalizadasInput} onChange={(e) => {setAreasPersonalizadasInput(e.target.value); clearError('areas')}} required placeholder="Ex: Cozinha, Recepção" className={`${inputStyle} ${errors.areas ? 'border-red-500' : 'border-gray-300'}`} />
-              {errors.areas && <p className="text-red-600 text-xs mt-1">{errors.areas}</p>}
+                <label htmlFor="form-cliente-areasPersonalizadasInputForm" className={labelStyle}>Áreas Internas (separadas por vírgula)*</label>
+                <input type="text" id="form-cliente-areasPersonalizadasInputForm" value={areasPersonalizadasInput} onChange={(e) => { setAreasPersonalizadasInput(e.target.value); clearError('areas'); }} required placeholder="Ex: Cozinha, Recepção" className={`${inputStyle} ${errors.areas ? 'border-red-500' : 'border-gray-300'}`} />
+                {errors.areas && <p className="text-red-600 text-xs mt-1">{errors.areas}</p>}
             </div>
             <div>
                 <label className={labelStyle}>Categorias Principais de Resíduo Usadas*</label>
                 <div className="mt-2 space-y-2 sm:space-y-0 sm:flex sm:space-x-4 sm:flex-wrap items-center">
-                    {CATEGORIAS_PRINCIPAIS_PADRAO.map(categoria => (<label key={categoria} htmlFor={`form-cliente-cat-${categoria}`} className="flex items-center"><input type="checkbox" id={`form-cliente-cat-${categoria}`} value={categoria} checked={categoriasPrincipaisSelecionadas.includes(categoria)} onChange={() => handleCategoriaPrincipalChange(categoria)} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{categoria}</span></label>))}
+                    {CATEGORIAS_PRINCIPAIS_PADRAO.map(categoria => (<label key={categoria} htmlFor={`form-cliente-cat-${categoria}`} className="flex items-center"><input type="checkbox" id={`form-cliente-cat-${categoria}`} value={categoria} checked={categoriasPrincipaisSelecionadas.includes(categoria)} onChange={() => { handleCategoriaPrincipalChange(categoria); clearError('categorias'); }} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{categoria}</span></label>))}
                     <div className="flex items-center pt-2 sm:pt-0">
                         <label htmlFor="form-cliente-outrasCategorias" className="text-sm text-gray-700 mr-2 whitespace-nowrap">Outras (por vírgula):</label>
-                        <input type="text" id="form-cliente-outrasCategorias" value={outrasCategoriasInput} onChange={(e) => {setOutrasCategoriasInput(e.target.value); clearError('categorias')}} placeholder="Ex: Isopor, Lixo Eletrônico" className="p-2 border border-gray-300 rounded-md shadow-sm sm:text-sm w-full" />
+                        <input type="text" id="form-cliente-outrasCategorias" value={outrasCategoriasInput} onChange={(e) => { setOutrasCategoriasInput(e.target.value); clearError('categorias'); }} placeholder="Ex: Isopor, Lixo Eletrônico" className="p-2 border border-gray-300 rounded-md shadow-sm sm:text-sm w-full" />
                     </div>
                 </div>
                 {errors.categorias && <p className="text-red-600 text-xs mt-1">{errors.categorias}</p>}
             </div>
             <div className="border border-gray-200 p-3 rounded-md mt-4">
               <label htmlFor="fazSeparacaoReciclaveisCompleta" className="flex items-center text-sm font-medium text-gray-700"><input type="checkbox" id="fazSeparacaoReciclaveisCompleta" checked={fazSeparacaoReciclaveisCompleta} onChange={(e) => setFazSeparacaoReciclaveisCompleta(e.target.checked)} className={`${checkboxStyle} mr-2`} />Cliente detalha os tipos de <span className="font-bold ml-1">recicláveis</span>?</label>
-              {fazSeparacaoReciclaveisCompleta && ( <div className="mt-3 pl-2"> <label className={labelStyle}>Sub-tipos de Recicláveis Detalhados*</label> <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2"> {SUBTIPOS_RECICLAVEIS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsReciclaveisSelecionados.includes(subtipo)} onChange={() => handleSubtipoComumChange(subtipo, 'reciclavel')} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))} </div> <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposReciclaveisInput} onChange={(e) => {setOutrosSubtiposReciclaveisInput(e.target.value); clearError('subtiposReciclaveis')}} placeholder="Ex: Isopor, Embalagem Longa Vida" className={`${inputStyle} mt-1`} /></div> {errors.subtiposReciclaveis && <p className="text-red-600 text-xs mt-1">{errors.subtiposReciclaveis}</p>}</div> )}
+              {fazSeparacaoReciclaveisCompleta && ( <div className="mt-3 pl-2"> <label className={labelStyle}>Sub-tipos de Recicláveis Detalhados*</label> <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2"> {SUBTIPOS_RECICLAVEIS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsReciclaveisSelecionados.includes(subtipo)} onChange={() => { handleSubtipoComumChange(subtipo, 'reciclavel'); clearError('subtiposReciclaveis'); }} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))} </div> <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposReciclaveisInput} onChange={(e) => { setOutrosSubtiposReciclaveisInput(e.target.value); clearError('subtiposReciclaveis'); }} placeholder="Ex: Isopor, Embalagem Longa Vida" className={`${inputStyle} mt-1`} /></div> {errors.subtiposReciclaveis && <p className="text-red-600 text-xs mt-1">{errors.subtiposReciclaveis}</p>} </div> )}
             </div>
             <div className="border border-gray-200 p-3 rounded-md mt-4">
               <label htmlFor="fazSeparacaoOrganicosCompleta" className="flex items-center text-sm font-medium text-gray-700"><input type="checkbox" id="fazSeparacaoOrganicosCompleta" checked={fazSeparacaoOrganicosCompleta} onChange={(e) => setFazSeparacaoOrganicosCompleta(e.target.checked)} className={`${checkboxStyle} mr-2`} />Cliente detalha os tipos de <span className="font-bold ml-1">orgânicos</span>?</label>
-              {fazSeparacaoOrganicosCompleta && ( <div className="mt-3 pl-2"> <label className={labelStyle}>Sub-tipos de Orgânicos Detalhados*</label> <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2"> {SUBTIPOS_ORGANICOS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsOrganicosSelecionados.includes(subtipo)} onChange={() => handleSubtipoComumChange(subtipo, 'organico')} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))} </div> <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposOrganicosInput} onChange={(e) => {setOutrosSubtiposOrganicosInput(e.target.value); clearError('subtiposOrganicos')}} placeholder="Ex: Aparas, Cinzas" className={`${inputStyle} mt-1`} /></div> {errors.subtiposOrganicos && <p className="text-red-600 text-xs mt-1">{errors.subtiposOrganicos}</p>} </div> )}
+              {fazSeparacaoOrganicosCompleta && ( <div className="mt-3 pl-2"> <label className={labelStyle}>Sub-tipos de Orgânicos Detalhados*</label> <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2"> {SUBTIPOS_ORGANICOS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsOrganicosSelecionados.includes(subtipo)} onChange={() => { handleSubtipoComumChange(subtipo, 'organico'); clearError('subtiposOrganicos'); }} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))} </div> <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposOrganicosInput} onChange={(e) => { setOutrosSubtiposOrganicosInput(e.target.value); clearError('subtiposOrganicos'); }} placeholder="Ex: Aparas, Cinzas" className={`${inputStyle} mt-1`} /></div>{errors.subtiposOrganicos && <p className="text-red-600 text-xs mt-1">{errors.subtiposOrganicos}</p>} </div> )}
             </div>
             
             <div className="border border-gray-200 p-3 rounded-md mt-4 bg-amber-50">
@@ -466,3 +493,4 @@ export default function ClienteForm({
     </form>
   );
 }
+
