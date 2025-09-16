@@ -1,3 +1,15 @@
+# Framework da API (versões importantes para compatibilidade)
 Flask==2.2.2
-firebase-admin==6.1.0
 Werkzeug==2.2.2
+Jinja2==3.1.2
+
+# Conexão com o Firebase
+firebase-admin==6.1.0
+
+# Geração de PDF
+pdfkit==1.0.0
+
+# Geração de Gráficos e Manipulação de Dados (sem versões fixas)
+matplotlib
+seaborn
+pandas

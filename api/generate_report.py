@@ -1,117 +1,96 @@
 import os
 import json
 import datetime
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file
 import firebase_admin
 from firebase_admin import credentials, firestore
 
-# Inicializa o aplicativo Flask
+# Adiciona o diretório 'src' ao path para que possamos importar o ReportGenerator
+import sys
+# O '..' foi removido, pois 'src' agora é uma subpasta de 'api'
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
+from report_generator import ReportGenerator
+
+# --- INICIALIZAÇÃO (sem alterações) ---
 app = Flask(__name__)
-
-# --- INICIALIZAÇÃO DO FIREBASE COM COMENTÁRIOS DETALHADOS ---
-# Pega o conteúdo da variável de ambiente que criamos na Vercel.
 service_account_info_json = os.getenv('FIREBASE_SERVICE_ACCOUNT')
-db = None # Define db como None inicialmente para podermos verificar a conexão
-
-# Verifica se a variável de ambiente foi carregada corretamente.
+db = None
 if service_account_info_json:
     try:
-        # Converte o texto JSON da variável de ambiente para um dicionário Python.
         service_account_info = json.loads(service_account_info_json)
-        # Usa o dicionário para criar as credenciais.
         cred = credentials.Certificate(service_account_info)
-        
-        # Inicializa o app do Firebase, mas somente se ainda não foi inicializado.
-        # Isso é importante para evitar erros em ambientes serverless.
         if not firebase_admin._apps:
             firebase_admin.initialize_app(cred)
-        
-        # Pega uma referência para o banco de dados Firestore.
         db = firestore.client()
     except Exception as e:
         print(f"ERRO DE INICIALIZAÇÃO DO FIREBASE: {e}")
-else:
-    print("Variável de ambiente FIREBASE_SERVICE_ACCOUNT não encontrada.")
-# --- FIM DA INICIALIZAÇÃO ---
 
-
-# Define a rota principal da nossa API.
-# A Vercel direcionará requisições para /api/generate_report para esta função.
-# O "methods=['POST']" significa que esta rota só aceita requisições do tipo POST,
-# que é o método que usaremos para enviar os filtros do front-end.
 @app.route('/api/generate_report', methods=['POST'])
 def handle_report_generation():
     if not db:
-        return jsonify({"error": "A conexão com o banco de dados falhou."}), 500
+        return "A conexão com o banco de dados falhou.", 500
 
-    # Pega os dados (filtros) que o front-end enviou na requisição.
     filters = request.json
     cliente_ids = filters.get('selectedClienteIds', [])
     anos = filters.get('selectedYears', [])
-    # No JS, os meses são 0-11. No Python datetime, são 1-12.
-    # Adicionamos +1 para compatibilizar.
-    meses = [m + 1 for m in filters.get('selectedMonths', [])]
-    
-    # --- INÍCIO DOS LOGS DE DEBUG ---
-    print("--- INÍCIO DA EXECUÇÃO ---")
-    print(f"Filtros Recebidos: Clientes={cliente_ids}, Anos={anos}, Meses={meses}")
-    # --- FIM DOS LOGS DE DEBUG ---
+    meses_js = filters.get('selectedMonths', [])
+    meses_py = [m + 1 for m in meses_js]
 
     try:
+        # --- PASSO 1: BUSCAR DADOS DOS CLIENTES ---
+        cliente_docs = db.collection('clientes').where('__name__', 'in', cliente_ids).stream()
+        clientes_data = {doc.id: doc.to_dict() for doc in cliente_docs}
+        primeiro_cliente_data = next(iter(clientes_data.values()), {})
+        cliente_nome = primeiro_cliente_data.get('nome', 'Cliente')
+
+        # --- PASSO 2: BUSCAR DADOS DE RESÍDUOS ---
         query = db.collection_group('wasteRecords').where('clienteId', 'in', cliente_ids)
-        
-        # Convertemos o resultado para uma lista para podermos inspecionar
         docs = list(query.stream())
         
-        # --- LOG DE DEBUG 1 ---
-        print(f"LOG 1: Firestore retornou {len(docs)} documentos para o(s) cliente(s) selecionado(s) (ANTES da filtragem de data).")
-
         filtered_records = []
-        
-        # --- LOG DE DEBUG 2 ---
-        print("LOG 2: Verificando cada documento contra os filtros de data...")
         for doc in docs:
             record = doc.to_dict()
-            timestamp = record.get('timestamp', 0)
-            record_date = datetime.datetime.fromtimestamp(timestamp / 1000)
-            
-            # Mostrar a data de cada registro que está sendo verificado.
-            print(f"  - Verificando registro com data: {record_date.strftime('%Y-%m-%d')}")
-            
-            if record_date.year in anos and record_date.month in meses:
+            record_date = datetime.datetime.fromtimestamp(record['timestamp'] / 1000)
+            if record_date.year in anos and record_date.month in meses_py:
                  filtered_records.append(record)
-                 # --- LOG DE DEBUG 3 ---
-                 print(f"    --> ACEITO! Este registro está no período desejado.")
 
-        # --- LOG DE DEBUG 4 ---
-        print(f"LOG 4: Total de registros APÓS a filtragem de data: {len(filtered_records)}")
-
-        # --- PROCESSAMENTO (idêntico ao da versão de debug anterior) ---
+        # --- PASSO 3: PROCESSAR DADOS ---
         total_geral_kg = sum(rec.get('peso', 0) for rec in filtered_records)
         total_organico_kg = sum(rec.get('peso', 0) for rec in filtered_records if 'orgânico' in rec.get('wasteType', '').lower())
         total_reciclavel_kg = sum(rec.get('peso', 0) for rec in filtered_records if 'reciclável' in rec.get('wasteType', '').lower())
         total_rejeito_kg = sum(rec.get('peso', 0) for rec in filtered_records if 'rejeito' in rec.get('wasteType', '').lower())
         
-        p_organico = (total_organico_kg / total_geral_kg * 100) if total_geral_kg > 0 else 0
-        p_reciclavel = (total_reciclavel_kg / total_geral_kg * 100) if total_geral_kg > 0 else 0
-        p_rejeito = (total_rejeito_kg / total_geral_kg * 100) if total_geral_kg > 0 else 0
-
-        report_data = {
-            "visao_geral": {
-                "total_residuos": f"{total_geral_kg:.2f} Kg",
-                "organico_kg": f"{total_organico_kg:.2f} Kg",
-                "organico_percent": f"{p_organico:.2f}%",
-                "reciclavel_kg": f"{total_reciclavel_kg:.2f} Kg",
-                "reciclavel_percent": f"{p_reciclavel:.2f}%",
-                "rejeito_kg": f"{total_rejeito_kg:.2f} Kg",
-                "rejeito_percent": f"{p_rejeito:.2f}%"
-            },
-            "debug_info": { "records_found": len(filtered_records) }
+        # --- PASSO 4: ESTRUTURAR DADOS PARA O TEMPLATE ---
+        dados_para_template = {
+            'cliente_nome': cliente_nome,
+            'empresa_nome': 'CtrlWaste',
+            'periodo': f"{meses_js[0]+1}/{anos[0]} a {meses_js[-1]+1}/{anos[-1]}",
+            'resumo_executivo': f"Este relatório apresenta a visão consolidada da geração de resíduos para {cliente_nome} durante o período selecionado, detalhando a composição e os totais gerados.",
+            'receita_total': f"{total_geral_kg:.2f} Kg",
+            'crescimento_geral': f"{((total_organico_kg+total_reciclavel_kg)/total_geral_kg*100):.2f}%" if total_geral_kg > 0 else "0.00%",
+            'margem_lucro': f"{(total_reciclavel_kg/total_geral_kg*100):.2f}%" if total_geral_kg > 0 else "0.00%",
+            'satisfacao_cliente': f"{(total_rejeito_kg/total_geral_kg*100):.2f}%" if total_geral_kg > 0 else "0.00%",
+            'indicadores_principais': [
+                {'nome': 'Total de Resíduos', 'valor': f'{total_geral_kg:.2f} Kg', 'variacao': ''},
+                {'nome': '% Orgânico', 'valor': f'{(total_organico_kg/total_geral_kg*100):.2f}%' if total_geral_kg > 0 else '0.00%', 'variacao': f'{total_organico_kg:.2f} Kg'},
+                {'nome': '% Reciclável', 'valor': f'{(total_reciclavel_kg/total_geral_kg*100):.2f}%' if total_geral_kg > 0 else '0.00%', 'variacao': f'{total_reciclavel_kg:.2f} Kg'},
+                {'nome': '% Rejeito', 'valor': f'{(total_rejeito_kg/total_geral_kg*100):.2f}%' if total_geral_kg > 0 else '0.00%', 'variacao': f'{total_rejeito_kg:.2f} Kg'}
+            ],
+            'grafico_principal': None, 'destaques': [], 'dados_tabela': None, 'analise': '', 'recomendacoes': [], 'proximos_passos': []
         }
+
+        # --- PASSO 5: GERAR E RETORNAR O PDF ---
+        generator = ReportGenerator(templates_dir="templates", output_dir="output")
+        nome_arquivo = f"relatorio_{cliente_nome.replace(' ', '_')}_{datetime.date.today()}.pdf"
         
-        print("--- FIM DA EXECUÇÃO ---")
-        return jsonify(report_data)
+        caminho_pdf = generator.create_report(
+            template_name='relatorio_executivo.html',
+            data=dados_para_template,
+            output_filename=nome_arquivo
+        )
+        
+        return send_file(caminho_pdf, mimetype='application/pdf', as_attachment=True, download_name=nome_arquivo)
 
     except Exception as e:
         print(f"ERRO DURANTE EXECUÇÃO: {e}")
-        return jsonify({"error": "Ocorreu um erro ao processar os dados."}), 500
+        return f"Ocorreu um erro ao gerar o relatório: {e}", 500
