@@ -9,7 +9,10 @@ firebase-admin==6.1.0
 # Geração de PDF
 pdfkit==1.0.0
 
-# Geração de Gráficos (versões mais antigas e potencialmente menores)
+# Dependência crucial para compilação
+cffi==1.15.1
+
+# Geração de Gráficos e Dados (versões otimizadas)
 matplotlib==3.5.3
 seaborn==0.11.2
 pandas==1.5.3
