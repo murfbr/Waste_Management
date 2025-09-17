@@ -1,43 +1,117 @@
 import os
 import datetime
-from flask import Flask, jsonify
+from flask import Flask, request, jsonify
+from flask_cors import CORS # Importa a biblioteca CORS
+import firebase_admin
+from firebase_admin import credentials, firestore
 from google.cloud import storage
 
+# Importa a nossa classe de geração de relatórios do arquivo vizinho
+from report_generator import ReportGenerator
+
+# --- INICIALIZAÇÃO DO SERVIÇO ---
 app = Flask(__name__)
 
-# Inicialização ultra-simplificada
+# Habilita o CORS para o nosso aplicativo, permitindo que o front-end na Vercel
+# faça requisições diretamente para este serviço no Cloud Run.
+CORS(app)
+
+# O Cloud Run gerencia a autenticação automaticamente
+cred = credentials.ApplicationDefault()
+firebase_admin.initialize_app(cred)
+db = firestore.client()
 storage_client = storage.Client()
+
+# Pega o nome do bucket da variável de ambiente que configuramos no Cloud Run
 BUCKET_NAME = os.getenv('GCS_BUCKET_NAME')
 
 @app.route('/create-report-job', methods=['POST'])
 def create_report_job():
-    # A única coisa que este endpoint faz é tentar escrever um arquivo.
+    """
+    Endpoint principal que recebe o pedido, gera o relatório, o salva no Storage
+    e retorna um link de download seguro.
+    """
     if not BUCKET_NAME:
-        return jsonify({"status": "error", "message": "Bucket não configurado."}), 500
+        return jsonify({"status": "error", "message": "Nome do bucket não configurado."}), 500
+
+    filters = request.json
+    cliente_ids = filters.get('selectedClienteIds', [])
+    anos = filters.get('selectedYears', [])
+    meses_js = filters.get('selectedMonths', [])
+    meses_py = [m + 1 for m in meses_js]
 
     try:
-        print(f"--- INICIANDO TESTE DE ESCRITA NO BUCKET: {BUCKET_NAME} ---")
+        # --- PASSO 1: BUSCAR DADOS ---
+        cliente_docs = db.collection('clientes').where('__name__', 'in', cliente_ids).stream()
+        primeiro_cliente_data = next(iter({doc.id: doc.to_dict() for doc in cliente_docs}.values()), {})
+        cliente_nome = primeiro_cliente_data.get('nome', 'Cliente')
 
-        bucket = storage_client.bucket(BUCKET_NAME)
-        file_name = f"teste-de-permissao-{datetime.datetime.now().isoformat()}.txt"
-        blob = bucket.blob(file_name)
+        query = db.collection_group('wasteRecords').where('clienteId', 'in', cliente_ids)
+        docs = list(query.stream())
+        
+        filtered_records = [
+            doc.to_dict() for doc in docs 
+            if datetime.datetime.fromtimestamp(doc.to_dict()['timestamp'] / 1000).year in anos and 
+               datetime.datetime.fromtimestamp(doc.to_dict()['timestamp'] / 1000).month in meses_py
+        ]
 
-        blob.upload_from_string(
-            "Teste de escrita bem-sucedido.",
-            content_type="text/plain"
+        # --- PASSO 2: PROCESSAR DADOS ---
+        total_geral_kg = sum(rec.get('peso', 0) for rec in filtered_records)
+        total_organico_kg = sum(rec.get('peso', 0) for rec in filtered_records if 'orgânico' in rec.get('wasteType', '').lower())
+        total_reciclavel_kg = sum(rec.get('peso', 0) for rec in filtered_records if 'reciclável' in rec.get('wasteType', '').lower())
+        total_rejeito_kg = sum(rec.get('peso', 0) for rec in filtered_records if 'rejeito' in rec.get('wasteType', '').lower())
+        
+        # --- PASSO 3: ESTRUTURAR DADOS PARA O TEMPLATE ---
+        dados_para_template = {
+            'cliente_nome': cliente_nome, 'empresa_nome': 'CtrlWaste', 'periodo': f"{meses_js[0]+1}/{anos[0]}",
+            'resumo_executivo': f"Relatório de geração de resíduos para {cliente_nome} no período selecionado.",
+            'indicadores_principais': [
+                {'nome': 'Total de Resíduos', 'valor': f'{total_geral_kg:.2f} Kg', 'variacao': ''},
+                {'nome': '% Orgânico', 'valor': f'{(total_organico_kg/total_geral_kg*100):.2f}%' if total_geral_kg > 0 else '0.00%', 'variacao': f'{total_organico_kg:.2f} Kg'},
+                {'nome': '% Reciclável', 'valor': f'{(total_reciclavel_kg/total_geral_kg*100):.2f}%' if total_geral_kg > 0 else '0.00%', 'variacao': f'{total_reciclavel_kg:.2f} Kg'},
+                {'nome': '% Rejeito', 'valor': f'{(total_rejeito_kg/total_geral_kg*100):.2f}%' if total_geral_kg > 0 else '0.00%', 'variacao': f'{total_rejeito_kg:.2f} Kg'}
+            ],
+            # Campos extras do template para evitar erros
+            'receita_total': f"{total_geral_kg:.2f} Kg", 'crescimento_geral': " ", 'margem_lucro': " ", 'satisfacao_cliente': " ",
+            'grafico_principal': None, 'destaques': [], 'dados_tabela': None, 'analise': '', 'recomendacoes': [], 'proximos_passos': []
+        }
+
+        # --- PASSO 4: GERAR O PDF ---
+        generator = ReportGenerator()
+        nome_arquivo_pdf = f"relatorio_{cliente_nome.replace(' ', '_')}_{datetime.date.today()}.pdf"
+        caminho_pdf_local = generator.create_report(
+            template_name='relatorio_executivo.html', data=dados_para_template, output_filename=nome_arquivo_pdf
         )
-
-        print(f"--- SUCESSO! Arquivo '{file_name}' criado. ---")
-        return jsonify({
-            "status": "success",
-            "message": "SUCESSO: O teste de escrita no bucket funcionou. A permissão básica está correta.",
-            "file_created": file_name
-        }), 200
+        
+        # --- PASSO 5: UPLOAD PARA O CLOUD STORAGE ---
+        bucket = storage_client.bucket(BUCKET_NAME)
+        nome_arquivo_nuvem = f"reports/{nome_arquivo_pdf}"
+        blob = bucket.blob(nome_arquivo_nuvem)
+        blob.upload_from_filename(caminho_pdf_local, content_type='application/pdf')
+        
+        # --- PASSO 6: GERAR LINK DE DOWNLOAD (VERSÃO FINAL) ---
+        # A biblioteca agora usará a permissão "Service Account Token Creator"
+        # que concedemos para assinar a URL usando a API IAM interna do Google.
+        download_url = blob.generate_signed_url(
+            version="v4",
+            expiration=datetime.timedelta(hours=1),
+            method="GET",
+        )
+        
+        print(f"Relatório '{nome_arquivo_nuvem}' salvo no bucket '{BUCKET_NAME}'.")
+        
+        return jsonify({ "status": "success", "downloadUrl": download_url }), 200
 
     except Exception as e:
-        # Se falhar aqui, o erro será sobre a permissão de escrita, e não de assinatura.
-        print(f"--- FALHA NO TESTE DE ESCRITA: {e} ---")
+        print(f"ERRO CRÍTICO DURANTE A GERAÇÃO DO RELATÓRIO: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
+
+@app.route('/', methods=['GET'])
+def health_check():
+    """
+    Um endpoint simples para verificar se o serviço está no ar e respondendo.
+    """
+    return "Report service is healthy and running.", 200
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)), debug=True)
