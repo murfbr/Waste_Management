@@ -11,15 +11,21 @@ from report_generator import ReportGenerator
 # --- INICIALIZAÇÃO DO SERVIÇO ---
 app = Flask(__name__)
 
+# O Cloud Run gerencia a autenticação automaticamente, então usamos as credenciais padrão do ambiente.
 cred = credentials.ApplicationDefault()
 firebase_admin.initialize_app(cred)
 db = firestore.client()
 storage_client = storage.Client()
 
+# Pega o nome do bucket da variável de ambiente que configuramos no Cloud Run
 BUCKET_NAME = os.getenv('GCS_BUCKET_NAME')
 
 @app.route('/create-report-job', methods=['POST'])
 def create_report_job():
+    """
+    Endpoint principal que recebe o pedido, gera o relatório, o salva no Storage
+    e retorna um link de download seguro.
+    """
     if not BUCKET_NAME:
         return jsonify({"status": "error", "message": "Nome do bucket não configurado."}), 500
 
@@ -60,6 +66,7 @@ def create_report_job():
                 {'nome': '% Reciclável', 'valor': f'{(total_reciclavel_kg/total_geral_kg*100):.2f}%' if total_geral_kg > 0 else '0.00%', 'variacao': f'{total_reciclavel_kg:.2f} Kg'},
                 {'nome': '% Rejeito', 'valor': f'{(total_rejeito_kg/total_geral_kg*100):.2f}%' if total_geral_kg > 0 else '0.00%', 'variacao': f'{total_rejeito_kg:.2f} Kg'}
             ],
+            # Campos extras do template para evitar erros
             'receita_total': f"{total_geral_kg:.2f} Kg", 'crescimento_geral': " ", 'margem_lucro': " ", 'satisfacao_cliente': " ",
             'grafico_principal': None, 'destaques': [], 'dados_tabela': None, 'analise': '', 'recomendacoes': [], 'proximos_passos': []
         }
@@ -77,8 +84,21 @@ def create_report_job():
         blob = bucket.blob(nome_arquivo_nuvem)
         blob.upload_from_filename(caminho_pdf_local, content_type='application/pdf')
         
-        # --- PASSO 6: GERAR LINK DE DOWNLOAD ---
-        download_url = blob.generate_signed_url(expiration=datetime.timedelta(hours=1))
+        # --- PASSO 6: GERAR LINK DE DOWNLOAD (VERSÃO CORRIGIDA) ---
+        # Primeiro, pegamos o email da conta de serviço que está rodando o nosso código.
+        # Esta é a identidade que já tem a permissão de "Token Creator".
+        # Usamos 'get_credential()' para acessar as credenciais carregadas automaticamente.
+        service_account_email = firebase_admin.credentials.ApplicationDefault().get_credential().service_account_email
+
+        # Agora, geramos a URL, especificando explicitamente quem deve "assiná-la".
+        download_url = blob.generate_signed_url(
+            expiration=datetime.timedelta(hours=1),
+            service_account_email=service_account_email,
+            access_token=None, # Importante usar o fluxo de assinatura, não um token de acesso.
+            version="v4"
+        )
+        
+        print(f"Relatório '{nome_arquivo_nuvem}' salvo no bucket '{BUCKET_NAME}'.")
         
         return jsonify({ "status": "success", "downloadUrl": download_url }), 200
 
