@@ -1,96 +1,56 @@
 import os
-import json
-import datetime
-from flask import Flask, request, jsonify, send_file
-import firebase_admin
-from firebase_admin import credentials, firestore
+import requests
+from flask import Flask, request, jsonify
 
-# Adiciona o diretório 'src' ao path para que possamos importar o ReportGenerator
-import sys
-# O '..' foi removido, pois 'src' agora é uma subpasta de 'api'
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'src')))
-from report_generator import ReportGenerator
-
-# --- INICIALIZAÇÃO (sem alterações) ---
 app = Flask(__name__)
-service_account_info_json = os.getenv('FIREBASE_SERVICE_ACCOUNT')
-db = None
-if service_account_info_json:
-    try:
-        service_account_info = json.loads(service_account_info_json)
-        cred = credentials.Certificate(service_account_info)
-        if not firebase_admin._apps:
-            firebase_admin.initialize_app(cred)
-        db = firestore.client()
-    except Exception as e:
-        print(f"ERRO DE INICIALIZAÇÃO DO FIREBASE: {e}")
+
+# O endereço da nossa fábrica no Google Cloud Run que acabamos de publicar.
+FACTORY_URL = "https://report-service-5675939765.us-east1.run.app/create-report-job"
 
 @app.route('/api/generate_report', methods=['POST'])
 def handle_report_generation():
-    if not db:
-        return "A conexão com o banco de dados falhou.", 500
-
+    """
+    Esta função agora atua como um proxy. Ela recebe a requisição do front-end
+    e a repassa de forma segura para o nosso serviço de geração de relatórios.
+    """
+    # 1. Pega os filtros do corpo da requisição original (enviada pelo seu app React)
     filters = request.json
-    cliente_ids = filters.get('selectedClienteIds', [])
-    anos = filters.get('selectedYears', [])
-    meses_js = filters.get('selectedMonths', [])
-    meses_py = [m + 1 for m in meses_js]
+    
+    if not filters:
+        return jsonify({"error": "Corpo da requisição está vazio."}), 400
 
     try:
-        # --- PASSO 1: BUSCAR DADOS DOS CLIENTES ---
-        cliente_docs = db.collection('clientes').where('__name__', 'in', cliente_ids).stream()
-        clientes_data = {doc.id: doc.to_dict() for doc in cliente_docs}
-        primeiro_cliente_data = next(iter(clientes_data.values()), {})
-        cliente_nome = primeiro_cliente_data.get('nome', 'Cliente')
-
-        # --- PASSO 2: BUSCAR DADOS DE RESÍDUOS ---
-        query = db.collection_group('wasteRecords').where('clienteId', 'in', cliente_ids)
-        docs = list(query.stream())
+        print(f"Encaminhando pedido para a fábrica: {FACTORY_URL}")
         
-        filtered_records = []
-        for doc in docs:
-            record = doc.to_dict()
-            record_date = datetime.datetime.fromtimestamp(record['timestamp'] / 1000)
-            if record_date.year in anos and record_date.month in meses_py:
-                 filtered_records.append(record)
-
-        # --- PASSO 3: PROCESSAR DADOS ---
-        total_geral_kg = sum(rec.get('peso', 0) for rec in filtered_records)
-        total_organico_kg = sum(rec.get('peso', 0) for rec in filtered_records if 'orgânico' in rec.get('wasteType', '').lower())
-        total_reciclavel_kg = sum(rec.get('peso', 0) for rec in filtered_records if 'reciclável' in rec.get('wasteType', '').lower())
-        total_rejeito_kg = sum(rec.get('peso', 0) for rec in filtered_records if 'rejeito' in rec.get('wasteType', '').lower())
+        # 2. Faz uma nova requisição POST para a URL da nossa fábrica,
+        # repassando exatamente os mesmos filtros.
+        # O timeout de 300 segundos (5 minutos) garante que a fábrica tenha tempo de processar.
+        response = requests.post(FACTORY_URL, json=filters, timeout=300)
         
-        # --- PASSO 4: ESTRUTURAR DADOS PARA O TEMPLATE ---
-        dados_para_template = {
-            'cliente_nome': cliente_nome,
-            'empresa_nome': 'CtrlWaste',
-            'periodo': f"{meses_js[0]+1}/{anos[0]} a {meses_js[-1]+1}/{anos[-1]}",
-            'resumo_executivo': f"Este relatório apresenta a visão consolidada da geração de resíduos para {cliente_nome} durante o período selecionado, detalhando a composição e os totais gerados.",
-            'receita_total': f"{total_geral_kg:.2f} Kg",
-            'crescimento_geral': f"{((total_organico_kg+total_reciclavel_kg)/total_geral_kg*100):.2f}%" if total_geral_kg > 0 else "0.00%",
-            'margem_lucro': f"{(total_reciclavel_kg/total_geral_kg*100):.2f}%" if total_geral_kg > 0 else "0.00%",
-            'satisfacao_cliente': f"{(total_rejeito_kg/total_geral_kg*100):.2f}%" if total_geral_kg > 0 else "0.00%",
-            'indicadores_principais': [
-                {'nome': 'Total de Resíduos', 'valor': f'{total_geral_kg:.2f} Kg', 'variacao': ''},
-                {'nome': '% Orgânico', 'valor': f'{(total_organico_kg/total_geral_kg*100):.2f}%' if total_geral_kg > 0 else '0.00%', 'variacao': f'{total_organico_kg:.2f} Kg'},
-                {'nome': '% Reciclável', 'valor': f'{(total_reciclavel_kg/total_geral_kg*100):.2f}%' if total_geral_kg > 0 else '0.00%', 'variacao': f'{total_reciclavel_kg:.2f} Kg'},
-                {'nome': '% Rejeito', 'valor': f'{(total_rejeito_kg/total_geral_kg*100):.2f}%' if total_geral_kg > 0 else '0.00%', 'variacao': f'{total_rejeito_kg:.2f} Kg'}
-            ],
-            'grafico_principal': None, 'destaques': [], 'dados_tabela': None, 'analise': '', 'recomendacoes': [], 'proximos_passos': []
-        }
-
-        # --- PASSO 5: GERAR E RETORNAR O PDF ---
-        generator = ReportGenerator(templates_dir="templates", output_dir="output")
-        nome_arquivo = f"relatorio_{cliente_nome.replace(' ', '_')}_{datetime.date.today()}.pdf"
+        # 3. Força a verificação de erro na resposta da fábrica.
+        # Se a fábrica retornou um erro (ex: status 500), isso vai gerar uma exceção.
+        response.raise_for_status()
         
-        caminho_pdf = generator.create_report(
-            template_name='relatorio_executivo.html',
-            data=dados_para_template,
-            output_filename=nome_arquivo
-        )
+        # 4. Se tudo deu certo na fábrica, ela nos devolve um JSON com o 'downloadUrl'.
+        # Nós simplesmente repassamos essa resposta de volta para o front-end.
+        factory_data = response.json()
+        print(f"Fábrica respondeu com sucesso: {factory_data}")
         
-        return send_file(caminho_pdf, mimetype='application/pdf', as_attachment=True, download_name=nome_arquivo)
+        return jsonify(factory_data), 200
 
+    except requests.exceptions.HTTPError as http_err:
+        # Se a fábrica retornou um erro HTTP (4xx ou 5xx)
+        print(f"Erro HTTP da fábrica: {http_err.response.status_code} - {http_err.response.text}")
+        return jsonify({
+            "error": "O serviço de geração de relatórios retornou um erro.",
+            "details": http_err.response.text
+        }), http_err.response.status_code
+        
+    except requests.exceptions.RequestException as req_err:
+        # Se houve um erro de conexão com a fábrica (ex: timeout)
+        print(f"Erro de conexão com a fábrica: {req_err}")
+        return jsonify({"error": "Não foi possível conectar ao serviço de geração de relatórios."}), 502 # Bad Gateway
+        
     except Exception as e:
-        print(f"ERRO DURANTE EXECUÇÃO: {e}")
-        return f"Ocorreu um erro ao gerar o relatório: {e}", 500
+        print(f"Erro inesperado no proxy: {e}")
+        return jsonify({"error": "Um erro inesperado ocorreu."}), 500

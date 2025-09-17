@@ -1,0 +1,28 @@
+# --- Framework da API e Servidor Web ---
+# O Flask é o "cérebro" que nos permite criar a API e definir rotas como /create-report-job.
+Flask==2.2.2
+# O Werkzeug é um "kit de ferramentas" essencial do qual o Flask depende para lidar com requisições web.
+Werkzeug==2.2.2
+# O Gunicorn é o "motor industrial" que irá rodar nosso aplicativo Flask de forma eficiente no ambiente de produção do Google Cloud Run.
+gunicorn==20.1.0
+
+# --- Conexão com Google Cloud e Firebase ---
+firebase-admin==6.1.0
+# Biblioteca específica para fazer o upload do PDF final para o nosso "Depósito" no Google Cloud Storage.
+google-cloud-storage==2.10.0
+
+# --- Geração de PDF ---
+# É o motor de templates que preenche o nosso HTML com os dados (ex: substitui {{ cliente_nome }} pelo nome real).
+Jinja2==3.1.2
+# A biblioteca que "conversa" com o programa wkhtmltopdf para converter o HTML preenchido em um arquivo PDF.
+pdfkit==1.0.0
+
+# --- Processamento de Dados e Geração de Gráficos ---
+matplotlib==3.5.3
+# Construído sobre o Matplotlib, o Seaborn facilita a criação de gráficos estatísticos visualmente mais atraentes.
+seaborn==0.11.2
+# A ferramenta mais poderosa para manipulação de dados em Python. Usaremos para organizar os dados do Firestore antes de gerar os gráficos.
+pandas==1.5.3
+
+# --- Dependência Essencial de Compilação ---
+cffi==1.15.1
