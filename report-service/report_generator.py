@@ -26,14 +26,19 @@ class ReportGenerator:
         }
 
     def create_report(self, template_name: str, data: dict, output_filename: str) -> str:
+        # A CORREÇÃO ESTÁ AQUI: Usamos o caminho absoluto do diretório static
+        # para garantir que o wkhtmltopdf o encontre dentro do container.
+        data['static_url'] = f"file://{self.static_dir.resolve()}/"
         data['data_geracao'] = datetime.datetime.now().strftime('%d/%m/%Y %H:%M')
-        data['static_url'] = f"file://{self.static_dir.resolve()}"
+        
         template = self.jinja_env.get_template(template_name)
         html_content = template.render(data)
         pdf_path = self.output_dir / output_filename
         
         try:
-            pdfkit.from_string(html_content, str(pdf_path), options=self.pdf_options)
+            # Passamos o CSS explicitamente como uma opção para maior robustez
+            css_path = self.static_dir / 'css' / 'report_styles.css'
+            pdfkit.from_string(html_content, str(pdf_path), options=self.pdf_options, css=str(css_path))
             print(f"Relatório gerado com sucesso em: {pdf_path}")
             return str(pdf_path)
         except Exception as e:
