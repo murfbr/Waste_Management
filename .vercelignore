@@ -1,0 +1,38 @@
+# Ignorar arquivos comuns do Git e de ambientes locais
+.git
+.gitignore
+.env
+.env.local
+.venv/
+node_modules/
+
+# Ignorar documentação, testes e exemplos das bibliotecas Python
+# Esta é a parte mais importante para reduzir o tamanho
+
+# Excluir arquivos de teste
+**/tests/
+**/*_test.py
+**/*-tests.py
+
+# Excluir documentação
+**/doc/
+**/docs/
+
+# Excluir dados e exemplos do Pandas
+**/pandas/tests/
+**/pandas/io/formats/templates/
+
+# Excluir dados e exemplos do Matplotlib
+**/matplotlib/mpl-data/sample_data/
+**/matplotlib/tests/
+
+# Excluir dados e exemplos do Seaborn
+**/seaborn/tests/
+**/seaborn/_docstrings/
+
+# Excluir arquivos de metadados e compilação que são pesados
+**/*.dist-info/
+**/*.egg-info/
+__pycache__/
+**/*.so
+**/*.pyc
