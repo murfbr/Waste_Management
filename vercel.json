@@ -4,10 +4,5 @@
       "source": "/((?!api/|_next/|static/|assets/|favicon.ico|sw.js|manifest.json|robots.txt|sitemap.xml|.*\\..*).*)",
       "destination": "/index.html"
     }
-  ],
-  "functions": {
-    "api/index.py": {
-      "maxDuration": 60
-    }
-  }
+  ]
 }
