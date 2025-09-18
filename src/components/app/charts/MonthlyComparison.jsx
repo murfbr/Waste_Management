@@ -67,7 +67,7 @@ export default function MonthlyComparison({
   isLoading,
 }) {
   const { t, i18n } = useTranslation(['dashboard', 'charts']);
-  const [chartType, setChartType] = useState('solid'); // 'solid' ou 'stacked'
+  const [chartType, setChartType] = useState('stacked'); // 'solid' ou 'stacked'
 
   const localeMap = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
   const currentLocale = localeMap[i18n.language] || 'pt-BR';
