@@ -99,6 +99,7 @@ export default function DestinacaoChart({ data, isLoading }) {
                             fill="#8884d8"
                             dataKey="value"
                             nameKey="translatedName" // MUDANÇA AQUI: Usando a nova chave para o nome
+                            label={({percent }) => ` ${(percent).toFixed(1)}%`}
                         >
                             {chartData.map((entry, index) => (
                                 // MUDANÇA AQUI: Usando a chave original 'name' para pegar a cor
