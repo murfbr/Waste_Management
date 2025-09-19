@@ -2,6 +2,8 @@
 import React, { useContext, useEffect, useState, useMemo } from 'react';
 import { collection, getDocs } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 
 // Importações dos componentes
 import AuthContext from '../../context/AuthContext';
@@ -15,6 +17,7 @@ import SummaryCards from '../../components/app/charts/SummaryCards';
 import DashboardFilters from '../../components/app/filters/DashboardFilters';
 import DestinacaoChart from '../../components/app/charts/DestinacaoChart';
 import LazySection from '../../components/app/LazySection';
+import ReportGeneratorButton from '../../components/app/ReportGeneratorButton'; // <-- ADICIONADO
 
 // PADRONIZADO: Única função robusta para criar chaves camelCase a partir de strings do DB
 const toCamelCaseKey = (str) => {
@@ -536,50 +539,67 @@ if (disposalData.value > 0) {
         isLoading={loadingRecords || loadingComparisonRecords || selectedYears.length === 0} 
       />
       
-      <div className="mt-8 space-y-6">
-        {loadingRecords || loadingComparisonRecords || loadingEmpresas ? (<div className="text-center p-8 text-rich-soil">{t('dashboard:paginaDashboard.filters.loadingData')}</div>) :
-         !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.selectClient')}</div>) :
-         recordsForComparison.length === 0 ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.noData')}</div>) : (
-          <>
-            <section>
-                <SectionTitle title={t('dashboard:paginaDashboard.sections.overview')} isExpanded={sectionsVisibility.summary} onClick={() => toggleSection('summary')} />
-                {sectionsVisibility.summary && <SummaryCards summaryData={summaryData} isLoading={loadingRecords} />}
-            </section>
-            
-            <LazySection onVisible={() => setIsMonthlyComparisonVisible(true)}>
-              <section>
-                  <SectionTitle title={t('dashboard:paginaDashboard.sections.monthlyGeneration')} isExpanded={sectionsVisibility.monthlyComparison} onClick={() => toggleSection('monthlyComparison')} />
-                  {sectionsVisibility.monthlyComparison && <MonthlyComparison chartData={monthlyComparisonChartData} yearsToCompare={actualYearsInComparisonData} isLoading={loadingComparisonRecords} />}
-              </section>
-            </LazySection>
+      {/* ====================================================================
+        INÍCIO DAS MODIFICAÇÕES PARA GERAR PDF
+        ====================================================================
+      */}
 
-            <LazySection onVisible={() => setIsCompositionVisible(true)}>
-              <section>
-                  <SectionTitle title={t('dashboard:paginaDashboard.sections.generationComposition')} isExpanded={sectionsVisibility.composition} onClick={() => toggleSection('composition')} />
-                  {sectionsVisibility.composition && (
-                      <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-8">
-                          <WasteTypePieChart data={wasteTypePieData} isLoading={loadingRecords} />
-                          <AreaPieChart data={areaPieData} isLoading={loadingRecords} />
-                      </div>
-                  )}
-              </section>
-            </LazySection>
+      {/* 1. O botão gerador de relatório é adicionado aqui */}
+      <ReportGeneratorButton 
+          elementIdToCapture="dashboard-content-for-pdf" 
+          filters={{ selectedClienteIds, selectedYears, selectedMonths }} 
+      />
 
-            <LazySection onVisible={() => setIsDestinationVisible(true)}>
+      {/* 2. A div que envolve todo o conteúdo do dashboard para captura */}
+      <div id="dashboard-content-for-pdf">
+        <div className="mt-8 space-y-6">
+          {loadingRecords || loadingComparisonRecords || loadingEmpresas ? (<div className="text-center p-8 text-rich-soil">{t('dashboard:paginaDashboard.filters.loadingData')}</div>) :
+          !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.selectClient')}</div>) :
+          recordsForComparison.length === 0 ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.noData')}</div>) : (
+            <>
               <section>
-                  <SectionTitle title={t('dashboard:paginaDashboard.sections.destinationComposition')} isExpanded={sectionsVisibility.destination} onClick={() => toggleSection('destination')} />
-                  {sectionsVisibility.destination && (
-                      <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-6">
-                          <DesvioDeAterro data={desvioDeAterroData} isLoading={loadingRecords} />
-                          <DestinacaoChart data={destinacaoData} isLoading={loadingRecords || loadingEmpresas} />
-                      </div>
-                  )}
+                  <SectionTitle title={t('dashboard:paginaDashboard.sections.overview')} isExpanded={sectionsVisibility.summary} onClick={() => toggleSection('summary')} />
+                  {sectionsVisibility.summary && <SummaryCards summaryData={summaryData} isLoading={loadingRecords} />}
               </section>
-            </LazySection>
-          </>
-        )}
+              
+              <LazySection onVisible={() => setIsMonthlyComparisonVisible(true)}>
+                <section>
+                    <SectionTitle title={t('dashboard:paginaDashboard.sections.monthlyGeneration')} isExpanded={sectionsVisibility.monthlyComparison} onClick={() => toggleSection('monthlyComparison')} />
+                    {sectionsVisibility.monthlyComparison && <MonthlyComparison chartData={monthlyComparisonChartData} yearsToCompare={actualYearsInComparisonData} isLoading={loadingComparisonRecords} />}
+                </section>
+              </LazySection>
+
+              <LazySection onVisible={() => setIsCompositionVisible(true)}>
+                <section>
+                    <SectionTitle title={t('dashboard:paginaDashboard.sections.generationComposition')} isExpanded={sectionsVisibility.composition} onClick={() => toggleSection('composition')} />
+                    {sectionsVisibility.composition && (
+                        <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-8">
+                            <WasteTypePieChart data={wasteTypePieData} isLoading={loadingRecords} />
+                            <AreaPieChart data={areaPieData} isLoading={loadingRecords} />
+                        </div>
+                    )}
+                </section>
+              </LazySection>
+
+              <LazySection onVisible={() => setIsDestinationVisible(true)}>
+                <section>
+                    <SectionTitle title={t('dashboard:paginaDashboard.sections.destinationComposition')} isExpanded={sectionsVisibility.destination} onClick={() => toggleSection('destination')} />
+                    {sectionsVisibility.destination && (
+                        <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-6">
+                            <DesvioDeAterro data={desvioDeAterroData} isLoading={loadingRecords} />
+                            <DestinacaoChart data={destinacaoData} isLoading={loadingRecords || loadingEmpresas} />
+                        </div>
+                    )}
+                </section>
+              </LazySection>
+            </>
+          )}
+        </div>
       </div>
+      {/* ====================================================================
+        FIM DAS MODIFICAÇÕES
+        ====================================================================
+      */}
     </div>
   );
 }
-
