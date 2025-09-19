@@ -12,7 +12,7 @@ export default function App() {
       {/* AppRoutes será o componente que define todas as rotas da aplicação */}
       <AppRoutes />
 
-      {/* 2. ADICIONE O COMPONENTE DE ANALYTICS AQUI */}
+      {/* 2. ADICIONE O COMPONENTE DE ANALYTICS AQUI*/}
       <Analytics />
     </AuthProvider>
   );
