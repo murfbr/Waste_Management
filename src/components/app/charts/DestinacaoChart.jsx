@@ -1,10 +1,8 @@
-// src/components/app/charts/DestinacaoChart.jsx
-
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-// Manteve-se o mesmo
+// Paleta de cores fixa por chave
 const COLORS = {
     'recovery': '#0D3520', // Cor para Valorização (rain-forest)
     'disposal': '#CE603E', // Cor para Descarte (apricot-orange)
@@ -17,12 +15,12 @@ const formatNumber = (number, locale, decimals = 1) => {
   return number.toLocaleString(locale, { minimumFractionDigits: decimals, maximumFractionDigits: decimals });
 };
 
-// MUDANÇA AQUI: Tooltip agora usa a chave 'translatedName' para exibição
+// Tooltip customizado
 const CustomTooltip = ({ active, payload, locale, unit }) => {
     if (active && payload && payload.length) {
         const data = payload[0];
         const mainValue = data.payload.value;
-        const translatedName = data.payload.translatedName; // Usando o nome traduzido
+        const translatedName = data.payload.translatedName; // agora pega o nome traduzido certo
         const breakdown = data.payload.breakdown || [];
 
         return (
@@ -37,7 +35,9 @@ const CustomTooltip = ({ active, payload, locale, unit }) => {
                             return (
                                 <li key={index} className="flex justify-between items-center">
                                     <span>{item.name}:</span>
-                                    <span className="font-bold ml-3">{formatNumber(item.value, locale, 2)} {unit} ({formatNumber(percentage, locale, 1)}%)</span>
+                                    <span className="font-bold ml-3">
+                                        {formatNumber(item.value, locale, 2)} {unit} ({formatNumber(percentage, locale, 1)}%)
+                                    </span>
                                 </li>
                             );
                         })}
@@ -58,10 +58,10 @@ export default function DestinacaoChart({ data, isLoading }) {
     const chartTitle = t('dashboard:destinationChartComponent.chartTitle');
     const noDataMessage = t('dashboard:destinationChartComponent.noData');
 
-    // MUDANÇA AQUI: Criamos uma nova chave 'translatedName' em vez de substituir a original
+    // Corrigido: usa `entry.key` (fixo) para buscar tradução
     const chartData = data.map(entry => ({
         ...entry,
-        translatedName: t(`charts:chartLabels.${entry.name.toLowerCase()}`)
+        translatedName: t(`charts:chartLabels.${entry.key}`, entry.name) // ✅ usa chave fixa
     }));
 
     if (isLoading) {
@@ -98,12 +98,11 @@ export default function DestinacaoChart({ data, isLoading }) {
                             outerRadius="80%"
                             fill="#8884d8"
                             dataKey="value"
-                            nameKey="translatedName" // MUDANÇA AQUI: Usando a nova chave para o nome
+                            nameKey="translatedName" // ✅ usa traduzido certo
                             label={({percent }) => ` ${(percent).toFixed(1)}%`}
                         >
                             {chartData.map((entry, index) => (
-                                // MUDANÇA AQUI: Usando a chave original 'name' para pegar a cor
-                                <Cell key={`cell-${index}`} fill={COLORS[entry.name.toLowerCase()]} />
+                                <Cell key={`cell-${index}`} fill={COLORS[entry.key]} /> // ✅ cor via chave fixa
                             ))}
                         </Pie>
                         <Tooltip content={<CustomTooltip locale={currentLocale} unit={unit} />} />

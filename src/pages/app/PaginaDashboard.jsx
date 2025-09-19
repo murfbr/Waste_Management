@@ -399,6 +399,7 @@ const result = [];
 if (recoveryData.value > 0) {
     const percent = totalValue > 0 ? (recoveryData.value / totalValue) * 100 : 0;
     result.push({
+      key: 'recovery',
         name: t('charts:chartLabels.recovery', 'Recovery'),
         value: parseFloat(recoveryData.value.toFixed(2)),
         percent: parseFloat(percent.toFixed(2)),
@@ -408,6 +409,7 @@ if (recoveryData.value > 0) {
 if (disposalData.value > 0) {
     const percent = totalValue > 0 ? (disposalData.value / totalValue) * 100 : 0;
     result.push({
+      key: 'disposal',
         name: t('charts:chartLabels.disposal', 'Disposal'),
         value: parseFloat(disposalData.value.toFixed(2)),
         percent: parseFloat(percent.toFixed(2)),
