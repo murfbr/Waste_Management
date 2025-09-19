@@ -7,20 +7,25 @@ import firebase_admin
 from firebase_admin import credentials, firestore
 from google.cloud import storage
 
+# Importa a nossa classe de geração de relatórios do arquivo vizinho
 from report_generator import ReportGenerator
 
 # --- INICIALIZAÇÃO DO SERVIÇO ---
 app = Flask(__name__)
-CORS(app)
+CORS(app) # Habilita o CORS para permitir chamadas do seu app Vercel
 
+# Carrega as credenciais de forma explícita para máxima robustez
 credentials_json_str = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
 if not credentials_json_str:
     raise RuntimeError("A variável de ambiente GOOGLE_APPLICATION_CREDENTIALS_JSON não está definida.")
+
 credentials_info = json.loads(credentials_json_str)
 cred = credentials.Certificate(credentials_info)
+
 firebase_admin.initialize_app(cred)
 storage_client = storage.Client(credentials=cred)
 db = firestore.client()
+
 BUCKET_NAME = os.getenv('GCS_BUCKET_NAME')
 
 @app.route('/create-report-job', methods=['POST'])
@@ -66,31 +71,21 @@ def create_report_job():
             'receita_total': f"{total_geral_kg:.2f} Kg", 'crescimento_geral': " ", 'margem_lucro': " ", 'satisfacao_cliente': " ",
             'grafico_principal': None, 'destaques': [], 'dados_tabela': None, 'analise': '', 'recomendacoes': [], 'proximos_passos': []
         }
-        
-        # --- O AJUSTE DE DEBUG ESTÁ AQUI ---
-        print("--- DADOS ENVIADOS PARA O TEMPLATE ---")
-        # Usamos json.dumps para formatar o dicionário de forma legível no log
-        print(json.dumps(dados_para_template, indent=2))
-        print("------------------------------------")
 
         # --- GERAÇÃO DO PDF ---
         generator = ReportGenerator()
-        # ... (resto do código igual) ...
         nome_arquivo_pdf = f"relatorio_{cliente_nome.replace(' ', '_')}_{datetime.date.today()}.pdf"
         caminho_pdf_local = generator.create_report(
             template_name='relatorio_executivo.html', data=dados_para_template, output_filename=nome_arquivo_pdf
         )
         
+        # --- UPLOAD E CRIAÇÃO DO LINK ---
         bucket = storage_client.bucket(BUCKET_NAME)
         nome_arquivo_nuvem = f"reports/{nome_arquivo_pdf}"
         blob = bucket.blob(nome_arquivo_nuvem)
         blob.upload_from_filename(caminho_pdf_local, content_type='application/pdf')
         
-        download_url = blob.generate_signed_url(
-            version="v4",
-            expiration=datetime.timedelta(hours=1),
-            method="GET",
-        )
+        download_url = blob.generate_signed_url(version="v4", expiration=datetime.timedelta(hours=1), method="GET")
         
         return jsonify({ "status": "success", "downloadUrl": download_url }), 200
 
@@ -98,7 +93,6 @@ def create_report_job():
         print(f"ERRO CRÍTICO DURANTE A GERAÇÃO DO RELATÓRIO: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
 
-# ... (resto do arquivo main.py igual) ...
 @app.route('/', methods=['GET'])
 def health_check():
     return "Report service is healthy and running.", 200
