@@ -45,14 +45,6 @@ functions/lib/
 .env.*.local
 functions/.env.local
 
-# # # Dados dos Emuladores e de Teste (MUITO IMPORTANTE) # # #
-# Ignora os dados exportados dos emuladores e os dados de seed.
-# Estes ficheiros podem conter informações de teste ou cópias de dados de produção.
-.emulator-data/
-seed-data/
-saved-emulator-state/
-emulator-data/
-
 # # # Logs e Ficheiros de Depuração # # #
 # Ignora ficheiros de log que podem conter informações sensíveis.
 *.log
