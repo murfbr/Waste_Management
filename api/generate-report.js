@@ -119,7 +119,7 @@ export default async function handler(req, res) {
 
     } catch (error) {
         // Se a função falhar em qualquer ponto, este bloco será executado.
-        console.error('ERRO DETALHADO NO CATCH FINAL:', error);
+        console.error('ERRO DETALHADO NO CaTCH FINAL:', error);
         res.status(500).json({ message: 'Erro interno no servidor.', error: error.message, stack: error.stack });
     }
 }
