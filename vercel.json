@@ -4,11 +4,5 @@
       "source": "/((?!api/|_next/|static/|assets/|favicon.ico|sw.js|manifest.json|robots.txt|sitemap.xml|.*\\..*).*)",
       "destination": "/index.html"
     }
-  ],
-  "functions": {
-    "api/generate-report.js": {
-      "maxDuration": 45,
-      "memory": 3008
-    }
-  }
+  ]
 }
