@@ -67,4 +67,4 @@ firebase-export-*/
 
 #Ignora a pasta old
 zzz_old/
-api/
+api
