@@ -12,9 +12,9 @@ from report_generator import ReportGenerator
 
 # --- INICIALIZAÇÃO DO SERVIÇO ---
 app = Flask(__name__)
-CORS(app) # Habilita o CORS para permitir chamadas do seu app Vercel
+CORS(app) # Habilita o CORS
 
-# Carrega as credenciais de forma explícita para máxima robustez
+# Carrega as credenciais de forma explícita da variável de ambiente
 credentials_json_str = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
 if not credentials_json_str:
     raise RuntimeError("A variável de ambiente GOOGLE_APPLICATION_CREDENTIALS_JSON não está definida.")
@@ -40,7 +40,7 @@ def create_report_job():
     meses_py = [m + 1 for m in meses_js]
 
     try:
-        # --- BUSCA E PROCESSAMENTO DE DADOS ---
+        # --- LÓGICA COMPLETA DE GERAÇÃO DE RELATÓRIO ---
         cliente_docs = db.collection('clientes').where('__name__', 'in', cliente_ids).stream()
         primeiro_cliente_data = next(iter({doc.id: doc.to_dict() for doc in cliente_docs}.values()), {})
         cliente_nome = primeiro_cliente_data.get('nome', 'Cliente')
@@ -72,14 +72,12 @@ def create_report_job():
             'grafico_principal': None, 'destaques': [], 'dados_tabela': None, 'analise': '', 'recomendacoes': [], 'proximos_passos': []
         }
 
-        # --- GERAÇÃO DO PDF ---
         generator = ReportGenerator()
         nome_arquivo_pdf = f"relatorio_{cliente_nome.replace(' ', '_')}_{datetime.date.today()}.pdf"
         caminho_pdf_local = generator.create_report(
             template_name='relatorio_executivo.html', data=dados_para_template, output_filename=nome_arquivo_pdf
         )
         
-        # --- UPLOAD E CRIAÇÃO DO LINK ---
         bucket = storage_client.bucket(BUCKET_NAME)
         nome_arquivo_nuvem = f"reports/{nome_arquivo_pdf}"
         blob = bucket.blob(nome_arquivo_nuvem)
