@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Gestão - {{ cliente_nome }}</title>
+    <style>
+        /* Estilos básicos para garantir a visualização. Adapte conforme necessário. */
+        body { font-family: sans-serif; margin: 0; padding: 0; background-color: #f4f4f4; color: #333; }
+        .report-container { max-width: 800px; margin: 20px auto; background: white; padding: 30px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+        .report-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 2px solid #eee; padding-bottom: 20px; margin-bottom: 30px; }
+        .company-info h1 { margin: 0; color: #2c3e50; }
+        .company-info p { margin: 5px 0 0; color: #7f8c8d; }
+        .report-section { margin-bottom: 40px; }
+        .section-title { font-size: 20px; color: #3498db; border-bottom: 1px solid #3498db; padding-bottom: 5px; margin-bottom: 20px; }
+        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; }
+        .metric-card { background: #ecf0f1; padding: 20px; border-radius: 5px; text-align: center; }
+        .metric-value { font-size: 24px; font-weight: bold; color: #2c3e50; }
+        .metric-label { font-size: 14px; color: #7f8c8d; margin-top: 5px; }
+        .chart-container { text-align: center; }
+        .chart-container img { max-width: 100%; height: auto; border: 1px solid #ddd; padding: 5px; }
+        .report-footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #eee; font-size: 12px; color: #95a5a6; }
+    </style>
+</head>
+<body>
+    <div class="report-container">
+        <header class="report-header">
+            <div class="company-info">
+                <h1>{{ empresa_nome | default('Ctrl+Waste') }}</h1>
+                <p>Relatório de Gestão de Resíduos</p>
+                <p>{{ periodo | default('Período não especificado') }}</p>
+            </div>
+        </header>
+
+        <section class="client-info">
+            <h2>Cliente: {{ cliente_nome | default('Não especificado') }}</h2>
+        </section>
+
+        <section class="report-section">
+            <h2 class="section-title">Resumo do Período</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <div class="metric-value">{{ vendas_total | default('0 kg') }}</div>
+                    <div class="metric-label">Peso Total Gerado</div>
+                </div>
+                
+                {% if numero_clientes %}
+                <div class="metric-card">
+                    <div class="metric-value">{{ numero_clientes }}</div>
+                    <div class="metric-label">Localidades Atendidas</div>
+                </div>
+                {% endif %}
+            </div>
+        </section>
+
+        {% if grafico_categorias %}
+        <section class="report-section">
+            <h2 class="section-title">Composição dos Resíduos</h2>
+            <div class="chart-container">
+                <img src="{{ grafico_categorias }}" alt="Gráfico de Composição por Categoria">
+            </div>
+        </section>
+        {% endif %}
+
+        {% if produtos_top %}
+        <section class="report-section">
+            <h2 class="section-title">Detalhes por Categoria</h2>
+            <table class="data-table">
+                </table>
+        </section>
+        {% endif %}
+
+
+        <footer class="report-footer">
+            <p>Relatório gerado em {{ data_geracao }}</p>
+            <p>Documento Confidencial</p>
+        </footer>
+    </div>
+</body>
+</html>

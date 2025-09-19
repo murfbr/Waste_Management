@@ -1,51 +1,75 @@
-// src/components/app/ReportGeneratorButton.jsx
-
 import React, { useState } from 'react';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
 
-// O componente recebe duas propriedades (props):
-// 1. elementIdToCapture: O ID do elemento HTML que queremos "fotografar".
-// 2. filters: Um objeto com os filtros, para validação.
-export default function ReportGeneratorButton({ elementIdToCapture, filters }) {
+// NOTE: Não precisamos mais de jsPDF ou html2canvas aqui. O frontend ficou mais simples.
+
+export default function ReportGeneratorButton({ filters, clienteNames }) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [error, setError] = useState('');
+    const [successMessage, setSuccessMessage] = useState('');
 
-    const handleGenerateReport = () => {
-        // Validação simples para garantir que os filtros foram passados
-        if (!filters || filters.selectedClienteIds?.length === 0 || filters.selectedYears?.length === 0 || filters.selectedMonths?.length === 0) {
-            setError('Por favor, selecione os filtros antes de gerar o relatório.');
+    const handleGenerateReport = async () => {
+        // Limpa mensagens antigas
+        setError('');
+        setSuccessMessage('');
+
+        // Validação simples para garantir que os filtros foram selecionados
+        if (!filters || !filters.selectedClienteIds || filters.selectedClienteIds.length === 0) {
+            setError('Por favor, selecione pelo menos um cliente.');
             return;
         }
-
-        const reportElement = document.getElementById(elementIdToCapture);
-
-        if (!reportElement) {
-            setError(`Erro: Elemento com o ID '${elementIdToCapture}' não foi encontrado.`);
+        if (!filters.selectedYears || filters.selectedYears.length === 0) {
+            setError('Por favor, selecione pelo menos um ano.');
             return;
         }
 
         setIsGenerating(true);
-        setError('');
 
-        html2canvas(reportElement, {
-            useCORS: true, // Permite que imagens de outras origens sejam renderizadas
-            scale: 2,      // Aumenta a resolução da captura para um PDF de melhor qualidade
-        }).then(canvas => {
-            const imgData = canvas.toDataURL('image/png');
-            const pdf = new jsPDF('p', 'mm', 'a4');
+        try {
+            // Monta o pacote de dados para enviar ao backend.
+            // Vamos enviar apenas o primeiro cliente e ano selecionado por enquanto para simplificar.
+            const reportPayload = {
+                clienteId: filters.selectedClienteIds[0],
+                ano: filters.selectedYears[0],
+                nomeCliente: clienteNames,
+                // Adicione outros filtros que o backend precise, como `meses: filters.selectedMonths`
+            };
 
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
+            // 2. Chamar a nossa API no backend
+            const response = await fetch('/api/generate-report', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(reportPayload),
+            });
 
-            pdf.addImage(imgData, 'PNG', 0, 0, pdfWidth, pdfHeight);
-            pdf.save(`relatorio-ctrlwaste-${new Date().toLocaleDateString()}.pdf`);
-        }).catch(err => {
-            setError("Ocorreu um erro ao gerar o PDF.");
-            console.error(err);
-        }).finally(() => {
+            // Se a resposta NÃO for um PDF, significa que houve um erro no backend.
+            if (response.headers.get("Content-Type") !== "application/pdf") {
+                const errorData = await response.json();
+                throw new Error(errorData.message || 'Ocorreu um erro no servidor.');
+            }
+
+            // 3. Se a resposta for um PDF, processa o download
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `relatorio-${clienteNames.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            
+            // Limpa o link temporário
+            a.remove();
+            window.URL.revokeObjectURL(url);
+            
+            setSuccessMessage("Relatório gerado com sucesso!");
+
+        } catch (err) {
+            setError(err.message);
+            console.error("Erro ao chamar a API de relatório:", err);
+        } finally {
             setIsGenerating(false);
-        });
+        }
     };
 
     return (
@@ -66,6 +90,7 @@ export default function ReportGeneratorButton({ elementIdToCapture, filters }) {
                 {isGenerating ? 'Gerando Relatório...' : 'Gerar Relatório em PDF'}
             </button>
             {error && <p style={{ color: 'red', marginTop: '10px' }}>{error}</p>}
+            {successMessage && <p style={{ color: 'green', marginTop: '10px' }}>{successMessage}</p>}
         </div>
     );
 }
