@@ -1,0 +1,61 @@
+    <!DOCTYPE html>
+    <html lang="pt-BR">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Relatório de Gestão - {{ cliente_nome }}</title>
+        <style>
+            body { font-family: 'Lexend', sans-serif; margin: 0; padding: 0; background-color: #f8f9fa; color: #343a40; }
+            .report-container { max-width: 800px; margin: 20px auto; background: white; padding: 40px; }
+            .report-header { text-align: center; border-bottom: 2px solid #3498db; padding-bottom: 20px; margin-bottom: 40px; }
+            .report-header h1 { margin: 0; color: #2c3e50; font-size: 28px; }
+            .report-header p { margin: 5px 0 0; color: #7f8c8d; font-size: 16px; }
+            .report-section { margin-bottom: 40px; page-break-inside: avoid; }
+            .section-title { font-size: 22px; color: #3498db; border-bottom: 1px solid #dee2e6; padding-bottom: 10px; margin-bottom: 20px; font-weight: 600; }
+            .metrics-grid { display: flex; justify-content: space-around; text-align: center; }
+            .metric-card { padding: 20px; }
+            .metric-value { font-size: 32px; font-weight: 800; color: #2c3e50; }
+            .metric-label { font-size: 14px; color: #7f8c8d; margin-top: 5px; text-transform: uppercase; }
+            .chart-container { text-align: center; margin-top: 20px; }
+            .chart-container img { max-width: 100%; height: auto; border: 1px solid #e9ecef; padding: 5px; border-radius: 5px; }
+            .report-footer { text-align: center; margin-top: 40px; padding-top: 20px; border-top: 1px solid #dee2e6; font-size: 12px; color: #95a5a6; }
+        </style>
+        <link href="https://fonts.googleapis.com/css2?family=Lexend:wght@400;600;800&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <div class="report-container">
+            <header class="report-header">
+                <h1>Relatório de Gestão de Resíduos</h1>
+                <p>{{ cliente_nome }} - {{ periodo }}</p>
+            </header>
+            <section class="report-section">
+                <h2 class="section-title">Visão Geral</h2>
+                <div class="metrics-grid">
+                    <div class="metric-card">
+                        <div class="metric-value">{{ peso_total | default('0 kg') }}</div>
+                        <div class="metric-label">Peso Total Gerado</div>
+                    </div>
+                    <div class="metric-card">
+                        <div class="metric-value">{{ total_lancamentos | default('0') }}</div>
+                        <div class="metric-label">Lançamentos Registrados</div>
+                    </div>
+                </div>
+            </section>
+            <section class="report-section">
+                <h2 class="section-title">Composição por Tipo de Resíduo</h2>
+                <div class="chart-container">
+                    <img src="{{ grafico_distribuicao_tipo }}" alt="Gráfico de Composição por Tipo">
+                </div>
+            </section>
+            <section class="report-section">
+                <h2 class="section-title">Geração por Área de Lançamento</h2>
+                <div class="chart-container">
+                    <img src="{{ grafico_distribuicao_area }}" alt="Gráfico de Geração por Área">
+                </div>
+            </section>
+            <footer class="report-footer">
+                <p>Relatório gerado em {{ data_geracao }} pela plataforma Ctrl+Waste.</p>
+            </footer>
+        </div>
+    </body>
+    </html>

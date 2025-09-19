@@ -1,86 +1,92 @@
-import chromium from '@sparticuz/chromium';
-import puppeteer from 'puppeteer-core';
-import nunjucks from 'nunjucks';
-import path from 'path';
-import admin from 'firebase-admin';
+    import chromium from '@sparticuz/chromium';
+    import puppeteer from 'puppeteer-core';
+    import nunjucks from 'nunjucks';
+    import path from 'path';
+    import admin from 'firebase-admin';
 
-// --- CONFIGURAÇÃO DO FIREBASE ADMIN ---
-if (!admin.apps.length) {
-  try {
-    admin.initializeApp({
-      credential: admin.credential.applicationDefault(),
-    });
-  } catch (error) {
-    console.error("Firebase Admin initialization error:", error.message);
-  }
-}
-const db = admin.firestore();
+    // --- CONFIGURAÇÃO DO FIREBASE ADMIN ---
+    if (!admin.apps.length) {
+      try {
+        const serviceAccount = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS);
+        admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
+      } catch (error) {
+        console.error("Firebase Admin initialization error:", error.message);
+        admin.initializeApp({ credential: admin.credential.applicationDefault() });
+      }
+    }
+    const db = admin.firestore();
 
-// --- CONFIGURAÇÃO DO NUNJUCKS ---
-const templateDir = path.resolve(process.cwd(), 'pages/api'); // ou 'src/pages/api' se for o caso
-nunjucks.configure(templateDir, { autoescape: true });
+    // --- CONFIGURAÇÃO DO NUNJUCKS ---
+    const templateDir = path.resolve(process.cwd(), 'api');
+    nunjucks.configure(templateDir, { autoescape: true });
 
-
-// --- FUNÇÃO PRINCIPAL DO RELATÓRIO ---
-export default async function handler(req, res) {
-    // =======================================================
-    // VALIDAÇÃO DA ETAPA 2: VERIFICAR SE OS DADOS CHEGARAM
-    // =======================================================
-    console.log("===================================");
-    console.log("API /api/generate-report foi chamada!");
-    console.log("Método da Requisição:", req.method);
-    console.log("Dados recebidos do frontend:", req.body);
-    console.log("===================================");
-    // =======================================================
-
-    if (req.method !== 'POST') {
-        return res.status(405).json({ message: 'Método não permitido.' });
+    async function generateChartAsBase64(chartConfig) {
+        const url = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&backgroundColor=white&width=500&height=300`;
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Falha ao gerar o gráfico.');
+        const imageBuffer = await response.arrayBuffer();
+        return `data:image/png;base64,${Buffer.from(imageBuffer).toString('base64')}`;
     }
 
-    try {
-        const { clienteId, ano, nomeCliente } = req.body;
-        if (!clienteId || !ano) {
-            return res.status(400).json({ message: 'clienteId e ano são obrigatórios.' });
+    export default async function handler(req, res) {
+        if (req.method !== 'POST') return res.status(405).json({ message: 'Método não permitido.' });
+
+        try {
+            const { clienteId, ano } = req.body;
+            if (!clienteId || !ano) return res.status(400).json({ message: 'clienteId e ano são obrigatórios.' });
+
+            const clienteDoc = await db.collection('clientes').doc(clienteId).get();
+            if (!clienteDoc.exists) return res.status(404).json({ message: `Cliente com ID ${clienteId} não encontrado.` });
+            const clienteData = clienteDoc.data();
+            const nomeCliente = clienteData.nome || "Cliente sem nome";
+
+            // Usamos collectionGroup porque os seus lançamentos estão em subcoleções
+            const recordsSnapshot = await db.collectionGroup('wasteRecords')
+                .where('clienteId', '==', clienteId)
+                .where('timestamp', '>=', new Date(`${ano}-01-01T00:00:00Z`).getTime())
+                .where('timestamp', '<', new Date(`${parseInt(ano) + 1}-01-01T00:00:00Z`).getTime())
+                .get();
+            
+            const records = recordsSnapshot.docs.map(doc => doc.data());
+            if (records.length === 0) return res.status(404).json({ message: `Nenhum lançamento encontrado para ${nomeCliente} em ${ano}.` });
+            
+            let pesoTotal = 0;
+            const totalPorTipo = {};
+            const totalPorArea = {};
+            records.forEach(rec => {
+                const peso = rec.peso && typeof rec.peso === 'number' ? rec.peso : 0;
+                pesoTotal += peso;
+                if (rec.wasteType) totalPorTipo[rec.wasteType] = (totalPorTipo[rec.wasteType] || 0) + peso;
+                if (rec.areaLancamento) totalPorArea[rec.areaLancamento] = (totalPorArea[rec.areaLancamento] || 0) + peso;
+            });
+
+            const graficoTipoConfig = { type: 'pie', data: { labels: Object.keys(totalPorTipo), datasets: [{ data: Object.values(totalPorTipo) }] }, options: { title: { display: true, text: 'Distribuição por Tipo de Resíduo' } } };
+            const graficoTipoBase64 = await generateChartAsBase64(graficoTipoConfig);
+            const graficoAreaConfig = { type: 'bar', data: { labels: Object.keys(totalPorArea), datasets: [{ label: 'Peso (kg)', data: Object.values(totalPorArea) }] }, options: { title: { display: true, text: 'Geração por Área de Lançamento' } } };
+            const graficoAreaBase64 = await generateChartAsBase64(graficoAreaConfig);
+            
+            const templateData = {
+                cliente_nome: nomeCliente,
+                periodo: `Relatório Anual de ${ano}`,
+                data_geracao: new Date().toLocaleDateString('pt-BR'),
+                peso_total: `${pesoTotal.toFixed(2)} kg`,
+                total_lancamentos: records.length,
+                grafico_distribuicao_tipo: graficoTipoBase64,
+                grafico_distribuicao_area: graficoAreaBase64,
+            };
+            
+            const finalHtml = nunjucks.render('relatorio_modelo.html', templateData);
+            const browser = await puppeteer.launch({ args: chromium.args, executablePath: await chromium.executablePath(), headless: chromium.headless });
+            const page = await browser.newPage();
+            await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
+            const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
+            await browser.close();
+            res.setHeader('Content-Type', 'application/pdf');
+            res.setHeader('Content-Disposition', `attachment; filename=relatorio_${ano}_${nomeCliente.replace(/\s/g, '_')}.pdf`);
+            res.status(200).send(pdfBuffer);
+        } catch (error) {
+            console.error('ERRO GERAL NA FUNÇÃO:', error);
+            res.status(500).json({ message: 'Erro interno no servidor.', error: error.message });
         }
-        
-        // Por enquanto, vamos devolver uma resposta simples para confirmar
-        // que recebemos os dados, em vez de gerar o PDF completo.
-        
-        // NOTA: A lógica de buscar no banco, gerar gráficos e o PDF está temporariamente
-        // desativada abaixo. Vamos reativá-la na próxima etapa.
-
-        /*
-        // [LÓGICA DO PDF DESATIVADA TEMPORARIAMENTE]
-        const templateData = {
-            cliente_nome: nomeCliente || "Cliente Teste",
-            periodo: `Ano de ${ano}`,
-            vendas_total: '1234 kg',
-            grafico_categorias: null, // Sem gráfico por enquanto
-        };
-        const finalHtml = nunjucks.render('relatorio_vendas.html', templateData);
-        const browser = await puppeteer.launch({
-            args: chromium.args,
-            executablePath: await chromium.executablePath(),
-            headless: chromium.headless,
-        });
-        const page = await browser.newPage();
-        await page.setContent(finalHtml, { waitUntil: 'networkidle0' });
-        const pdfBuffer = await page.pdf({ format: 'A4', printBackground: true });
-        await browser.close();
-        res.setHeader('Content-Type', 'application/pdf');
-        res.setHeader('Content-Disposition', 'attachment; filename=relatorio_teste.pdf');
-        res.status(200).send(pdfBuffer);
-        */
-        
-        // RESPOSTA TEMPORÁRIA PARA TESTE
-        res.status(200).json({ 
-            message: "API recebeu os dados com sucesso!",
-            dados_recebidos: req.body 
-        });
-
-
-    } catch (error) {
-        console.error('ERRO GERAL NA FUNÇÃO:', error);
-        res.status(500).json({ message: 'Erro interno no servidor.', error: error.message });
     }
-}
+    
