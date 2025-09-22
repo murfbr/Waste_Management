@@ -547,10 +547,14 @@ if (disposalData.value > 0) {
       */}
 
       {/* 1. O botão gerador de relatório é adicionado aqui */}
-      <ReportGeneratorButton 
-          elementIdToCapture="dashboard-content-for-pdf" 
-          filters={{ selectedClienteIds, selectedYears, selectedMonths }} 
-      />
+       {/* O 'div' wrapper foi adicionado para garantir que o tooltip apareça mesmo com o botão desativado. */}
+      <div title="Em desenvolvimento" className="inline-block">
+        <ReportGeneratorButton 
+            elementIdToCapture="dashboard-content-for-pdf" 
+            filters={{ selectedClienteIds, selectedYears, selectedMonths }} 
+            disabled // Propriedade adicionada para desativar o botão.
+        />
+      </div>  
 
       {/* 2. A div que envolve todo o conteúdo do dashboard para captura */}
       <div id="dashboard-content-for-pdf">

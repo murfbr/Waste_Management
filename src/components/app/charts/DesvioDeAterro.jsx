@@ -29,6 +29,19 @@ export default function DesvioDeAterro({
   const chartTitle = t('landfillDiversionComponent.chartTitle');
   const baseNoDataMessage = t('landfillDiversionComponent.noData');
 
+  // Lógica para tornar o eixo Y dinâmico
+  const allValues = data ? data.flatMap(d => [d.taxaDesvio, d.mediaTaxaDesvio]).filter(v => typeof v === 'number') : [];
+  const minValue = allValues.length > 0 ? Math.min(...allValues) : 100;
+
+  // Define o domínio e os ticks com base no menor valor.
+  // Se o menor valor for >= 50, usamos a visão "zoom". Caso contrário, a visão completa.
+  const isZoomed = minValue >= 50;
+  
+  // No modo zoom, o domínio começa um pouco abaixo do menor valor de dado ('dataMin - 5') para dar um respiro,
+  // e os ticks são mais focados na área de interesse.
+  const yAxisDomain = isZoomed ? ['dataMin - 5', 101] : [0, 100];
+  const yAxisTicks = isZoomed ? [50, 75, 90, 100] : [0, 25, 50, 75, 90, 100];
+
   if (isLoading) {
     return (
       <div className="bg-white p-4 md:p-6 rounded-lg shadow font-comfortaa">
@@ -51,14 +64,14 @@ export default function DesvioDeAterro({
             <YAxis 
               tick={{ fill: '#0D4F5F', fontFamily: 'Comfortaa' }}
               label={{ value: t('landfillDiversionComponent.yAxisLabel'), angle: -90, position: 'insideLeft', fill: '#0D4F5F', fontFamily: 'Lexend', offset: -5 }} 
-              domain={[0, 100]}
+              domain={yAxisDomain}
               tickFormatter={(tick) => `${tick}%`}
-              allowDataOverflow 
+              ticks={yAxisTicks}
+              interval={0}
             />
             <Tooltip 
               formatter={(value, name) => {
                 const formattedValue = `${typeof value === 'number' ? value.toLocaleString(currentLocale, {minimumFractionDigits: 2, maximumFractionDigits: 2}) : value}%`;
-                // 'name' aqui é o que definimos na prop 'name' de cada <Line>
                 return [formattedValue, name]; 
               }}
               labelFormatter={(label) => `${t('landfillDiversionComponent.tooltip.label')}: ${label}`}
@@ -83,9 +96,17 @@ export default function DesvioDeAterro({
               strokeDasharray="5 5" 
               dot={false} 
             />
+            {/* Linha "fantasma" apenas para adicionar a Meta na legenda */}
+            <Line 
+              dataKey="meta" 
+              name={t('landfillDiversionComponent.legend.goal', 'Meta')}
+              stroke={chartColors.meta}
+              strokeWidth={2}
+              strokeDasharray="3 3"
+              activeDot={false}
+            />
             <ReferenceLine 
               y={90}
-              label={{ value: t('landfillDiversionComponent.goalLine', { value: 90 }), position: "insideTopRight", fill: chartColors.meta, dy: -10, fontFamily: 'Lexend' }} 
               stroke={chartColors.meta}
               strokeWidth={2}
               strokeDasharray="3 3" 

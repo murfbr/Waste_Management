@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import lancamentoImg from '../../pages/site/img/lancamento3.png';
+import lancamentoImg from '../../pages/site/img/lancamento4.png';
 import logoAzulLaranja from '../../pages/site/img/Vertical-AzulLaranja-SVG.svg';
 
 export default function HeroSection() {
