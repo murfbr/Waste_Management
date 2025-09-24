@@ -9,8 +9,11 @@ import AuthContext from '../../context/AuthContext';
 import { appId } from '../../firebase/config';
 import EditLancamentoModal from '../../components/app/admin/EditLancamentoModal';
 import DeleteConfirmationModal from '../../components/app/DeleteConfirmationModal';
+// ALTERAÇÃO: Importando os componentes de seus próprios arquivos
+import AdminCard from '../../components/app/admin/AdminCard';
+import ConfigEmissoesCard from '../../components/app/admin/ConfigEmissoesCard';
 
-// --- COMPONENTES VISUAIS (Existentes e ajustados) ---
+// --- COMPONENTES VISUAIS ---
 
 const ResultDisplay = ({ result }) => {
     if (!result) return null;
@@ -26,27 +29,14 @@ const ResultDisplay = ({ result }) => {
     );
 };
 
-const AdminCard = ({ icon, title, description, children, className = '' }) => (
-    <div className={`bg-white rounded-lg shadow-md overflow-hidden flex flex-col ${className}`}>
-        <div className="p-5 bg-blue-coral flex items-center space-x-4">
-            <div className="flex-shrink-0 bg-white/20 p-3 rounded-full">{icon}</div>
-            <div>
-                <h3 className="text-xl font-lexend font-bold text-white">{title}</h3>
-                <p className="text-sm text-white/80 font-comfortaa">{description}</p>
-            </div>
-        </div>
-        <div className="p-6 flex-grow">{children}</div>
-    </div>
-);
-
-// --- NOVO COMPONENTE PARA EDIÇÃO DE LANÇAMENTOS ---
+// --- COMPONENTE PARA EDIÇÃO DE LANÇAMENTOS ---
 
 const LancamentosEditorCard = () => {
     const { db, userAllowedClientes, loadingAllowedClientes } = useContext(AuthContext);
 
     const [selectedClienteId, setSelectedClienteId] = useState('');
     const [clienteData, setClienteData] = useState(null);
-    const [loadingCliente, setLoadingCliente] = useState(false); // Estado para o loading do cliente
+    const [loadingCliente, setLoadingCliente] = useState(false);
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     
@@ -62,7 +52,7 @@ const LancamentosEditorCard = () => {
     useEffect(() => {
         if (!selectedClienteId) {
             setClienteData(null);
-            setLancamentos([]); // Limpa os lançamentos se o cliente for desmarcado
+            setLancamentos([]);
             return;
         }
         const fetchClienteData = async () => {
@@ -275,38 +265,38 @@ export default function PaginaAdminMaster() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
                 
-                {/* Card 1: Cálculo Retroativo */}
+                {/* Card 1: Cálculo Retroativo (FUNÇÃO RESTAURADA) */}
                 <AdminCard icon={<FaCalculator className="h-8 w-8 text-white" />} title="Cálculo Retroativo" description="Recalcular manualmente os dados do dashboard para um cliente e mês.">
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="client-select-retro" className="block text-sm font-medium text-gray-700 mb-1">Cliente:</label>
-                            <select id="client-select-retro" value={selectedClientRetro} onChange={(e) => setSelectedClientRetro(e.target.value)} disabled={loadingAllowedClientes || isLoadingRetro} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-apricot-orange focus:border-apricot-orange disabled:bg-gray-100">
+                            <select id="client-select-retro" value={selectedClientRetro} onChange={(e) => setSelectedClientRetro(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                                 <option value="" disabled>{loadingAllowedClientes ? 'Carregando...' : 'Selecione'}</option>
                                 {userAllowedClientes.map(c => (<option key={c.id} value={c.id}>{c.nome}</option>))}
                             </select>
                         </div>
                         <div>
-                             <label htmlFor="retro-month" className="block text-sm font-medium text-gray-700 mb-1">Mês para cálculo:</label>
-                            <input type="month" id="retro-month" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} disabled={isLoadingRetro} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm disabled:bg-gray-100" />
+                            <label htmlFor="month-select" className="block text-sm font-medium text-gray-700 mb-1">Mês/Ano:</label>
+                            <input type="month" id="month-select" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md shadow-sm"/>
                         </div>
-                        <button onClick={handleSumMonths} disabled={!selectedClientRetro || !selectedMonth || isLoadingRetro} className="w-full bg-apricot-orange text-white font-lexend py-2 px-4 rounded-md hover:opacity-90 transition-opacity disabled:bg-early-frost disabled:cursor-not-allowed">
-                            {isLoadingRetro ? 'Processando...' : 'Iniciar Cálculo'}
+                        <button onClick={handleSumMonths} disabled={!selectedClientRetro || isLoadingRetro} className="w-full bg-apricot-orange text-white font-lexend py-2 px-4 rounded-md hover:opacity-90 disabled:opacity-50">
+                            {isLoadingRetro ? 'Processando...' : 'Gerar Resumo do Mês'}
                         </button>
                         <ResultDisplay result={resultRetro} />
                     </div>
                 </AdminCard>
 
-                {/* Card 2: Verificador de Conexão INEA */}
+                {/* Card 2: Verificador de Conexão INEA (FUNÇÃO RESTAURADA) */}
                 <AdminCard icon={<FaUserShield className="h-8 w-8 text-white" />} title="Verificador de Conexão INEA" description="Teste a conexão com a API do INEA usando as credenciais do cliente.">
                     <div className="space-y-4">
-                         <div>
+                        <div>
                             <label htmlFor="client-select-inea" className="block text-sm font-medium text-gray-700 mb-1">Cliente:</label>
-                            <select id="client-select-inea" value={selectedClientInea} onChange={(e) => setSelectedClientInea(e.target.value)} disabled={loadingAllowedClientes || isLoadingInea} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-apricot-orange focus:border-apricot-orange disabled:bg-gray-100">
+                            <select id="client-select-inea" value={selectedClientInea} onChange={(e) => setSelectedClientInea(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                                 <option value="" disabled>{loadingAllowedClientes ? 'Carregando...' : 'Selecione'}</option>
                                 {userAllowedClientes.map(c => (<option key={c.id} value={c.id}>{c.nome}</option>))}
                             </select>
                         </div>
-                        <button onClick={handleCheckInea} disabled={!selectedClientInea || isLoadingInea} className="w-full bg-apricot-orange text-white font-lexend py-2 px-4 rounded-md hover:opacity-90 transition-opacity disabled:bg-early-frost disabled:cursor-not-allowed">
+                        <button onClick={handleCheckInea} disabled={!selectedClientInea || isLoadingInea} className="w-full bg-apricot-orange text-white font-lexend py-2 px-4 rounded-md hover:opacity-90 disabled:opacity-50">
                             {isLoadingInea ? 'Verificando...' : 'Testar Conexão'}
                         </button>
                         <ResultDisplay result={resultInea} />
@@ -318,11 +308,13 @@ export default function PaginaAdminMaster() {
                      <div className="text-center text-gray-500 flex items-center justify-center h-full"><p>Aguardando implementação.</p></div>
                 </AdminCard>
 
-                {/* NOVO CARD DE EDIÇÃO DE LANÇAMENTOS */}
+                {/* CARD DE EDIÇÃO DE LANÇAMENTOS */}
                 <LancamentosEditorCard />
+                
+                {/* --- NOVO CARD DE CONFIGURAÇÃO DE EMISSÕES --- */}
+                <ConfigEmissoesCard />
 
             </div>
         </div>
     );
 }
-

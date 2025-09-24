@@ -16,6 +16,14 @@ const LIMITES_PADRAO = {
 const estadosBrasileiros = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'].sort();
 const estadosPrioritarios = ['RJ', 'SP'];
 
+// Define a estrutura padrão para a composição gravimétrica, usada para inicializar e resetar o estado.
+const COMPOSICAO_GRAVIMETRICA_PADRAO = {
+    "Papel / Papelão": '',
+    "Plásticos (mix)": '',
+    "Metais": '',
+    "Vidro": ''
+};
+
 
 export default function ClienteForm({ 
     initialData, 
@@ -62,6 +70,10 @@ export default function ClienteForm({
   const [isCnpjValid, setIsCnpjValid] = useState(true);
   const [isCpfValid, setIsCpfValid] = useState(true);
   
+  // --- NOVOS ESTADOS PARA A COMPOSIÇÃO GRAVIMÉTRICA ---
+  const [possuiEstudoGravimetrico, setPossuiEstudoGravimetrico] = useState(false);
+  const [composicaoGravimetricaPropria, setComposicaoGravimetricaPropria] = useState({...COMPOSICAO_GRAVIMETRICA_PADRAO});
+
   const arrayFromString = (str) => str.split(',').map(item => item.trim()).filter(item => item.length > 0);
 
   const clearError = (fieldName) => {
@@ -94,6 +106,9 @@ export default function ClienteForm({
     setIsCnpjValid(true);
     setIsCpfValid(true);
     setErrors({});
+    // Reseta os novos estados
+    setPossuiEstudoGravimetrico(false);
+    setComposicaoGravimetricaPropria({...COMPOSICAO_GRAVIMETRICA_PADRAO});
   };
 
   useEffect(() => {
@@ -149,6 +164,15 @@ export default function ClienteForm({
       setRealtimeDashboardEnabled(initialData.realtimeDashboardEnabled || false);
       setIsCnpjValid(true);
       setIsCpfValid(true);
+
+      // Popula os dados de sustentabilidade
+      if (initialData.composicaoGravimetricaPropria && Object.keys(initialData.composicaoGravimetricaPropria).length > 0) {
+        setPossuiEstudoGravimetrico(true);
+        setComposicaoGravimetricaPropria({ ...COMPOSICAO_GRAVIMETRICA_PADRAO, ...initialData.composicaoGravimetricaPropria });
+      } else {
+        setPossuiEstudoGravimetrico(false);
+        setComposicaoGravimetricaPropria({ ...COMPOSICAO_GRAVIMETRICA_PADRAO });
+      }
 
     } else {
       resetForm();
@@ -218,6 +242,13 @@ export default function ClienteForm({
         }
     }
 
+    if (possuiEstudoGravimetrico) {
+        const totalPercent = Object.values(composicaoGravimetricaPropria).reduce((sum, val) => sum + (parseFloat(String(val).replace(',', '.')) || 0), 0);
+        if (Math.abs(totalPercent - 100) > 0.01) {
+            newErrors.composicao = "A soma dos percentuais da composição gravimétrica deve ser igual a 100%.";
+        }
+    }
+
     setErrors(newErrors);
     if (Object.keys(newErrors).length > 0) {
       setIsSubmitting(false);
@@ -262,6 +293,16 @@ export default function ClienteForm({
       realtimeDashboardEnabled: realtimeDashboardEnabled,
     };
 
+    if (possuiEstudoGravimetrico) {
+        const composicaoNumerica = {};
+        for (const key in composicaoGravimetricaPropria) {
+            composicaoNumerica[key] = parseFloat(String(composicaoGravimetricaPropria[key]).replace(',', '.')) || 0;
+        }
+        clienteData.composicaoGravimetricaPropria = composicaoNumerica;
+    } else {
+        clienteData.composicaoGravimetricaPropria = null; 
+    }
+
     if (isEditing && !ineaSenha) {
       delete clienteData.configINEA.ineaSenha;
     }
@@ -277,7 +318,7 @@ export default function ClienteForm({
     if (value.trim()) {
       setIsCnpjValid(validaDocumento(value));
     } else {
-      setIsCnpjValid(true); // Evita mostrar erro de inválido quando o campo está vazio
+      setIsCnpjValid(true);
     }
   };
 
@@ -289,6 +330,13 @@ export default function ClienteForm({
     } else {
       setIsCpfValid(true);
     }
+  };
+  
+  const handleComposicaoChange = (material, valor) => {
+      if (/^[0-9]*[.,]?[0-9]*$/.test(valor)) {
+          setComposicaoGravimetricaPropria(prev => ({ ...prev, [material]: valor }));
+          clearError('composicao');
+      }
   };
 
   const handleLimiteChange = (categoria, valor) => { if (/^[0-9]*[.,]?[0-9]*$/.test(valor)) { setLimitesPorResiduo(prev => ({ ...prev, [categoria]: valor })); } };
@@ -304,6 +352,10 @@ export default function ClienteForm({
   const labelStyle = "block text-sm font-medium text-gray-700";
   const checkboxStyle = "h-4 w-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500";
   const dropdownCategorias = availableCategorias;
+
+  const totalComposicao = useMemo(() => {
+      return Object.values(composicaoGravimetricaPropria).reduce((sum, val) => sum + (parseFloat(String(val).replace(',', '.')) || 0), 0);
+  }, [composicaoGravimetricaPropria]);
 
   return (
     <form onSubmit={handleLocalSubmit} className="bg-white p-6 rounded-xl shadow-lg space-y-6">
@@ -361,13 +413,9 @@ export default function ClienteForm({
                 <label htmlFor="form-cliente-estado" className={labelStyle}>Estado (UF)</label>
                 <select id="form-cliente-estado" value={estado} onChange={(e) => setEstado(e.target.value)} className={inputStyle}>
                   <option value="">Selecione...</option>
-                  {estadosPrioritarios.map(uf => (
-                    <option key={`prioritario-${uf}`} value={uf}>{uf}</option>
-                  ))}
+                  {estadosPrioritarios.map(uf => ( <option key={`prioritario-${uf}`} value={uf}>{uf}</option> ))}
                   <option disabled style={{ borderTop: '1px solid #ccc', marginTop: '4px', paddingTop: '4px' }}> </option>
-                  {estadosBrasileiros.map(uf => (
-                    <option key={`geral-${uf}`} value={uf}>{uf}</option>
-                  ))}
+                  {estadosBrasileiros.map(uf => ( <option key={`geral-${uf}`} value={uf}>{uf}</option> ))}
                 </select>
               </div>
             </div>
@@ -449,6 +497,54 @@ export default function ClienteForm({
                 <button type="button" onClick={addContratoForm} className="px-3 py-1.5 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"> + Adicionar Contrato </button>
             </div>
         </fieldset>
+        
+        {/* --- SEÇÃO NOVA --- */}
+        <fieldset className="border border-gray-300 p-4 rounded-lg">
+          <legend className="text-lg font-semibold text-green-700 px-2">Configurações de Sustentabilidade</legend>
+          <div className="space-y-4 pt-3">
+            <div className="flex items-center">
+              <input 
+                type="checkbox" 
+                id="possuiEstudoGravimetrico" 
+                checked={possuiEstudoGravimetrico} 
+                onChange={(e) => setPossuiEstudoGravimetrico(e.target.checked)} 
+                className={`${checkboxStyle} mr-2`}
+              />
+              <label htmlFor="possuiEstudoGravimetrico" className={labelStyle}>Cliente possui estudo gravimétrico próprio para recicláveis?</label>
+            </div>
+
+            {possuiEstudoGravimetrico && (
+              <div className="pl-6 border-l-2 border-green-200 space-y-4 animate-fade-in">
+                <p className="text-sm text-gray-600">
+                  Insira a composição percentual do fluxo de recicláveis do cliente. A soma dos campos deve ser 100%.
+                </p>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {Object.keys(composicaoGravimetricaPropria).map(material => (
+                    <div key={material}>
+                      <label htmlFor={`composicao-${material}`} className={`${labelStyle} capitalize`}>{material}</label>
+                      <div className="relative mt-1">
+                        <input 
+                          type="text" 
+                          inputMode="decimal"
+                          placeholder="0"
+                          id={`composicao-${material}`} 
+                          value={composicaoGravimetricaPropria[material]}
+                          onChange={(e) => handleComposicaoChange(material, e.target.value)}
+                          className={`${inputStyle} pr-8`}
+                        />
+                        <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500 text-sm">%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="text-right font-medium text-sm pr-1">
+                  Total: <span className={Math.abs(totalComposicao - 100) > 0.01 && totalComposicao > 0 ? 'text-red-600' : 'text-gray-700'}>{totalComposicao.toFixed(2)}%</span>
+                </div>
+                {errors.composicao && <p className="text-red-600 text-xs mt-1">{errors.composicao}</p>}
+              </div>
+            )}
+          </div>
+        </fieldset>
 
         <fieldset className="border border-gray-300 p-4 rounded-lg">
             <legend className="text-lg font-semibold text-indigo-700 px-2">Informações para Preenchimento MTR (INEA)</legend>
@@ -493,4 +589,3 @@ export default function ClienteForm({
     </form>
   );
 }
-

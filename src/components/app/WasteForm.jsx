@@ -84,8 +84,8 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
   }, [clienteSelecionado, formResetKey]);
 
   const formatPesoForDisplay = (valor) => {
-    const valorNumerico = valor / 100;
-    return valorNumerico.toLocaleString(currentLocale, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const valorNumerico = valor / 10;
+    return valorNumerico.toLocaleString(currentLocale, { minimumFractionDigits: 1, maximumFractionDigits: 1 });
   };
 
   const clearMessagesAfterDelay = () => {
@@ -137,7 +137,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
       return;
     }
     
-    const parsedPeso = peso / 100;
+    const parsedPeso = peso / 10;
     if (isNaN(parsedPeso) || parsedPeso <= 0) {
       setFormError(t('wasteFormComponent.errors.invalidWeight'));
       clearMessagesAfterDelay();

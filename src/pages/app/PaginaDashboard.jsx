@@ -1,6 +1,7 @@
 // src/pages/app/PaginaDashboard.jsx
 import React, { useContext, useEffect, useState, useMemo } from 'react';
-import { collection, getDocs } from 'firebase/firestore';
+// ALTERAÇÃO 1 de 3: Adicionado 'doc' e 'getDoc' para buscar a configuração de CO2
+import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
@@ -16,6 +17,7 @@ import AreaPieChart from '../../components/app/charts/AreaPieChart';
 import SummaryCards from '../../components/app/charts/SummaryCards';
 import DashboardFilters from '../../components/app/filters/DashboardFilters';
 import DestinacaoChart from '../../components/app/charts/DestinacaoChart';
+import CO2ImpactCard from '../../components/app/charts/CO2ImpactCard';
 import LazySection from '../../components/app/LazySection';
 import ReportGeneratorButton from '../../components/app/ReportGeneratorButton'; // <-- ADICIONADO
 
@@ -262,6 +264,9 @@ export default function PaginaDashboard() {
   const [isCompositionVisible, setIsCompositionVisible] = useState(false);
   const [isDestinationVisible, setIsDestinationVisible] = useState(false);
 
+  const [co2Config, setCo2Config] = useState(null);
+  const [loadingCO2Config, setLoadingCO2Config] = useState(true);
+
   const [sectionsVisibility, setSectionsVisibility] = useState({ summary: true, monthlyComparison: true, composition: true, destination: true });
   const toggleSection = (section) => setSectionsVisibility(prev => ({ ...prev, [section]: !prev[section] }));
 
@@ -331,6 +336,32 @@ export default function PaginaDashboard() {
     }
   }, [recordsForComparison]);
 
+  useEffect(() => {
+    if (!db || selectedYears.length === 0) return;
+
+    const fetchCO2Config = async () => {
+        setLoadingCO2Config(true);
+        const anoReferencia = Math.max(...selectedYears);
+        const docRef = doc(db, 'emissoesConfig', `config_${anoReferencia}`);
+        try {
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+                setCo2Config(docSnap.data());
+            } else {
+                console.warn(`Configuração de CO2 para o ano ${anoReferencia} não encontrada.`);
+                setCo2Config(null);
+            }
+        } catch (error) {
+            console.error("Erro ao buscar configuração de CO2:", error);
+            setCo2Config(null);
+        } finally {
+            setLoadingCO2Config(false);
+        }
+    };
+
+    fetchCO2Config();
+  }, [db, selectedYears]);
+
   const recordsForMonthlyComparisonChart = useMemo(() => {
     if (loadingComparisonRecords || recordsForComparison.length === 0) return [];
     return recordsForComparison.filter(record => {
@@ -346,6 +377,126 @@ export default function PaginaDashboard() {
         return areaMatch;
     });
   }, [recordsFullyFiltered, selectedAreas, loadingRecords]);
+  
+  // ALTERAÇÃO 2 de 3: Lógica de cálculo do CO2
+  const co2CalculationData = useMemo(() => {
+    const isLoading = loadingRecords || loadingEmpresas || loadingCO2Config || !co2Config || !userAllowedClientes.length;
+    
+    // O hook useHybridWasteData pode retornar um array vazio enquanto carrega os resumos, então checamos a flag de loading.
+    if (isLoading) {
+        return { isLoading: true, netImpact: 0, totalEvitadas: 0, totalDiretas: 0, metodologia: 'Calculando...' };
+    }
+
+    const clientesMap = new Map(userAllowedClientes.map(c => [c.id, c]));
+    const empresasMap = new Map(empresasColeta.map(e => [e.id, e]));
+    
+    let totalEvitadas = 0;
+    let totalDiretas = 0;
+    let usaEstudoProprio = false;
+    
+    // A fonte de dados (recordsForOtherCharts) pode conter resumos ou registros detalhados.
+    // Verificamos a estrutura do primeiro item para decidir o modo de cálculo.
+    const isSummaryMode = recordsForOtherCharts.length > 0 && recordsForOtherCharts[0]?.hasOwnProperty('composicaoPorTipo');
+
+    if (isSummaryMode) {
+        // --- MODO RESUMO (PARA MESES ANTERIORES) ---
+        for (const summary of recordsForOtherCharts) {
+            const cliente = clientesMap.get(summary.clienteId);
+            if (!cliente) continue;
+
+            // --- Cálculo de Emissões Evitadas (Reciclagem) ---
+            const pesoRecicladoKg = summary.composicaoPorDestinacao?.recovery?.breakdown?.Reciclagem?.value || 0;
+            if (pesoRecicladoKg > 0) {
+                const pesoRecicladoToneladas = pesoRecicladoKg / 1000;
+                
+                if (cliente.composicaoGravimetricaPropria) {
+                    usaEstudoProprio = true;
+                    for (const [material, percent] of Object.entries(cliente.composicaoGravimetricaPropria)) {
+                        if (!percent || percent <= 0) continue;
+                        const pesoMaterial = pesoRecicladoToneladas * (percent / 100);
+                        const fatorKey = material.toLowerCase().includes('plástico') ? 'Plástico (Mix)' : material;
+                        const fator = co2Config.fatoresEmissaoEvitada[fatorKey] || co2Config.fatoresEmissaoEvitada['Geral (Média Ponderada)'];
+                        if (fator) totalEvitadas += pesoMaterial * fator;
+                    }
+                } else {
+                    const fatorMedio = co2Config.fatoresEmissaoEvitada['Geral (Média Ponderada)'];
+                    if (fatorMedio) totalEvitadas += pesoRecicladoToneladas * fatorMedio;
+                }
+            }
+
+            // --- Cálculo de Emissões Diretas (Aterro, Compostagem, etc.) ---
+            const pesoRejeitoKg = summary.totalRejeitoKg || 0;
+            const pesoOrganicoTotalKg = summary.totalOrganicoKg || 0;
+            
+            const pesoOrganicoCompostadoKg = summary.composicaoPorDestinacao?.recovery?.breakdown?.Compostagem?.value || 0;
+            const pesoOrganicoBiometanizadoKg = summary.composicaoPorDestinacao?.recovery?.breakdown?.Biometanização?.value || 0;
+            const pesoOrganicoRecuperadoKg = pesoOrganicoCompostadoKg + pesoOrganicoBiometanizadoKg;
+
+            // O que não foi recuperado, consideramos que foi para aterro, junto com o rejeito.
+            const pesoOrganicoAterradoKg = pesoOrganicoTotalKg - pesoOrganicoRecuperadoKg;
+
+            if (pesoRejeitoKg > 0) totalDiretas += (pesoRejeitoKg / 1000) * co2Config.fatoresEmissaoDireta['aterro-rejeito'];
+            if (pesoOrganicoAterradoKg > 0) totalDiretas += (pesoOrganicoAterradoKg / 1000) * co2Config.fatoresEmissaoDireta['aterro-organico'];
+            if (pesoOrganicoCompostadoKg > 0) totalDiretas += (pesoOrganicoCompostadoKg / 1000) * co2Config.fatoresEmissaoDireta['compostagem'];
+            if (pesoOrganicoBiometanizadoKg > 0) totalDiretas += (pesoOrganicoBiometanizadoKg / 1000) * co2Config.fatoresEmissaoDireta['biometanizacao'];
+        }
+    } else if (recordsForOtherCharts.length > 0) {
+        // --- MODO DETALHADO (PARA MÊS CORRENTE) ---
+        for (const record of recordsForOtherCharts) {
+            const cliente = clientesMap.get(record.clienteId);
+            const empresa = empresasMap.get(record.empresaColetaId);
+            if (!cliente || !empresa) continue;
+
+            // CORREÇÃO: Normaliza o wasteType para a busca de destinação
+            let lookupWasteType = record.wasteType;
+            if (lookupWasteType.startsWith('Reciclável')) lookupWasteType = 'Reciclável';
+            else if (lookupWasteType.startsWith('Orgânico')) lookupWasteType = 'Orgânico';
+
+            const pesoToneladas = (record.peso || 0) / 1000;
+            const destinacoes = empresa.destinacoes?.[lookupWasteType] || [];
+            
+            const isReciclagem = destinacoes.includes('Reciclagem');
+            const isCompostagem = destinacoes.includes('Compostagem');
+            const isBiometanizacao = destinacoes.includes('Biometanização');
+            const isAterro = destinacoes.includes('Aterro Sanitário');
+            const isIncineracao = destinacoes.includes('Incineração');
+
+            if (lookupWasteType === 'Reciclável' && isReciclagem) {
+                const composicao = cliente.composicaoGravimetricaPropria || co2Config.composicaoGravimetricaNacional;
+                if (cliente.composicaoGravimetricaPropria) usaEstudoProprio = true;
+                for (const [material, percent] of Object.entries(composicao)) {
+                    if (!percent || percent <= 0) continue;
+                    const pesoMaterial = pesoToneladas * (percent / 100);
+                    let fatorKey = material;
+                    if (material.toLowerCase().includes('plástico')) fatorKey = 'Plástico (Mix)';
+                    const fator = co2Config.fatoresEmissaoEvitada[fatorKey] || co2Config.fatoresEmissaoEvitada['Geral (Média Ponderada)'];
+                    if (fator) totalEvitadas += pesoMaterial * fator;
+                }
+            } else if (lookupWasteType === 'Orgânico' && (isCompostagem || isBiometanizacao)) {
+                const fator = isBiometanizacao ? co2Config.fatoresEmissaoDireta.biometanizacao : co2Config.fatoresEmissaoDireta.compostagem;
+                if(fator) totalDiretas += pesoToneladas * fator;
+            } else if (isAterro) {
+                let fatorKey = 'aterro-rejeito';
+                if (lookupWasteType === 'Orgânico') fatorKey = 'aterro-organico';
+                const fator = co2Config.fatoresEmissaoDireta[fatorKey];
+                if(fator) totalDiretas += pesoToneladas * fator;
+            } else if (isIncineracao) {
+                 const fator = co2Config.fatoresEmissaoDireta.incineracao;
+                 if(fator) totalDiretas += pesoToneladas * fator;
+            }
+        }
+    }
+
+    return {
+        isLoading: false,
+        netImpact: totalEvitadas + totalDiretas,
+        totalEvitadas,
+        totalDiretas,
+        metodologia: usaEstudoProprio 
+            ? 'Cálculo baseado em estudo gravimétrico próprio do cliente.'
+            : 'Cálculo baseado na composição gravimétrica média nacional.'
+    };
+  }, [recordsForOtherCharts, userAllowedClientes, empresasColeta, co2Config, loadingRecords, loadingEmpresas, loadingCO2Config]);
 
   const destinacaoData = useMemo(() => {
     if (!isDestinationVisible) return [];
@@ -393,30 +544,30 @@ export default function PaginaDashboard() {
             .sort((a, b) => b.value - a.value);
     };
 
-const totalValue = recoveryData.value + disposalData.value;
+    const totalValue = recoveryData.value + disposalData.value;
 
-const result = [];
-if (recoveryData.value > 0) {
-    const percent = totalValue > 0 ? (recoveryData.value / totalValue) * 100 : 0;
-    result.push({
-      key: 'recovery',
-        name: t('charts:chartLabels.recovery', 'Recovery'),
-        value: parseFloat(recoveryData.value.toFixed(2)),
-        percent: parseFloat(percent.toFixed(2)),
-        breakdown: formatBreakdown(recoveryData.breakdown)
-    });
-}
-if (disposalData.value > 0) {
-    const percent = totalValue > 0 ? (disposalData.value / totalValue) * 100 : 0;
-    result.push({
-      key: 'disposal',
-        name: t('charts:chartLabels.disposal', 'Disposal'),
-        value: parseFloat(disposalData.value.toFixed(2)),
-        percent: parseFloat(percent.toFixed(2)),
-        breakdown: formatBreakdown(disposalData.breakdown)
-    });
-}
-    
+    const result = [];
+    if (recoveryData.value > 0) {
+        const percent = totalValue > 0 ? (recoveryData.value / totalValue) * 100 : 0;
+        result.push({
+          key: 'recovery',
+            name: t('charts:chartLabels.recovery', 'Recovery'),
+            value: parseFloat(recoveryData.value.toFixed(2)),
+            percent: parseFloat(percent.toFixed(2)),
+            breakdown: formatBreakdown(recoveryData.breakdown)
+        });
+    }
+    if (disposalData.value > 0) {
+        const percent = totalValue > 0 ? (disposalData.value / totalValue) * 100 : 0;
+        result.push({
+          key: 'disposal',
+            name: t('charts:chartLabels.disposal', 'Disposal'),
+            value: parseFloat(disposalData.value.toFixed(2)),
+            percent: parseFloat(percent.toFixed(2)),
+            breakdown: formatBreakdown(disposalData.breakdown)
+        });
+    }
+        
     return result;
   }, [recordsForOtherCharts, empresasColeta, isDestinationVisible, t]);
 
@@ -541,31 +692,33 @@ if (disposalData.value > 0) {
         isLoading={loadingRecords || loadingComparisonRecords || selectedYears.length === 0} 
       />
       
-      {/* ====================================================================
-        INÍCIO DAS MODIFICAÇÕES PARA GERAR PDF
-        ====================================================================
-      */}
-
-      {/* 1. O botão gerador de relatório é adicionado aqui */}
-       {/* O 'div' wrapper foi adicionado para garantir que o tooltip apareça mesmo com o botão desativado. */}
       <div title="Em desenvolvimento" className="inline-block">
         <ReportGeneratorButton 
             elementIdToCapture="dashboard-content-for-pdf" 
             filters={{ selectedClienteIds, selectedYears, selectedMonths }} 
-            disabled // Propriedade adicionada para desativar o botão.
+            disabled
         />
       </div>  
 
-      {/* 2. A div que envolve todo o conteúdo do dashboard para captura */}
       <div id="dashboard-content-for-pdf">
         <div className="mt-8 space-y-6">
           {loadingRecords || loadingComparisonRecords || loadingEmpresas ? (<div className="text-center p-8 text-rich-soil">{t('dashboard:paginaDashboard.filters.loadingData')}</div>) :
           !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.selectClient')}</div>) :
           recordsForComparison.length === 0 ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.noData')}</div>) : (
             <>
+              {/* ALTERAÇÃO 3 de 3: A seção de resumo agora é uma grid para incluir o card de CO2 */}
               <section>
                   <SectionTitle title={t('dashboard:paginaDashboard.sections.overview')} isExpanded={sectionsVisibility.summary} onClick={() => toggleSection('summary')} />
-                  {sectionsVisibility.summary && <SummaryCards summaryData={summaryData} isLoading={loadingRecords} />}
+                  {sectionsVisibility.summary && (
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
+                        <div className="lg:col-span-2">
+                            <SummaryCards summaryData={summaryData} isLoading={loadingRecords} />
+                        </div>
+                       {/* <div className="h-full">
+                            <CO2ImpactCard data={co2CalculationData} isLoading={co2CalculationData.isLoading} />
+                        </div> */}
+                    </div>
+                  )}
               </section>
               
               <LazySection onVisible={() => setIsMonthlyComparisonVisible(true)}>
@@ -602,10 +755,6 @@ if (disposalData.value > 0) {
           )}
         </div>
       </div>
-      {/* ====================================================================
-        FIM DAS MODIFICAÇÕES
-        ====================================================================
-      */}
     </div>
   );
 }
