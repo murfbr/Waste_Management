@@ -18,6 +18,7 @@ import SummaryCards from '../../components/app/charts/SummaryCards';
 import DashboardFilters from '../../components/app/filters/DashboardFilters';
 import DestinacaoChart from '../../components/app/charts/DestinacaoChart';
 import CO2ImpactCard from '../../components/app/charts/CO2ImpactCard';
+import CO2EvolutionChart from '../../components/app/charts/CO2EvolutionChart';
 import LazySection from '../../components/app/LazySection';
 import ReportGeneratorButton from '../../components/app/ReportGeneratorButton'; // <-- ADICIONADO
 
@@ -263,11 +264,12 @@ export default function PaginaDashboard() {
   const [isMonthlyComparisonVisible, setIsMonthlyComparisonVisible] = useState(false);
   const [isCompositionVisible, setIsCompositionVisible] = useState(false);
   const [isDestinationVisible, setIsDestinationVisible] = useState(false);
+  const [isSustainabilityVisible, setIsSustainabilityVisible] = useState(false);
 
   const [co2Config, setCo2Config] = useState(null);
   const [loadingCO2Config, setLoadingCO2Config] = useState(true);
 
-  const [sectionsVisibility, setSectionsVisibility] = useState({ summary: true, monthlyComparison: true, composition: true, destination: true });
+  const [sectionsVisibility, setSectionsVisibility] = useState({ summary: true, sustainability: true, monthlyComparison: true, composition: true, destination: true });
   const toggleSection = (section) => setSectionsVisibility(prev => ({ ...prev, [section]: !prev[section] }));
 
   const dashboardMode = useMemo(() => {
@@ -498,6 +500,52 @@ export default function PaginaDashboard() {
     };
   }, [recordsForOtherCharts, userAllowedClientes, empresasColeta, co2Config, loadingRecords, loadingEmpresas, loadingCO2Config]);
 
+  const co2EvolutionData = useMemo(() => {
+    if (!isSustainabilityVisible || !co2Config || recordsForOtherCharts.length === 0) return [];
+
+    const calculateImpactForRecord = (record, cliente, empresa) => {
+        let netImpact = 0;
+        if (!cliente || !empresa) return 0;
+        
+        let lookupWasteType = record.wasteType;
+        if (lookupWasteType.startsWith('Reciclável')) lookupWasteType = 'Reciclável';
+        else if (lookupWasteType.startsWith('Orgânico')) lookupWasteType = 'Orgânico';
+
+        const pesoToneladas = (record.peso || 0) / 1000;
+        const destinacoes = empresa.destinacoes?.[lookupWasteType] || [];
+        
+        if (lookupWasteType === 'Reciclável' && destinacoes.includes('Reciclagem')) {
+            const composicao = cliente.composicaoGravimetricaPropria || co2Config.composicaoGravimetricaNacional;
+            for (const [material, percent] of Object.entries(composicao)) {
+                if (!percent || percent <= 0) continue;
+                const pesoMaterial = pesoToneladas * (percent / 100);
+                const fatorKey = material.toLowerCase().includes('plástico') ? 'Plástico (Mix)' : material;
+                const fator = co2Config.fatoresEmissaoEvitada[fatorKey] || co2Config.fatoresEmissaoEvitada['Geral (Média Ponderada)'];
+                if (fator) netImpact += pesoMaterial * fator;
+            }
+        }
+        // Nota: Esta versão simplificada foca nas emissões evitadas para o gráfico.
+        // A lógica de emissões diretas pode ser adicionada aqui se desejado.
+        return netImpact;
+    };
+    
+    // Agrupa os registros por dia
+    const dailyData = recordsForOtherCharts.reduce((acc, record) => {
+        if (!record.timestamp) return acc;
+        const date = new Date(record.timestamp).toISOString().split('T')[0];
+        if (!acc[date]) {
+            acc[date] = { name: new Date(date).toLocaleDateString('pt-BR', { timeZone: 'UTC' }), netImpact: 0 };
+        }
+        const cliente = userAllowedClientes.find(c => c.id === record.clienteId);
+        const empresa = empresasColeta.find(e => e.id === record.empresaColetaId);
+        acc[date].netImpact += calculateImpactForRecord(record, cliente, empresa);
+        return acc;
+    }, {});
+
+    return Object.values(dailyData).sort((a, b) => new Date(a.name.split('/').reverse().join('-')) - new Date(b.name.split('/').reverse().join('-')));
+
+  }, [isSustainabilityVisible, recordsForOtherCharts, co2Config, userAllowedClientes, empresasColeta]);
+
   const destinacaoData = useMemo(() => {
     if (!isDestinationVisible) return [];
     
@@ -720,6 +768,18 @@ export default function PaginaDashboard() {
                     </div>
                   )}
               </section>
+
+              <LazySection onVisible={() => setIsSustainabilityVisible(true)}>
+                <section>
+                    <SectionTitle title="Sustentabilidade e Impacto de Carbono" isExpanded={sectionsVisibility.sustainability} onClick={() => toggleSection('sustainability')} />
+                    {sectionsVisibility.sustainability && (
+                        <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                            <CO2ImpactCard data={co2CalculationData} isLoading={co2CalculationData.isLoading} />
+                            <CO2EvolutionChart data={co2EvolutionData} isLoading={loadingRecords || !isSustainabilityVisible} />
+                        </div>
+                    )}
+                </section>
+              </LazySection>
               
               <LazySection onVisible={() => setIsMonthlyComparisonVisible(true)}>
                 <section>
