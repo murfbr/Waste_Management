@@ -479,7 +479,7 @@ export const calculateCO2Evolution = ({ records, userAllowedClientes, empresasCo
                 if (fator) netImpact += pesoMaterial * fator;
             }
         }
-        return netImpact;
+        return netImpact * -1;
     };
     
     const dailyData = records.reduce((acc, record) => {
@@ -494,5 +494,15 @@ export const calculateCO2Evolution = ({ records, userAllowedClientes, empresasCo
         return acc;
     }, {});
 
-    return Object.values(dailyData).sort((a, b) => new Date(a.name.split('/').reverse().join('-')) - new Date(b.name.split('/').reverse().join('-')));
+    const sortedDailyData = Object.values(dailyData).sort((a, b) => new Date(a.name.split('/').reverse().join('-')) - new Date(b.name.split('/').reverse().join('-')));
+
+    // ALTERAÇÃO: Lógica para calcular o impacto acumulado
+    let cumulativeImpact = 0;
+    return sortedDailyData.map(dataPoint => {
+        cumulativeImpact += dataPoint.netImpact;
+        return {
+            ...dataPoint,
+            netImpact: parseFloat(cumulativeImpact.toFixed(2)),
+        };
+    });
 };

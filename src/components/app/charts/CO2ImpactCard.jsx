@@ -32,7 +32,7 @@ export default function CO2ImpactCard({ data, isLoading }) {
         <div className="bg-white p-6 rounded-lg shadow-md flex flex-col h-full">
             <div className="flex items-start justify-between">
                 <div>
-                    <h3 className="text-lg font-lexend font-semibold text-rich-soil">Impacto de Emissões de Carbono</h3>
+                    <h3 className="text-acao font-lexend font-semibold text-rich-soil">Impacto de Emissões de Carbono</h3>
                     <p className="text-sm text-gray-500 font-comfortaa">Balanço de CO₂e no período</p>
                 </div>
                 <FaLeaf className="h-6 w-6 text-green-500" />

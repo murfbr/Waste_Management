@@ -1,6 +1,6 @@
 import React, { useState, useContext } from 'react';
 import { writeBatch, collection, doc, serverTimestamp } from 'firebase/firestore';
-import Papa from 'https://esm.sh/papaparse';
+import Papa from 'papaparse';
 import AuthContext from '../../context/AuthContext';
 
 export default function ImportadorHistoricoCliente({ cliente, isOpen, onClose, onImportSuccess }) {
