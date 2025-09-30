@@ -320,17 +320,7 @@ export default function PaginaDashboard() {
                   )}
               </section>
 
-              <LazySection onVisible={() => setIsSustainabilityVisible(true)}>
-                <section>
-                    <SectionTitle title="Sustentabilidade e Impacto de Carbono (fase de teste)" isExpanded={sectionsVisibility.sustainability} onClick={() => toggleSection('sustainability')} />
-                    {sectionsVisibility.sustainability && (
-                        <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                            <CO2ImpactCard data={impactCardData} isLoading={impactCardData.isLoading} />
-                            <CO2EvolutionChart data={evolutionChartData} isLoading={loadingRecords || !isSustainabilityVisible} />
-                        </div>
-                    )}
-                </section>
-              </LazySection>
+              
               
               <LazySection onVisible={() => setIsMonthlyComparisonVisible(true)}>
                 <section>
@@ -358,6 +348,18 @@ export default function PaginaDashboard() {
                         <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <DesvioDeAterro data={desvioDeAterroData} isLoading={loadingRecords} />
                             <DestinacaoChart data={destinacaoData} isLoading={loadingRecords || loadingEmpresas} />
+                        </div>
+                    )}
+                </section>
+              </LazySection>
+
+              <LazySection onVisible={() => setIsSustainabilityVisible(true)}>
+                <section>
+                    <SectionTitle title="Sustentabilidade e Impacto de Carbono (fase de teste)" isExpanded={sectionsVisibility.sustainability} onClick={() => toggleSection('sustainability')} />
+                    {sectionsVisibility.sustainability && (
+                        <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                            <CO2ImpactCard data={impactCardData} isLoading={impactCardData.isLoading} />
+                            <CO2EvolutionChart data={evolutionChartData} isLoading={loadingRecords || !isSustainabilityVisible} />
                         </div>
                     )}
                 </section>
