@@ -346,7 +346,7 @@ export default function ClienteForm({
   const removeContratoForm = (index) => { if (contratosColetaForm.length <= 1 && !isEditing && contratosColetaForm.length === 1 && contratosColetaForm[0].empresaColetaId === '' && contratosColetaForm[0].tiposResiduoColetados.length === 0) return; if (contratosColetaForm.length === 1) { setContratosColetaForm([{ empresaColetaId: '', tiposResiduoColetados: [] }]); return; } setContratosColetaForm(contratosColetaForm.filter((_, i) => i !== index)); };
   const handleCategoriaPrincipalChange = (categoria) => { setCategoriasPrincipaisSelecionadas(prev => prev.includes(categoria) ? prev.filter(c => c !== categoria) : [...prev, categoria]); };
   const handleSubtipoComumChange = (subtipo, type) => { if (type === 'reciclavel') { setSubtiposComunsReciclaveisSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); } else if (type === 'organico') { setSubtiposComunsOrganicosSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); } };
-  const opcoesResiduoContrato = useMemo(() => { const outrasCategorias = arrayFromString(outrasCategoriasInput); const todasCategorias = Array.from(new Set([...categoriasPrincipaisSelecionadas, ...outrasCategorias])); const categoriasBaseContrato = ["Reciclável", "Orgânico", "Rejeito"]; return todasCategorias.filter(op => categoriasBaseContrato.includes(op)); }, [categoriasPrincipaisSelecionadas, outrasCategoriasInput]);
+  /*const opcoesResiduoContrato = useMemo(() => { const outrasCategorias = arrayFromString(outrasCategoriasInput); const todasCategorias = Array.from(new Set([...categoriasPrincipaisSelecionadas, ...outrasCategorias])); const categoriasBaseContrato = ["Reciclável", "Orgânico", "Rejeito"]; return todasCategorias.filter(op => categoriasBaseContrato.includes(op)); }, [categoriasPrincipaisSelecionadas, outrasCategoriasInput]);*/
   
   const inputStyle = "mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
   const labelStyle = "block text-sm font-medium text-gray-700";
@@ -486,11 +486,44 @@ export default function ClienteForm({
                         <div className="flex justify-between items-center mb-2"><p className="text-base font-semibold text-gray-700">Contrato de Coleta #{index + 1}</p>{ (contratosColetaForm.length > 1 || (contratosColetaForm.length === 1 && contrato.empresaColetaId)) && (<button type="button" onClick={() => removeContratoForm(index)} className="text-red-600 hover:text-red-800 text-xs font-medium">Remover</button>)}</div>
                         <div><label htmlFor={`form-cliente-empresaColeta-${index}`} className={`${labelStyle} text-xs`}>Empresa de Coleta*</label><select id={`form-cliente-empresaColeta-${index}`} value={contrato.empresaColetaId} onChange={(e) => handleContratoChange(index, 'empresaColetaId', e.target.value)} className={`${inputStyle} text-sm p-1.5`}><option value="">Selecione...</option>{empresasColetaDisponiveis.map(emp => (<option key={emp.id} value={emp.id}>{emp.nomeFantasia}</option>))}</select></div>
                         <div>
-                            <label className={`${labelStyle} text-xs mb-1`}>Tipos de Resíduo Coletados (para este contrato)*</label>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 pt-1">
-                                {opcoesResiduoContrato.map(tipo => ( <label key={tipo} htmlFor={`form-cliente-contrato-${index}-tipo-${tipo}`} className="flex items-center text-sm"><input type="checkbox" id={`form-cliente-contrato-${index}-tipo-${tipo}`} checked={(contrato.tiposResiduoColetados || []).includes(tipo)} onChange={() => handleContratoTipoResiduoChange(index, tipo)} className={`${checkboxStyle} h-3.5 w-3.5 mr-1.5`} /><span className="text-gray-700">{tipo}</span></label> ))}
-                                {opcoesResiduoContrato.length === 0 && <p className="text-xs text-gray-500 col-span-full">Selecione uma categoria principal de resíduo (acima) para habilitar as opções de contrato.</p>}
-                            </div>
+                         <label className={`${labelStyle} text-xs mb-1`}>Tipos de Resíduo Coletados (para este contrato)*</label>
+    
+                            {/* Lógica Dinâmica Adicionada Aqui */}
+                            {(() => {
+                                // 1. Encontra a empresa completa com base no ID selecionado no contrato
+                                const empresaSelecionada = empresasColetaDisponiveis.find(
+                                    emp => emp.id === contrato.empresaColetaId
+                                );
+
+                                // 2. Extrai os tipos de resíduo dessa empresa. Se nenhuma empresa for selecionada, retorna um array vazio.
+                                const tiposDisponiveis = empresaSelecionada ? empresaSelecionada.tiposResiduo : [];
+
+                                // 3. Renderiza os checkboxes com base nos tipos corretos ou uma mensagem.
+                                if (empresaSelecionada && tiposDisponiveis && tiposDisponiveis.length > 0) {
+                                    return (
+                                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 pt-1">
+                                            {tiposDisponiveis.map(tipo => (
+                                                <label key={tipo} htmlFor={`form-cliente-contrato-${index}-tipo-${tipo}`} className="flex items-center text-sm">
+                                                    <input
+                                                        type="checkbox"
+                                                        id={`form-cliente-contrato-${index}-tipo-${tipo}`}
+                                                        checked={(contrato.tiposResiduoColetados || []).includes(tipo)}
+                                                        onChange={() => handleContratoTipoResiduoChange(index, tipo)}
+                                                        className={`${checkboxStyle} h-3.5 w-3.5 mr-1.5`}
+                                                    />
+                                                    <span className="text-gray-700">{tipo}</span>
+                                                </label>
+                                            ))}
+                                        </div>
+                                    );
+                                } else {
+                                    return (
+                                        <p className="text-xs text-gray-500 pt-1">
+                                            {contrato.empresaColetaId ? "Nenhum tipo de resíduo cadastrado para esta empresa." : "Selecione uma empresa de coleta para ver os tipos de resíduo."}
+                                        </p>
+                                    );
+                                }
+                            })()}
                         </div>
                     </div>
                 ))}
