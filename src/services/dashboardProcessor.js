@@ -417,7 +417,7 @@ export const calculateCO2Impact = ({ records, userAllowedClientes, empresasColet
             const isBiometanizacao = destinacoes.includes('Biometanização');
             const isAterro = destinacoes.includes('Aterro Sanitário');
             const isIncineracao = destinacoes.includes('Incineração');
-            if (lookupWasteType === 'Reciclável' && isReciclagem) {
+            if (isReciclagem) {
                 const composicao = cliente.composicaoGravimetricaPropria || co2Config.composicaoGravimetricaNacional;
                 if (cliente.composicaoGravimetricaPropria) usaEstudoProprio = true;
                 for (const [material, percent] of Object.entries(composicao)) {
@@ -469,7 +469,7 @@ export const calculateCO2Evolution = ({ records, userAllowedClientes, empresasCo
         else if (lookupWasteType.startsWith('Orgânico')) lookupWasteType = 'Orgânico';
         const pesoToneladas = (record.peso || 0) / 1000;
         const destinacoes = empresa.destinacoes?.[lookupWasteType] || [];
-        if (lookupWasteType === 'Reciclável' && destinacoes.includes('Reciclagem')) {
+        if (destinacoes.includes('Reciclagem')) {
             const composicao = cliente.composicaoGravimetricaPropria || co2Config.composicaoGravimetricaNacional;
             for (const [material, percent] of Object.entries(composicao)) {
                 if (!percent || percent <= 0) continue;
@@ -502,7 +502,7 @@ export const calculateCO2Evolution = ({ records, userAllowedClientes, empresasCo
         cumulativeImpact += dataPoint.netImpact;
         return {
             ...dataPoint,
-            netImpact: parseFloat(cumulativeImpact.toFixed(2)),
+            netImpact: parseFloat(cumulativeImpact.toFixed(3)),
         };
     });
 };

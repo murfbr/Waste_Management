@@ -87,7 +87,7 @@ export default function SummaryCards({ summaryData, isLoading }) {
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 md:gap-6">
         {/* Card Total */}
         <div className="md:col-span-1">
-          <SummaryCard
+          <SummaryCard 
             title={t('summaryCardsComponent.totalWaste')}
             value={totalFormatted.value}
             unit={totalFormatted.unit}
