@@ -22,6 +22,8 @@ export const exportToCsv = (records, clientName = 'cliente', showMessage) => {
     "Subtipo",
     "Peso (kg)",
     "Área de Lançamento",
+    "Empresa de Coleta",
+    "Destinação Final",
     "Status",
     "Lançado por (Email)",
     "ID do Usuário"
@@ -45,6 +47,8 @@ export const exportToCsv = (records, clientName = 'cliente', showMessage) => {
       record.wasteSubType || '', // Coluna "Subtipo" separada
       (record.peso || 0).toFixed(2).replace('.', ','), // Formata o peso com vírgula
       record.areaLancamento || 'N/A', // Trata área ausente
+      record.empresaColetaNome || 'N/A', // NOVO: Usa o nome salvo no registro
+      record.destinacaoFinal || 'N/A',   // NOVO: Usa a destinação salva no registro
       record.isPending ? 'Pendente' : 'Sincronizado', // Coluna "Status"
       record.userEmail || '', // Email do usuário
       record.userId || '' // ID do usuário

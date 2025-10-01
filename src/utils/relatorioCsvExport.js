@@ -14,15 +14,15 @@ export const exportarParaAuditoriaCSV = (lancamentos, empresasMap, clienteData) 
       'Tipo de Resíduo',
       'Subtipo de Resíduo',
       'Peso (kg)',
-      'Empresa de Coleta'
+      'Empresa de Coleta',
+      'Destinação Final'
     ];
 
     // 2. Mapeia os lançamentos para as linhas do CSV
     const rows = lancamentos.map(record => {
       const data = new Date(record.timestamp);
-      const empresaColeta = record.empresaColetaId 
-        ? empresasMap.get(record.empresaColetaId) || 'ID não encontrado' 
-        : 'N/A';
+      const empresaColeta = record.empresaColetaNome 
+        || (record.empresaColetaId ? empresasMap.get(record.empresaColetaId) || 'ID não encontrado' : 'N/A');
 
       // Retorna um array de valores para a linha
       return [
@@ -32,7 +32,8 @@ export const exportarParaAuditoriaCSV = (lancamentos, empresasMap, clienteData) 
         record.wasteType || '',
         record.wasteSubType || '',
         String(record.peso).replace('.', ','), // Troca ponto por vírgula para padrão Excel brasileiro
-        empresaColeta
+        empresaColeta,
+        record.destinacaoFinal || 'N/A'
       ];
     });
 
