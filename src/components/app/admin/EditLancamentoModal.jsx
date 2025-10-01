@@ -1,20 +1,44 @@
 // EditLancamentoModal.jsx
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useContext } from 'react';
+import { collection, getDocs, query } from 'firebase/firestore';
+import AuthContext from '../../../context/AuthContext'; // Certifique-se que o caminho para seu AuthContext está correto
 
-// --- ALTERAÇÃO: Recebe 'empresasColeta' como nova prop ---
-export default function EditLancamentoModal({ isOpen, onClose, onSave, lancamento, cliente, empresasColeta }) {
+export default function EditLancamentoModal({ isOpen, onClose, onSave, lancamento, cliente }) {
+  const { db } = useContext(AuthContext);
+
   const [formData, setFormData] = useState({});
   const [originalData, setOriginalData] = useState({});
+  
+  const [empresasColeta, setEmpresasColeta] = useState([]);
+  const [loadingEmpresas, setLoadingEmpresas] = useState(false);
+
+  // --- LÓGICA DE OPÇÕES DINÂMICAS ---
 
   const areaOptions = useMemo(() => cliente?.areasPersonalizadas || [], [cliente]);
   const wasteTypeOptions = useMemo(() => cliente?.categoriasPrincipaisResiduo || [], [cliente]);
+  
   const wasteSubTypeOptions = useMemo(() => {
     if (!cliente || !formData.wasteType) return [];
     if (formData.wasteType === 'Reciclável') return cliente.tiposReciclaveisPersonalizados || [];
     if (formData.wasteType === 'Orgânico') return cliente.tiposOrganicosPersonalizados || [];
     return [];
   }, [cliente, formData.wasteType]);
+
+  // NOVO: Memoiza as opções de destinação com base na empresa e tipo de resíduo selecionados
+  const destinacaoOptions = useMemo(() => {
+    if (!formData.empresaColetaId || !formData.wasteType || !empresasColeta.length) {
+      return [];
+    }
+    const selectedEmpresa = empresasColeta.find(emp => emp.id === formData.empresaColetaId);
+    if (!selectedEmpresa || !selectedEmpresa.destinacoes) {
+      return [];
+    }
+    return selectedEmpresa.destinacoes[formData.wasteType] || [];
+  }, [formData.empresaColetaId, formData.wasteType, empresasColeta]);
+
+
+  // --- EFEITOS (useEffect) ---
 
   useEffect(() => {
     if (lancamento) {
@@ -25,46 +49,73 @@ export default function EditLancamentoModal({ isOpen, onClose, onSave, lancament
     }
   }, [lancamento]);
 
-  // --- NOVO useEffect: Recalcula a destinação quando o tipo de resíduo muda ---
   useEffect(() => {
-    if (!formData.wasteType || !cliente || !empresasColeta) {
-      return;
+    if (isOpen && db) {
+      const fetchEmpresasColeta = async () => {
+        setLoadingEmpresas(true);
+        try {
+          const q = query(collection(db, 'empresasColeta'));
+          const querySnapshot = await getDocs(q);
+          const empresas = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+          setEmpresasColeta(empresas);
+        } catch (error) {
+          console.error("Erro ao buscar empresas de coleta:", error);
+          alert('Falha ao carregar os dados das empresas de coleta.');
+        } finally {
+          setLoadingEmpresas(false);
+        }
+      };
+      fetchEmpresasColeta();
     }
+  }, [isOpen, db]);
 
-    const contratoAplicavel = (cliente.contratosColeta || []).find(c => 
-        c.tiposResiduoColetados?.includes(formData.wasteType)
-    );
-
-    let empresaColetaCompleta = null;
-    let destinacaoFinal = null;
-
-    if (contratoAplicavel) {
-      empresaColetaCompleta = empresasColeta.find(emp => emp.id === contratoAplicavel.empresaColetaId);
-    }
-    
-    if (empresaColetaCompleta) {
-      const destinacoesPossiveis = empresaColetaCompleta.destinacoes?.[formData.wasteType] || [];
-      destinacaoFinal = destinacoesPossiveis.length > 0 ? destinacoesPossiveis[0] : null;
-    }
-
-    setFormData(prev => ({
-      ...prev,
-      empresaColetaId: empresaColetaCompleta?.id || null,
-      empresaColetaNome: empresaColetaCompleta?.nomeFantasia || null,
-      destinacaoFinal: destinacaoFinal,
-    }));
-
-  }, [formData.wasteType, cliente, empresasColeta]);
-  // --- FIM DO NOVO useEffect ---
-
-  if (!isOpen || !lancamento) return null;
+  // --- MANIPULADORES DE EVENTOS ---
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Se o tipo de resíduo for alterado, recalcula a empresa e destino padrão
     if (name === 'wasteType') {
-      setFormData(prev => ({ ...prev, wasteType: value, wasteSubType: '' }));
+        const contratoAplicavel = (cliente.contratosColeta || []).find(c => 
+            c.tiposResiduoColetados?.includes(value)
+        );
+
+        let defaultEmpresaId = '';
+        let defaultEmpresaNome = null;
+        let defaultDestinacao = '';
+
+        if (contratoAplicavel) {
+            const empresa = empresasColeta.find(emp => emp.id === contratoAplicavel.empresaColetaId);
+            if (empresa) {
+                defaultEmpresaId = empresa.id;
+                defaultEmpresaNome = empresa.nomeFantasia;
+                const destinacoesPossiveis = empresa.destinacoes?.[value] || [];
+                if (destinacoesPossiveis.length > 0) {
+                    defaultDestinacao = destinacoesPossiveis[0];
+                }
+            }
+        }
+        
+        setFormData(prev => ({
+            ...prev,
+            wasteType: value,
+            wasteSubType: '', // Reseta o subtipo
+            empresaColetaId: defaultEmpresaId,
+            empresaColetaNome: defaultEmpresaNome,
+            destinacaoFinal: defaultDestinacao,
+        }));
+
+    // Se a empresa de coleta for alterada manualmente, reseta a destinação
+    } else if (name === 'empresaColetaId') {
+        const selectedEmpresa = empresasColeta.find(emp => emp.id === value);
+        setFormData(prev => ({
+            ...prev,
+            empresaColetaId: value,
+            empresaColetaNome: selectedEmpresa?.nomeFantasia || null,
+            destinacaoFinal: '', // Força o usuário a escolher uma nova destinação válida
+        }));
     } else {
-      setFormData(prev => ({ ...prev, [name]: value }));
+        setFormData(prev => ({ ...prev, [name]: value }));
     }
   };
   
@@ -80,6 +131,8 @@ export default function EditLancamentoModal({ isOpen, onClose, onSave, lancament
 
   const hasChanges = JSON.stringify(formData) !== JSON.stringify(originalData);
 
+  if (!isOpen || !lancamento) return null;
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-60 flex justify-center items-center z-50 p-4 font-comfortaa">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
@@ -89,22 +142,47 @@ export default function EditLancamentoModal({ isOpen, onClose, onSave, lancament
         </div>
         <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-              {/* Campos de formulário existentes... */}
+              
+              {/* Campos de formulário */}
               <div><label htmlFor="timestamp" className="block text-sm font-medium text-gray-700">Data e Hora</label><input type="datetime-local" id="timestamp" name="timestamp" value={formData.timestamp || ''} onChange={handleChange} className="mt-1 w-full p-2 border border-gray-300 rounded-md shadow-sm"/></div>
               <div><label htmlFor="areaLancamento" className="block text-sm font-medium text-gray-700">Área de Lançamento</label><select id="areaLancamento" name="areaLancamento" value={formData.areaLancamento || ''} onChange={handleChange} className="mt-1 w-full p-2 border border-gray-300 rounded-md shadow-sm"><option value="">Selecione...</option>{areaOptions.map(area => <option key={area} value={area}>{area}</option>)}</select></div>
               <div><label htmlFor="wasteType" className="block text-sm font-medium text-gray-700">Tipo de Resíduo</label><select id="wasteType" name="wasteType" value={formData.wasteType || ''} onChange={handleChange} className="mt-1 w-full p-2 border border-gray-300 rounded-md shadow-sm"><option value="">Selecione...</option>{wasteTypeOptions.map(type => <option key={type} value={type}>{type}</option>)}</select></div>
               {wasteSubTypeOptions.length > 0 && (<div><label htmlFor="wasteSubType" className="block text-sm font-medium text-gray-700">Subtipo de Resíduo</label><select id="wasteSubType" name="wasteSubType" value={formData.wasteSubType || ''} onChange={handleChange} className="mt-1 w-full p-2 border border-gray-300 rounded-md shadow-sm"><option value="">Selecione...</option>{wasteSubTypeOptions.map(subType => <option key={subType} value={subType}>{subType}</option>)}</select></div>)}
               <div><label htmlFor="peso" className="block text-sm font-medium text-gray-700">Peso (kg)</label><input type="text" id="peso" name="peso" value={formData.peso || ''} onChange={handleChange} className="mt-1 w-full p-2 border border-gray-300 rounded-md shadow-sm"/></div>
               
-              {/* --- NOVO: Campos de exibição para Coleta e Destinação --- */}
+              {/* --- ALTERAÇÃO: Campos de Coleta e Destinação agora são selecionáveis --- */}
               <div className="pt-4 mt-4 border-t border-gray-200">
                   <div>
-                      <span className="block text-sm font-medium text-gray-500">Empresa de Coleta (Automático)</span>
-                      <p className="mt-1 w-full p-2 bg-gray-100 border border-gray-200 rounded-md text-gray-700">{formData.empresaColetaNome || 'Não definida para este tipo de resíduo'}</p>
+                      <label htmlFor="empresaColetaId" className="block text-sm font-medium text-gray-700">Empresa de Coleta</label>
+                      <select 
+                        id="empresaColetaId" 
+                        name="empresaColetaId" 
+                        value={formData.empresaColetaId || ''} 
+                        onChange={handleChange} 
+                        disabled={loadingEmpresas}
+                        className="mt-1 w-full p-2 border border-gray-300 rounded-md shadow-sm disabled:bg-gray-100"
+                      >
+                        <option value="">{loadingEmpresas ? 'Carregando...' : 'Selecione uma empresa'}</option>
+                        {empresasColeta.map(empresa => (
+                            <option key={empresa.id} value={empresa.id}>{empresa.nomeFantasia}</option>
+                        ))}
+                      </select>
                   </div>
                    <div className="mt-2">
-                      <span className="block text-sm font-medium text-gray-500">Destinação Final (Automático)</span>
-                      <p className="mt-1 w-full p-2 bg-gray-100 border border-gray-200 rounded-md text-gray-700">{formData.destinacaoFinal || 'Não definida para este tipo de resíduo'}</p>
+                      <label htmlFor="destinacaoFinal" className="block text-sm font-medium text-gray-700">Destinação Final</label>
+                      <select 
+                        id="destinacaoFinal" 
+                        name="destinacaoFinal" 
+                        value={formData.destinacaoFinal || ''} 
+                        onChange={handleChange} 
+                        disabled={!formData.empresaColetaId || destinacaoOptions.length === 0}
+                        className="mt-1 w-full p-2 border border-gray-300 rounded-md shadow-sm disabled:bg-gray-100"
+                      >
+                          <option value="">Selecione uma destinação</option>
+                          {destinacaoOptions.map(dest => (
+                            <option key={dest} value={dest}>{dest}</option>
+                          ))}
+                      </select>
                   </div>
               </div>
             </div>
