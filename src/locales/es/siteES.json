@@ -8,8 +8,8 @@
   },
   "hero": {
     "title": "Tecnología intuitiva. Resultados medibles.",
-    "paragraph1": "Una plataforma completa para monitoreo y gestión de residuos, diseñada para quienes realmente operan: un sistema intuitivo para registrar, reportar y reducir residuos mediante datos precisos, paneles en tiempo real, emisión automática de MTR e información lista para decisiones estratégicas.",
-    "paragraph2": "Desde el registro hasta el análisis, todo lo que su empresa necesita para tomar decisiones basadas en datos, reducir costos operativos y avanzar en sostenibilidad con eficiencia.",
+    "paragraph1": "Una plataforma integral para el monitoreo y la gestión de residuos, diseñada para quienes están en el terreno. Nuestro sistema intuitivo permite registrar, reportar y reducir residuos con datos precisos, paneles en tiempo real, emisión automática de MTR y reportes listos para impulsar decisiones estratégicas",
+    "paragraph2": "Desde el registro hasta el análisis, ofrecemos todo lo que su empresa necesita para tomar decisiones basadas en datos, reducir costos operativos y avanzar hacia la sostenibilidad con eficiencia.",
     "buttonDemo": "Solicita una Demostración",
     "buttonLearn": "Saber Más"
   },
@@ -17,104 +17,104 @@
     "sectionTitle": "¿Por qué elegir Ctrl+Waste?",
     "cards": {
       "dataEconomy": {
-        "title": "Ahorro basado en datos",
-        "text": "Identifique desperdicios por tipo, área o período. Actúe con precisión para reducir costos."
+        "title": "Ahorro impulsado por datos",
+        "text": "Detecte desperdicios según tipo, área o período. Tome decisiones precisas para reducir costos y optimizar recursos."
       },
       "operationControl": {
-        "title": "Poder de control operativo",
-        "text": "Contrate servicios de recolección basados en la cantidad real de residuos generados."
+        "title": "Control operativo inteligente",
+        "text": "Gestione la contratación de servicios de recolección según la cantidad real de residuos generados."
       },
       "legalAutomation": {
-        "title": "Automatice obligaciones legales",
-        "text": "Emisión automática de MTRs e informes. Menos tareas manuales, más productividad."
+        "title": "Cumplimiento legal automatizado",
+        "text": "Genere MTRs e informes de forma automática. Reduzca tareas manuales y aumente la productividad operativa."
       },
       "evidenceDecision": {
-        "title": "Decisiones basadas en evidencia",
-        "text": "Transforme residuos en indicadores estratégicos para su operación. Fácil de usar e implementar."
+        "title": "Decisiones respaldadas por datos",
+        "text": "Convierta los residuos en indicadores estratégicos para su operación. Una solución fácil de usar e implementar."
       }
     }
   },
   "platform": {
-    "sectionTitle": "La plataforma completa para su Gestión de Residuos",
+    "sectionTitle": "La plataforma integral para la gestión inteligente de residuos",
     "features": {
       "dashboards": {
         "title": "Paneles en tiempo real",
-        "text1": "Visualice claramente e interactivamente los principales indicadores de su operación:",
+        "text1": "Visualice de forma clara e interactiva los indicadores clave de su operación:",
         "list": [
-          "Peso de los residuos por tipo",
+          "Peso de residuos por tipo",
           "Porcentaje de desvío de vertedero (Metodología Cero Residuos)",
           "Seguimiento del progreso de metas",
           "Comparaciones por área, unidad y período"
         ],
-        "highlight": "Todo 100% digital, actualizado en tiempo real."
+        "highlight": "Todo 100% digital y actualizado en tiempo real."
       },
       "quickEntry": {
         "title": "Registro rápido y eficiente",
-        "text1": "Registro de datos simplificado vía:",
+        "text1": "Simplifique el registro de datos con opciones flexibles y adaptadas a su operación:",
         "list": [
-          "Cualquier dispositivo móvil",
-          "Balanza para pesar los residuos (a ser proporcionada por el cliente)",
-          "Interfaz intuitiva con categorías personalizables por operación"
+          "Compatible con cualquier dispositivo móvil",
+          "Integración con balanzas para pesar residuos (proporcionadas por el cliente)",
+          "Interfaz intuitiva con categorías personalizables según sus necesidades"
         ]
       },
       "reports": {
-        "title": "Informes y cumplimiento",
-        "text1": "Monitoree, exporte y demuestre los resultados de su gestión de residuos:",
+        "title": "Informes y cumplimiento simplificados",
+        "text1": "Monitoree, exporte y demuestre los resultados de su gestión de residuos con facilidad:",
         "list": [
           "Informes técnicos y gerenciales generados en tiempo real con un solo clic",
-          "Exportación CSV automatizada",
-          "Emisión automatizada y personalizada de MTR (Manifiesto de Transporte de Residuos)",
-          "Base sólida para auditorías, certificaciones e informes ESG"
+          "Exportación automatizada en formato CSV",
+          "Emisión personalizada y automática de MTR (Manifiesto de Transporte de Residuos)",
+          "Base sólida para auditorías, certificaciones y reportes ESG"
         ],
-        "aside": "💡 Ahorre hasta el 80% del tiempo dedicado a tareas operativas."
+        "aside": "💡 Ahorre hasta un 80% del tiempo dedicado a tareas operativas."
       }
     }
   },
   "productHero": {
-    "title": "Transforma Residuos en Resultados",
-    "subtitle": "Una solución completa, desde el registro hasta el análisis, para una gestión de residuos más inteligente y económica."
+    "title": "Transforma residuos en resultados",
+    "subtitle": "Una solución integral que abarca desde el registro hasta el análisis, para una gestión de residuos más eficiente, inteligente y rentable."
   },
   "included": {
-    "title": "¿Qué está incluido?",
-    "description": "Con Ctrl+Waste, su operación cuenta con una solución completa para transformar datos en decisiones eficientes:",
+    "title": "¿Qué incluye Ctrl+Waste?",
+    "description": "Con Ctrl+Waste, tu operación accede a una solución completa que convierte datos en decisiones inteligentes:",
     "list": [
-      "Software como Servicio (SaaS) con acceso multiusuario",
-      "Tableros en tiempo real para monitoreo y análisis de residuos",
-      "Emisión automática y personalizada de MTR (Manifiesto de Transporte de Residuos)"
+      "Software como Servicio (SaaS) con acceso multiusuario. Accede desde cualquier lugar, con perfiles personalizados para tu equipo.",
+      "Tableros en tiempo real. Monitorea y analiza los residuos generados con visualizaciones dinámicas y métricas clave.",
+      "Emisión automática y personalizada del MTR. Genera el Manifiesto de Transporte de Residuos de forma ágil, cumpliendo con la normativa vigente."
     ]
   },
   "requirements": {
-    "title": "¿Qué necesita tener?",
-    "description": "Para utilizar Ctrl+Waste con total eficiencia, su estructura debe contar con:",
+    "title": "¿Qué necesitas para usar Ctrl+Waste?",
+    "description": "Para aprovechar al máximo Ctrl+Waste, tu operación solo requiere una estructura básica:",
     "list": [
-      "Tableta o celular para el registro diario de pesajes",
-      "Balanza para pesar los residuos",
-      "Acceso operativo: basta con que una persona registre el peso en el sistema en 3 clics – simple, rápido y sin complicaciones."
+      "Tableta o celular. Para registrar fácilmente los pesajes diarios desde cualquier punto de generación.",
+      "Balanza. Para obtener el peso exacto de los residuos antes de su disposición o transporte.",
+      "Acceso operativo simplificado. Solo se necesita una persona para registrar el peso en el sistema con 3 clics. Es rápido, intuitivo y sin complicaciones."
     ]
   },
   "howItWorks": {
     "title": "¿Cómo funciona en la práctica?",
-    "subtitle": "Transformar residuos en datos y datos en ahorro es simple con Ctrl+Waste. Vea cómo funciona su operación en 5 pasos:",
+    "subtitle": "Transformar residuos en datos —y esos datos en ahorro— es simple con Ctrl+Waste. Así funciona tu operación en solo 5 pasos:",
     "steps": [
       {
-        "title": "Instale y personalice",
-        "text": "Active Ctrl+Waste en su tableta, celular o computadora. Personalice las categorías de residuos y áreas de su operación. Registre sus proveedores de recolección."
+        "title": "Instala y personaliza",
+        "text": "Activa Ctrl+Waste en tu tableta, celular o computadora. Configura las categorías de residuos, áreas operativas y registra tus proveedores de recolección."
       },
       {
-        "title": "Registre los pesajes",
-        "text": "En la rutina diaria, los colaboradores pesan los residuos en balanzas propias e ingresan los datos en tiempo real en el sistema con hasta 3 clics."
+        "title": "Registra los pesajes",
+        "text": "En la rutina diaria, los colaboradores pesan los residuos en sus balanzas y registran los datos en tiempo real con hasta 3 clics."
       },
       {
-        "title": "Visualice los datos",
-        "text": "Los tableros muestran la composición de los residuos, generación por área, tasa de desvío de vertedero y destino final."
+        "title": "Visualiza los datos",
+        "text": "Accede a tableros dinámicos que muestran la composición de residuos, generación por área, tasa de desvío de vertedero y destino final."
       },
       {
-        "title": "Generar informes y documentos obligatorios para el transporte de residuos",
-        "text": "Genera informes técnicos con un clic y deja que el sistema automatice la creación de los documentos obligatorios para el transporte de residuos."
+        "title": "Genera informes y documentos",
+        "text": "Con un clic, obtén informes técnicos y deja que el sistema automatice la creación de los documentos obligatorios para el transporte de residuos."
       },
       {
-        "title": "Tome decisiones estratégicas",
-        "text": "Utilice los insights de la plataforma para reducir desperdicios, revisar procesos, planificar acciones y ahorrar recursos."
+        "title": "Toma decisiones estratégicas",
+        "text": "Aprovecha los insights para reducir desperdicios, optimizar procesos, planificar acciones y ahorrar recursos."
       }
     ]
   },
@@ -123,50 +123,50 @@
     "features": [
       {
         "title": "Exporta tus datos",
-        "text": "Descarga todos los registros de residuos generados por tu operación fácilmente en CSV."
+        "text": "Descarga fácilmente todos los registros de residuos generados en formato CSV."
       },
       {
         "title": "Datos por categoría de residuo",
-        "text": "Sigue el volumen y tipo de residuos por área o proceso."
+        "text": "Monitorea el volumen y tipo de residuos por área, unidad o proceso."
       },
       {
         "title": "Informes con un clic",
-        "text": "Genera informes técnicos y de gestión al instante."
+        "text": "Genera informes técnicos y gerenciales al instante, listos para auditorías o decisiones estratégicas."
       },
       {
-        "title": "Controla tus datos",
-        "text": "Transparencia y autonomía total: tú controlas tus datos."
+        "title": "Control total de tus datos",
+        "text": "Transparencia y autonomía: tú decides cómo y cuándo usar tu información."
       },
       {
         "title": "Gestión de equipo",
-        "text": "Agrega, visualiza y administra quién está registrando los datos en el sistema."
+        "text": "Agrega, visualiza y administra los usuarios que registran datos en el sistema."
       },
       {
-        "title": "Listo para operaciones más grandes",
-        "text": "Recomendado para cadenas de hoteles, restaurantes o unidades con gran volumen de datos."
+        "title": "Escalable para grandes operaciones",
+        "text": "Ideal para cadenas hoteleras, restaurantes y unidades con alto volumen de residuos."
       },
       {
         "title": "Registro rápido",
-        "text": "Registro simplificado: registra un nuevo pesaje en menos de 3 segundos."
+        "text": "Registra un nuevo pesaje en menos de 3 segundos. Simple, ágil y eficiente."
       },
       {
-        "title": "No te preocupes por los documentos obligatorios",
-        "text": "Emisión automatizada y personalizada de documentos obligatorios para el transporte de residuos para garantizar que la documentación coincida con la realidad."
+        "title": "Documentación sin complicaciones",
+        "text": "Emisión automática y personalizada de los documentos obligatorios para el transporte de residuos, siempre alineados con la realidad operativa."
       }
     ]
   },
   "contact": {
     "title": "Contáctanos",
-    "subtitle": "¿Desea solicitar una demostración o hacer una consulta? Complete el formulario y nuestro equipo se pondrá en contacto con usted pronto.",
+    "subtitle": "¿Te gustaría solicitar una demostración o resolver alguna duda?",
     "legend": "Su Información",
     "fullName": "Nombre Completo",
-    "fullNamePlaceholder": "Su nombre completo",
-    "email": "Correo electrónico",
+    "fullNamePlaceholder": "Nombre completo",
+    "email": "Dirección electrónica",
     "emailPlaceholder": "tu.correo@ejemplo.com",
     "company": "Empresa",
     "companyPlaceholder": "Nombre de su empresa",
     "message": "Mensaje",
-    "messagePlaceholder": "¿Cómo podemos ayudar?",
+    "messagePlaceholder": "Completa el formulario y nuestro equipo te responderá en breve.",
     "successMessage": "¡Mensaje enviado con éxito! Agradecemos su contacto.",
     "errorMessage": "Ocurrió un error al enviar su mensaje. Por favor, inténtelo de nuevo más tarde.",
     "send": "Enviar Mensaje",

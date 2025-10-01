@@ -1,15 +1,18 @@
 // src/components/app/filters/MonthSelector.jsx
 import React from 'react';
 import { useTranslation } from 'react-i18next';
+// 1. Importar o hook do contexto
+import { useDashboardFilters } from '../../../context/DashboardFilterContext';
 
 const TODOS_OS_MESES = Array.from({ length: 12 }, (_, i) => i);
 
-export default function MonthSelector({
-  selectedMonths,
-  onSelectedMonthsChange,
-}) {
+// 2. Remover as props de estado da assinatura do componente
+export default function MonthSelector() {
   const { t } = useTranslation('dashboard');
   
+  // 3. Pegar o estado e a função diretamente do contexto
+  const { selectedMonths, handleManualMonthChange } = useDashboardFilters();
+
   const MESES_FILTRO = t('filtersComponent.monthSelector.months', { returnObjects: true }) || [];
 
   if (!Array.isArray(MESES_FILTRO) || MESES_FILTRO.length === 0) {
@@ -30,11 +33,13 @@ export default function MonthSelector({
         newSelectedMonths = [...selectedMonths, toggledMonthIndex];
       }
     }
-    onSelectedMonthsChange(newSelectedMonths);
+    // 4. Usar a função do contexto para atualizar o estado
+    handleManualMonthChange(newSelectedMonths);
   };
 
   const handleSelectAllToggle = () => {
-    onSelectedMonthsChange(allMonthsSelected ? [] : TODOS_OS_MESES);
+    // 4. Usar a função do contexto para atualizar o estado
+    handleManualMonthChange(allMonthsSelected ? [] : TODOS_OS_MESES);
   };
 
   return (

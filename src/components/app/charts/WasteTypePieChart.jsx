@@ -50,7 +50,7 @@ const CustomTooltip = ({ active, payload, locale, unit }) => {
 
 // Rótulo customizado agora recebe 'locale' e 'unit'
 const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, fill, locale, unit }) => {
-    if (percent < 0.05) return null;
+    if (percent < 0.001) return null;
     const RADIAN = Math.PI / 180;
     const radius = outerRadius + 30; 
     const x = cx + radius * Math.cos(-midAngle * RADIAN);

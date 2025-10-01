@@ -1,50 +1,25 @@
-// src/components/app/filters/DashboardFilters.jsx
-
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDashboardFilters } from '../../../context/DashboardFilterContext';
 import MonthSelector from './MonthSelector';
 import AreaSelector from './AreaSelector';
 import YearSelector from './YearSelector';
 
-// Ícones
-const FilterIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 mr-2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>;
-const ChevronDownIcon = ({ isOpen }) => (
-    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`h-6 w-6 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}>
-        <polyline points="6 9 12 15 18 9"></polyline>
-    </svg>
-);
+const FilterIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5 mr-2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>;
+const ChevronDownIcon = ({ isOpen }) => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={`h-6 w-6 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`}><polyline points="6 9 12 15 18 9"></polyline></svg>;
 
-export default function DashboardFilters({ 
-    selectedYears, 
-    onYearToggle, 
-    availableYears, 
-    selectedMonths, 
-    onSelectedMonthsChange,
-    selectedAreas, 
-    onSelectedAreasChange,
-    availableAreas, // A prop que estamos investigando
-    onQuickPeriodSelect,
-}) {
-
+// A assinatura do componente agora só recebe dados, não estado de filtros.
+export default function DashboardFilters({ availableYears, availableAreas }) {
     const { t } = useTranslation('dashboard');
     const [isExpanded, setIsExpanded] = useState(true);
-    const [activePeriod, setActivePeriod] = useState('thisMonth');
 
-    const handleQuickPeriodClick = (period) => {
-        setActivePeriod(period);
-        onQuickPeriodSelect(period);
-    };
-    
-    const handleManualChange = (action) => (...args) => {
-        setActivePeriod(null); 
-        action(...args);
-    };
+    const { activePeriod, handleQuickPeriodSelect } = useDashboardFilters();
 
     const hasLastYearData = availableYears.includes(new Date().getFullYear() - 1);
 
     const FilterButton = ({ period, label }) => (
         <button
-            onClick={() => handleQuickPeriodClick(period)}
+            onClick={() => handleQuickPeriodSelect(period)}
             className={`px-4 py-2 text-sm font-bold rounded-md transition-all duration-200 transform hover:scale-105
                 ${activePeriod === period 
                     ? 'bg-apricot-orange text-white shadow-md' 
@@ -80,23 +55,13 @@ export default function DashboardFilters({
                                 {hasLastYearData && <FilterButton period="lastYear" label={t('filtersComponent.quickPeriods.lastYear')} />}
                             </div>
                         </div>
-                        <YearSelector 
-                            availableYears={availableYears}
-                            selectedYears={selectedYears}
-                            onYearToggle={handleManualChange(onYearToggle)}
-                        />
+                        {/* Os filhos agora não recebem nenhuma prop de estado */}
+                        <YearSelector availableYears={availableYears} />
                     </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-6 border-t border-early-frost">
-                        <MonthSelector
-                            selectedMonths={selectedMonths}
-                            onSelectedMonthsChange={handleManualChange(onSelectedMonthsChange)}
-                        />
-                        <AreaSelector
-                            availableAreas={availableAreas}
-                            selectedAreas={selectedAreas}
-                            onSelectedAreasChange={handleManualChange(onSelectedAreasChange)}
-                        />
+                        <MonthSelector />
+                        <AreaSelector availableAreas={availableAreas} />
                     </div>
                 </div>
             )}

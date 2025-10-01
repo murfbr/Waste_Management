@@ -16,6 +16,14 @@ const TIPOS_RESIDUO_CONFIG = {
   }
 };
 
+const DESTINACOES_PADRAO_OUTROS = [
+  'Reciclagem',
+  'Compostagem',
+  'Biometanização',
+  'Aterro Sanitário',
+  'Incineração'
+];
+
 // Extrai os nomes dos tipos padrão para fácil acesso
 const CATEGORIAS_RESIDUO_PADRAO = Object.keys(TIPOS_RESIDUO_CONFIG);
 
@@ -203,24 +211,44 @@ export default function EmpresaColetaForm({
         </div>
 
         {/* Destinações Condicionais */}
-        {tiposSelecionados.length > 0 && (
-          <div className="space-y-4 pt-4 border-t border-gray-200">
+        {(() => {
+    // 1. Combina os tipos dos checkboxes e do campo de texto, sem duplicatas
+    const outrosTiposArray = outroTipoInput.split(',').map(t => t.trim()).filter(Boolean);
+    const todosOsTipos = [...new Set([...tiposSelecionados, ...outrosTiposArray])];
+
+    if (todosOsTipos.length === 0) return null; // Não mostra nada se nenhum tipo foi selecionado/digitado
+
+    return (
+        <div className="space-y-4 pt-4 border-t border-gray-200">
             <h3 className={labelStyle}>Destinação por Tipo de Resíduo*</h3>
-            {tiposSelecionados.filter(tipo => TIPOS_RESIDUO_CONFIG[tipo]).map((tipo) => (
-              <div key={tipo} className="p-3 bg-gray-50 rounded-md">
-                <p className="font-semibold text-gray-800">Destinação para {tipo}:</p>
-                <div className="mt-2 space-y-1">
-                  {TIPOS_RESIDUO_CONFIG[tipo].destinacoes.map(dest => (
-                    <label key={dest} htmlFor={`dest-${tipo}-${dest}`} className="flex items-center">
-                      <input type="checkbox" id={`dest-${tipo}-${dest}`} value={dest} checked={destinacoes[tipo]?.includes(dest) || false} onChange={() => handleDestinacaoChange(tipo, dest)} className={`${checkboxStyle} mr-2`}/>
-                      <span>{dest}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+            {todosOsTipos.map((tipo) => {
+                // 2. Decide qual lista de destinação usar
+                const listaDeDestinacoes = TIPOS_RESIDUO_CONFIG[tipo]?.destinacoes || DESTINACOES_PADRAO_OUTROS;
+
+                return (
+                    <div key={tipo} className="p-3 bg-gray-50 rounded-md">
+                        <p className="font-semibold text-gray-800">Destinação para {tipo}:</p>
+                        <div className="mt-2 space-y-1">
+                            {listaDeDestinacoes.map(dest => (
+                                <label key={dest} htmlFor={`dest-${tipo}-${dest}`} className="flex items-center">
+                                    <input
+                                        type="checkbox"
+                                        id={`dest-${tipo}-${dest}`}
+                                        value={dest}
+                                        checked={destinacoes[tipo]?.includes(dest) || false}
+                                        onChange={() => handleDestinacaoChange(tipo, dest)}
+                                        className={`${checkboxStyle} mr-2`}
+                                    />
+                                    <span>{dest}</span>
+                                </label>
+                            ))}
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    );
+})()}
       </fieldset>
 
       {/* Status da Empresa */}

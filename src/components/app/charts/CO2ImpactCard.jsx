@@ -8,10 +8,10 @@ const IconWrapper = ({ children, colorClass }) => (
     </div>
 );
 
-// Formata o número para ter 2 casas decimais e usar vírgula
+// Formata o número para ter 3 casas decimais e usar vírgula
 const formatNumber = (num) => {
     if (typeof num !== 'number') return '0,00';
-    return num.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    return num.toLocaleString('pt-BR', { minimumFractionDigits: 3, maximumFractionDigits: 3 });
 };
 
 export default function CO2ImpactCard({ data, isLoading }) {
@@ -32,7 +32,7 @@ export default function CO2ImpactCard({ data, isLoading }) {
         <div className="bg-white p-6 rounded-lg shadow-md flex flex-col h-full">
             <div className="flex items-start justify-between">
                 <div>
-                    <h3 className="text-lg font-lexend font-semibold text-rich-soil">Impacto de Emissões de Carbono</h3>
+                    <h3 className="text-acao font-lexend font-semibold text-rich-soil">Impacto de Emissões de Carbono</h3>
                     <p className="text-sm text-gray-500 font-comfortaa">Balanço de CO₂e no período</p>
                 </div>
                 <FaLeaf className="h-6 w-6 text-green-500" />

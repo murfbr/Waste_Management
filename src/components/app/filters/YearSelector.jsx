@@ -1,17 +1,19 @@
 // src/components/app/filters/YearSelector.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+// 1. IMPORTAR O NOSSO HOOK DO CONTEXTO
+import { useDashboardFilters } from '../../../context/DashboardFilterContext';
 
 const ChevronDownIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-400"><polyline points="6 9 12 15 18 9"></polyline></svg>;
 
-export default function YearSelector({
-  availableYears = [],
-  selectedYears = [],
-  onYearToggle = () => {},
-}) {
+// 2. A única prop que ele realmente precisa é a lista de anos disponíveis
+export default function YearSelector({ availableYears = [] }) {
   const { t } = useTranslation('dashboard');
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  // 3. Pegamos o estado e a função que precisamos diretamente do contexto
+  const { selectedYears, handleManualYearToggle } = useDashboardFilters();
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -25,7 +27,6 @@ export default function YearSelector({
 
   const getDisplayValue = () => {
     if (selectedYears.length === 0) return t('filtersComponent.yearSelector.placeholder');
-    // AQUI ESTÁ A CORREÇÃO:
     if (selectedYears.length === 1) return selectedYears[0]; 
     return t('filtersComponent.yearSelector.multipleSelected', { count: selectedYears.length });
   };
@@ -52,7 +53,8 @@ export default function YearSelector({
                 type="checkbox"
                 className="h-4 w-4 text-apricot-orange border-early-frost rounded focus:ring-apricot-orange"
                 checked={selectedYears.includes(year)}
-                onChange={() => onYearToggle(year)}
+                // 4. Usamos a função do contexto aqui
+                onChange={() => handleManualYearToggle(year)}
               />
               <span className="ml-3">{year}</span>
             </label>

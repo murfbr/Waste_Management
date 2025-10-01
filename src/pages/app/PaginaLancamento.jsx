@@ -5,17 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { useTranslation } from 'react-i18next';
 import AuthContext from '../../context/AuthContext';
-import { 
-    collection, 
-    deleteDoc, 
-    doc, 
-    query, 
-    where, 
-    getDocs, 
-    orderBy, 
-    limit, 
-    startAfter 
-} from 'firebase/firestore';
+import { collection, deleteDoc, doc, query, where, getDocs, orderBy, limit, startAfter } from 'firebase/firestore';
 
 import MessageBox from '../../components/app/MessageBox';
 import WasteForm from '../../components/app/WasteForm';
@@ -47,9 +37,13 @@ export default function PaginaLancamento() {
   const [lastVisibleFirestoreRecord, setLastVisibleFirestoreRecord] = useState(null); 
   const [hasMoreRecords, setHasMoreRecords] = useState(false); 
   const [loadingMore, setLoadingMore] = useState(false);
+
   const [selectedClienteId, setSelectedClienteId] = useState('');
   const [selectedClienteData, setSelectedClienteData] = useState(null);
-  
+
+  const [empresasColeta, setEmpresasColeta] = useState([]);
+  const [loadingEmpresas, setLoadingEmpresas] = useState(true);
+
   const [formResetKey, setFormResetKey] = useState(0);
   const [isExporting, setIsExporting] = useState(false);
   
@@ -109,6 +103,27 @@ export default function PaginaLancamento() {
       setSelectedClienteData(null); 
     }
   }, [selectedClienteId, userAllowedClientes]);
+
+useEffect(() => {
+  const fetchEmpresasColeta = async () => {
+    if (!db) return;
+    setLoadingEmpresas(true);
+    try {
+      const empresasRef = collection(db, 'empresasColeta');
+      const q = query(empresasRef, where("ativo", "==", true));
+      const querySnapshot = await getDocs(q);
+      const listaEmpresas = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      setEmpresasColeta(listaEmpresas);
+    } catch (error) {
+      console.error("Erro ao buscar empresas de coleta:", error);
+      showMessage('Falha ao carregar os dados das empresas de coleta.', true);
+    } finally {
+      setLoadingEmpresas(false);
+    }
+  };
+
+  fetchEmpresasColeta();
+}, [db]);;
 
 
   const loadAndCombineRecords = useCallback(async () => {
@@ -413,7 +428,8 @@ export default function PaginaLancamento() {
         <>
           <div className="bg-white p-6 rounded-lg shadow">
             <WasteForm 
-                clienteSelecionado={selectedClienteData} 
+                clienteSelecionado={selectedClienteData}
+                empresasColetaDisponiveis={empresasColeta} 
                 onLimitExceeded={handleLimitExceeded}
                 onSuccessfulSubmit={loadAndCombineRecords}
                 formResetKey={formResetKey}

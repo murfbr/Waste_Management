@@ -9,7 +9,7 @@ import { wasteTypeColors } from '../../utils/wasteTypeColors';
 const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
 const SUBTIPOS_ORGANICOS_FALLBACK = ["Geral", "Pré-serviço", "Pós-serviço"];
 
-export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSuccessfulSubmit, formResetKey }) { 
+export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSuccessfulSubmit, formResetKey, empresasColetaDisponiveis }) { 
   const { t, i18n } = useTranslation('wasteRegister');
   const { currentUser, appId } = useContext(AuthContext);
 
@@ -150,16 +150,35 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
         c.tiposResiduoColetados?.includes(selectedMainCategory)
     );
 
+    let empresaColetaCompleta = null;
+    let destinacaoFinal = null;
+
+    if (contratoAplicavel && empresasColetaDisponiveis) {
+      // Encontra a empresa inteira na lista que recebemos via props
+      empresaColetaCompleta = empresasColetaDisponiveis.find(
+        emp => emp.id === contratoAplicavel.empresaColetaId
+      );
+    }
+    
+    if (empresaColetaCompleta) {
+      // Pega as destinações para o tipo de resíduo principal
+      const destinacoesPossiveis = empresaColetaCompleta.destinacoes?.[selectedMainCategory] || [];
+      // Assume a primeira destinação da lista como a principal.
+      destinacaoFinal = destinacoesPossiveis.length > 0 ? destinacoesPossiveis[0] : null;
+    }
+
     const recordData = {
       areaLancamento: areaLancamento || (opcoesArea.length === 0 ? t('wasteFormComponent.data.general') : t('wasteFormComponent.data.notSpecified')),
       wasteType: selectedMainCategory,
       peso: parsedPeso,
       clienteId: clienteSelecionado.id,
-      empresaColetaId: contratoAplicavel?.empresaColetaId || null,
       timestamp: Date.now(),
       userId: currentUser.uid,
       userEmail: currentUser.email,
-      appId: appId || 'default-app-id'
+      appId: appId || 'default-app-id',
+      empresaColetaId: empresaColetaCompleta?.id || null,
+      empresaColetaNome: empresaColetaCompleta?.nomeFantasia || null,
+      destinacaoFinal: destinacaoFinal,
     };
 
     let categoriaParaVerificarLimite = selectedMainCategory;

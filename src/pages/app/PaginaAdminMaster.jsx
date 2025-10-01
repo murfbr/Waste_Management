@@ -9,7 +9,6 @@ import AuthContext from '../../context/AuthContext';
 import { appId } from '../../firebase/config';
 import EditLancamentoModal from '../../components/app/admin/EditLancamentoModal';
 import DeleteConfirmationModal from '../../components/app/DeleteConfirmationModal';
-// ALTERAÇÃO: Importando os componentes de seus próprios arquivos
 import AdminCard from '../../components/app/admin/AdminCard';
 import ConfigEmissoesCard from '../../components/app/admin/ConfigEmissoesCard';
 

@@ -1,9 +1,10 @@
 import React, { useState, useContext } from 'react';
 import { writeBatch, collection, doc, serverTimestamp } from 'firebase/firestore';
-import Papa from 'https://esm.sh/papaparse';
+import Papa from 'papaparse';
 import AuthContext from '../../context/AuthContext';
 
-export default function ImportadorHistoricoCliente({ cliente, isOpen, onClose, onImportSuccess }) {
+// Adicione 'empresasColeta' como prop para validação
+export default function ImportadorHistoricoCliente({ cliente, isOpen, onClose, onImportSuccess, empresasColeta }) {
   const { db, appId, currentUser } = useContext(AuthContext);
 
   const [importFile, setImportFile] = useState(null);
@@ -26,8 +27,8 @@ export default function ImportadorHistoricoCliente({ cliente, isOpen, onClose, o
   };
 
   const processAndImportCSV = async () => {
-    if (!importFile || !cliente || !db || !currentUser) {
-      setImportErrors([{ message: "Selecione um cliente e um arquivo, ou permissão negada." }]);
+    if (!importFile || !cliente || !db || !currentUser || !empresasColeta) {
+      setImportErrors([{ message: "Cliente, arquivo ou empresas de coleta não fornecidos. Permissão negada." }]);
       return;
     }
 
@@ -35,11 +36,14 @@ export default function ImportadorHistoricoCliente({ cliente, isOpen, onClose, o
     setImportErrors([]);
     setProcessedRows(0);
 
+    // Mapeia as empresas pelo nome para facilitar a busca (case-insensitive)
+    const empresasMap = new Map((empresasColeta || []).map(e => [e.nomeFantasia.toLowerCase(), e]));
+
     Papa.parse(importFile, {
       header: true,
       skipEmptyLines: true,
-      delimiter: ";", // Adicionado para processar CSVs com ponto e vírgula
-      encoding: "ISO-8859-1", // Adicionado para corrigir problemas de acentuação
+      delimiter: ";",
+      encoding: "ISO-8859-1",
       complete: async (results) => {
         const { data, errors: parseErrors } = results;
         let localErrors = [];
@@ -51,10 +55,12 @@ export default function ImportadorHistoricoCliente({ cliente, isOpen, onClose, o
 
         data.forEach((row, index) => {
           const rowIndex = index + 2;
-          const { Data, Area, TipoResiduo, Peso } = row;
+          // **NOVO: Captura os novos campos do CSV**
+          const { Data, Area, TipoResiduo, Peso, EmpresaColeta, Destinacao } = row;
 
-          if (!Data || !Area || !TipoResiduo || !Peso) {
-            localErrors.push({ row: rowIndex, message: `Dados obrigatórios (Data, Area, TipoResiduo, Peso) em falta.` });
+          // **NOVO: Validação dos campos obrigatórios atualizada**
+          if (!Data || !Area || !TipoResiduo || !Peso || !EmpresaColeta || !Destinacao) {
+            localErrors.push({ row: rowIndex, message: `Dados obrigatórios (Data, Area, TipoResiduo, Peso, EmpresaColeta, Destinacao) em falta.` });
             return;
           }
           const pesoNum = parseFloat(String(Peso).replace(',', '.'));
@@ -84,9 +90,24 @@ export default function ImportadorHistoricoCliente({ cliente, isOpen, onClose, o
             localErrors.push({ row: rowIndex, message: `Tipo de resíduo "${TipoResiduo}" não é válido para este cliente.` });
             return;
           }
+          
+          // **NOVO: Validação da Empresa de Coleta e Destinação**
+          const empresaEncontrada = empresasMap.get(String(EmpresaColeta).trim().toLowerCase());
+          if (!empresaEncontrada) {
+            localErrors.push({ row: rowIndex, message: `Empresa de coleta "${EmpresaColeta}" não encontrada ou não associada a este cliente.` });
+            return;
+          }
+          if (empresaEncontrada.destinacao.toLowerCase() !== String(Destinacao).trim().toLowerCase()) {
+            localErrors.push({ row: rowIndex, message: `A destinação "${Destinacao}" não corresponde à configurada para a empresa "${EmpresaColeta}" (${empresaEncontrada.destinacao}).` });
+            return;
+          }
+          
           validRecords.push({
             clienteId: cliente.id, areaLancamento: Area, wasteType: TipoResiduo, peso: pesoNum, timestamp: timestamp,
             userId: currentUser.uid, userEmail: currentUser.email, importadoEm: serverTimestamp(), appId: appId || 'default-app-id',
+            // **NOVO: Adiciona os novos campos ao objeto do registro**
+            empresaColetaId: empresaEncontrada.id,
+            destinacao: empresaEncontrada.destinacao,
           });
         });
         
@@ -98,7 +119,7 @@ export default function ImportadorHistoricoCliente({ cliente, isOpen, onClose, o
           return;
         }
         if (validRecords.length === 0) {
-          setImportErrors([{ message: "Nenhum registo válido encontrado no ficheiro CSV." }]);
+          setImportErrors([{ message: "Nenhum registro válido encontrado no arquivo CSV." }]);
           setIsImporting(false);
           return;
         }
@@ -111,17 +132,17 @@ export default function ImportadorHistoricoCliente({ cliente, isOpen, onClose, o
             batch.set(newRecordRef, record);
           });
           await batch.commit();
-          onImportSuccess(`${validRecords.length} registos importados com sucesso para ${cliente.nome}!`);
+          onImportSuccess(`${validRecords.length} registros importados com sucesso para ${cliente.nome}!`);
           handleClose();
         } catch (error) {
-          console.error("Erro ao salvar registos importados:", error);
+          console.error("Erro ao salvar registros importados:", error);
           setImportErrors([{ message: `Erro ao salvar no banco de dados: ${error.message}` }]);
           setIsImporting(false);
         }
       },
       error: (error) => {
         console.error("Erro ao processar CSV:", error);
-        setImportErrors([{ message: `Erro crítico ao ler o ficheiro CSV: ${error.message}` }]);
+        setImportErrors([{ message: `Erro crítico ao ler o arquivo CSV: ${error.message}` }]);
         setIsImporting(false);
       }
     });
@@ -134,14 +155,15 @@ export default function ImportadorHistoricoCliente({ cliente, isOpen, onClose, o
       <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-2xl space-y-4 font-comfortaa">
         <h2 className="text-2xl font-semibold text-blue-coral font-lexend">Importar Histórico para: <span className="text-apricot-orange">{cliente?.nome}</span></h2>
         
+        {/* **NOVO: Instruções atualizadas para o usuário** */}
         <div className="text-sm text-gray-700 space-y-1 bg-gray-50 p-3 rounded-md border">
             <p className="font-bold">Instruções para o ficheiro CSV:</p>
             <ul className="list-disc list-inside pl-4">
             <li>O arquivo deve usar <strong>ponto e vírgula (;)</strong> como separador.</li>
             <li>A primeira linha deve ser o cabeçalho com os nomes exatos das colunas.</li>
-            <li>Colunas obrigatórias: <strong>Data</strong>, <strong>Area</strong>, <strong>TipoResiduo</strong>, <strong>Peso</strong>.</li>
+            <li>Colunas obrigatórias: <strong>Data</strong>, <strong>Area</strong>, <strong>TipoResiduo</strong>, <strong>Peso</strong>, <strong>EmpresaColeta</strong>, <strong>Destinacao</strong>.</li>
             <li>Formato da <strong>Data</strong>: DD/MM/YYYY.</li>
-            <li><strong>Area</strong> e <strong>TipoResiduo</strong> devem corresponder aos valores configurados.</li>
+            <li><strong>Area</strong>, <strong>TipoResiduo</strong>, <strong>EmpresaColeta</strong> e <strong>Destinacao</strong> devem corresponder aos valores configurados.</li>
             <li><strong>Peso</strong>: Use ponto ou vírgula como separador decimal (ex: 10.5 ou 10,5).</li>
             </ul>
         </div>
@@ -188,5 +210,3 @@ export default function ImportadorHistoricoCliente({ cliente, isOpen, onClose, o
     </div>
   );
 }
-
-

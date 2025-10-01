@@ -20,16 +20,15 @@ import DestinacaoChart from '../../components/app/charts/DestinacaoChart';
 import CO2ImpactCard from '../../components/app/charts/CO2ImpactCard';
 import CO2EvolutionChart from '../../components/app/charts/CO2EvolutionChart';
 import LazySection from '../../components/app/LazySection';
-import { useSummaryData } from '../../hooks/charts/useSummaryData';
-import { useWasteTypePieData } from '../../hooks/charts/useWasteTypePieData';
-import { useAreaPieData } from '../../hooks/charts/useAreaPieData';
-import { useDesvioDeAterroData } from '../../hooks/charts/useDesvioDeAterroData';
-import { useMonthlyComparisonData } from '../../hooks/charts/useMonthlyComparisonData';
-import { useDestinacaoData } from '../../hooks/charts/useDestinacaoData';
-import { useCO2Data } from '../../hooks/charts/useCO2Data';
-import { useDashboardFilters } from '../../context/DashboardFilterContext.jsx';
-import ReportGeneratorButton from '../../components/app/ReportGeneratorButton';
-import * as dataProcessor from '../../services/dashboardProcessor';
+import ReportGeneratorButton from '../../components/app/ReportGeneratorButton'; // <-- ADICIONADO
+
+// PADRONIZADO: Única função robusta para criar chaves camelCase a partir de strings do DB
+const toCamelCaseKey = (str) => {
+    if (!str) return 'naoEspecificado';
+    const s = str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+    const parts = s.split(/[\s-]+/);
+    return parts[0] + parts.slice(1).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join('');
+};
 
 const RealtimeIcon = () => (
     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1.5" viewBox="0 0 20 20" fill="currentColor">
@@ -39,6 +38,204 @@ const RealtimeIcon = () => (
 
 const MESES_COMPLETOS = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 const TODOS_OS_MESES_INDICES = Array.from({ length: 12 }, (_, i) => i);
+
+const processDataForAggregatedPieChart = (records, t) => {
+  if (!Array.isArray(records) || records.length === 0) return [];
+  const aggregation = records.reduce((acc, record) => {
+    if (!record || !record.wasteType) return acc;
+    let mainType = record.wasteType;
+    let subType = record.wasteSubType;
+    const weight = parseFloat(record.peso || 0);
+    if (isNaN(weight)) return acc;
+
+    let translatedMainType;
+    if (mainType.startsWith('Reciclável')) {
+      if (!subType) { const match = mainType.match(/\((.*)\)/); if (match) subType = match[1]; }
+      translatedMainType = t('charts:wasteTypes.reciclavel');
+    } else if (mainType.startsWith('Orgânico')) {
+      if (!subType) { const match = mainType.match(/\((.*)\)/); if (match) subType = match[1]; }
+      translatedMainType = t('charts:wasteTypes.organico');
+    } else {
+      translatedMainType = t(`charts:wasteTypes.${toCamelCaseKey(mainType)}`, mainType);
+    }
+    
+    const translatedSubType = subType ? t(`charts:wasteSubTypes.${toCamelCaseKey(subType)}`, subType) : translatedMainType;
+
+    if (!acc[translatedMainType]) {
+      acc[translatedMainType] = { name: translatedMainType, value: 0, subtypes: {} };
+    }
+    acc[translatedMainType].value += weight;
+
+    if (!acc[translatedMainType].subtypes[translatedSubType]) {
+      acc[translatedMainType].subtypes[translatedSubType] = { name: translatedSubType, value: 0 };
+    }
+    acc[translatedMainType].subtypes[translatedSubType].value += weight;
+    return acc;
+  }, {});
+
+  for (const mainType in aggregation) {
+      const subtypes = aggregation[mainType].subtypes;
+      const subtypeKeys = Object.keys(subtypes);
+      if (subtypeKeys.length > 1 && subtypes[mainType]) {
+          delete subtypes[mainType];
+      }
+  }
+  return Object.values(aggregation).map(mainCategory => ({
+    ...mainCategory,
+    value: parseFloat(mainCategory.value.toFixed(2)),
+    subtypes: Object.values(mainCategory.subtypes).map(sub => ({ ...sub, value: parseFloat(sub.value.toFixed(2)) })).sort((a, b) => b.value - a.value)
+  }));
+};
+
+const processDataForAreaChartWithBreakdown = (records, t) => {
+    if (!Array.isArray(records) || records.length === 0) return [];
+    const aggregation = records.reduce((acc, record) => {
+        if (!record || !record.areaLancamento || !record.wasteType) return acc;
+        const areaName = record.areaLancamento;
+        const weight = parseFloat(record.peso || 0);
+        if (isNaN(weight)) return acc;
+        
+        let mainWasteType = record.wasteType;
+        let translatedWasteType;
+        if (mainWasteType.startsWith('Reciclável')) { translatedWasteType = t('charts:wasteTypes.reciclavel'); } 
+        else if (mainWasteType.startsWith('Orgânico')) { translatedWasteType = t('charts:wasteTypes.organico'); }
+        else { 
+            translatedWasteType = t(`charts:wasteTypes.${toCamelCaseKey(mainWasteType)}`, mainWasteType); 
+        }
+        
+        if (!acc[areaName]) { acc[areaName] = { name: areaName, value: 0, breakdown: {} }; }
+        acc[areaName].value += weight;
+        if (!acc[areaName].breakdown[translatedWasteType]) { acc[areaName].breakdown[translatedWasteType] = { name: translatedWasteType, value: 0 }; }
+        acc[areaName].breakdown[translatedWasteType].value += weight;
+        return acc;
+    }, {});
+    return Object.values(aggregation).map(areaData => ({
+        ...areaData,
+        value: parseFloat(areaData.value.toFixed(2)),
+        breakdown: Object.values(areaData.breakdown).map(b => ({ ...b, value: parseFloat(b.value.toFixed(2)) })).filter(b => b.value > 0).sort((a, b) => b.value - a.value)
+    }));
+};
+
+const processDataForDesvioDeAterro = (records, rejectCategoryName) => {
+    if (!Array.isArray(records) || records.length === 0) return [];
+    const dailyDataAggregated = records.reduce((acc, record) => {
+        if (!record || !record.timestamp) return acc;
+        const recordTimestamp = typeof record.timestamp === 'number' ? record.timestamp : record.timestamp?.toDate?.().getTime();
+        if (!recordTimestamp) return acc;
+        const dateKey = new Date(recordTimestamp).toISOString().split('T')[0];
+        const weight = parseFloat(record.peso || 0);
+        if (isNaN(weight)) return acc;
+        acc[dateKey] = acc[dateKey] || { total: 0, rejeito: 0 };
+        acc[dateKey].total += weight;
+        if (record.wasteType === rejectCategoryName) { 
+            acc[dateKey].rejeito += weight; 
+        }
+        return acc;
+    }, {});
+    const sortedDailyData = Object.entries(dailyDataAggregated).map(([dateKey, data]) => {
+        const percentualRejeito = data.total > 0 ? (data.rejeito / data.total) * 100 : 0;
+        const taxaDesvio = 100 - percentualRejeito;
+        return {
+            dateKey,
+            name: new Date(dateKey).toLocaleDateString('pt-BR', { timeZone: 'UTC', day: '2-digit', month: '2-digit' }),
+            taxaDesvio: parseFloat(taxaDesvio.toFixed(2)),
+        };
+    }).sort((a, b) => new Date(a.dateKey) - new Date(b.dateKey));
+    let acumuladoSomaTaxaDesvio = 0;
+    return sortedDailyData.map((dataPoint, index) => {
+        acumuladoSomaTaxaDesvio += dataPoint.taxaDesvio;
+        const mediaTaxaDesvio = acumuladoSomaTaxaDesvio / (index + 1);
+        return { ...dataPoint, mediaTaxaDesvio: parseFloat(mediaTaxaDesvio.toFixed(2)) };
+    });
+};
+
+const processDataForMonthlyYearlyComparison = (records, t) => {
+  if (!Array.isArray(records) || !records.length) return { data: [], years: [] };
+  const monthlyData = {};
+  const RECICLAVEL = t('charts:wasteTypes.reciclavel', 'Reciclável');
+  const ORGANICO = t('charts:wasteTypes.organico', 'Orgânico');
+  const REJEITO = t('charts:wasteTypes.rejeito', 'Rejeito');
+  records.forEach(record => {
+    if (!record || !record.timestamp || typeof record.peso !== 'number') return;
+    const recordDate = new Date(record.timestamp);
+    const recordYear = recordDate.getFullYear();
+    const recordMonth = recordDate.getMonth();
+    const weight = parseFloat(record.peso || 0);
+    if (isNaN(weight)) return;
+
+    if (!monthlyData[recordMonth]) { monthlyData[recordMonth] = {}; }
+    if (!monthlyData[recordMonth][recordYear]) {
+      monthlyData[recordMonth][recordYear] = {
+        total: 0,
+        breakdown: { [RECICLAVEL]: 0, [ORGANICO]: 0, [REJEITO]: 0 }
+      };
+    }
+    monthlyData[recordMonth][recordYear].total += weight;
+    const type = record.wasteType ? record.wasteType.toLowerCase() : '';
+    if (type.includes('orgânico') || type.includes('compostavel')) {
+        monthlyData[recordMonth][recordYear].breakdown[ORGANICO] += weight;
+    } else if (type.includes('rejeito')) {
+        monthlyData[recordMonth][recordYear].breakdown[REJEITO] += weight;
+    } else {
+        monthlyData[recordMonth][recordYear].breakdown[RECICLAVEL] += weight;
+    }
+  });
+
+  const yearsInDate = [...new Set(records.map(r => new Date(r.timestamp).getFullYear()))].sort((a,b) => b - a);
+
+  const chartData = MESES_COMPLETOS.map((monthName, index) => {
+    const dataPoint = { month: monthName };
+    if (monthlyData[index]) {
+        yearsInDate.forEach(year => {
+            if (monthlyData[index][year] !== undefined) {
+                const yearData = monthlyData[index][year];
+                dataPoint[year.toString()] = {
+                    total: parseFloat(yearData.total.toFixed(2)),
+                    breakdown: {
+                        [RECICLAVEL]: parseFloat(yearData.breakdown[RECICLAVEL].toFixed(2)),
+                        [ORGANICO]: parseFloat(yearData.breakdown[ORGANICO].toFixed(2)),
+                        [REJEITO]: parseFloat(yearData.breakdown[REJEITO].toFixed(2)),
+                    }
+                };
+            }
+        });
+    }
+    return dataPoint;
+  });
+
+  return { data: chartData, years: yearsInDate.map(y => y.toString()) };
+};
+
+const processDataForSummaryCards = (records) => {
+  if (!Array.isArray(records) || records.length === 0) return { totalGeralKg: 0, organico: {}, reciclavel: {}, rejeito: {} };
+  let totalGeralKg = 0, totalOrganicoKg = 0, totalReciclavelKg = 0, totalRejeitoKg = 0;
+  records.forEach(record => {
+    const weight = parseFloat(record.peso || 0);
+    if (isNaN(weight)) return;
+    totalGeralKg += weight;
+    const type = record.wasteType ? record.wasteType.toLowerCase() : '';
+    if (type.includes('orgânico') || type.includes('compostavel')) {
+        totalOrganicoKg += weight;
+    } 
+    else if (type.includes('rejeito')) {
+        totalRejeitoKg += weight;
+    } 
+    else {
+        totalReciclavelKg += weight;
+    }
+  });
+
+  const percentOrganico = totalGeralKg > 0 ? (totalOrganicoKg / totalGeralKg) * 100 : 0;
+  const percentReciclavel = totalGeralKg > 0 ? (totalReciclavelKg / totalGeralKg) * 100 : 0;
+  const percentRejeito = totalGeralKg > 0 ? (totalRejeitoKg / totalGeralKg) * 100 : 0;
+
+  return {
+    totalGeralKg: parseFloat(totalGeralKg.toFixed(2)),
+    organico: { kg: parseFloat(totalOrganicoKg.toFixed(2)), percent: parseFloat(percentOrganico.toFixed(2)) },
+    reciclavel: { kg: parseFloat(totalReciclavelKg.toFixed(2)), percent: parseFloat(percentReciclavel.toFixed(2)) },
+    rejeito: { kg: parseFloat(totalRejeitoKg.toFixed(2)), percent: parseFloat(percentRejeito.toFixed(2)) },
+  };
+};
 
 const SectionTitle = ({ title, isExpanded, onClick }) => (
     <button onClick={onClick} className={`w-full flex justify-between items-center bg-rain-forest text-white py-2 px-4 rounded-t-lg text-left focus:outline-none ${!isExpanded ? 'rounded-b-lg' : ''}`} aria-expanded={isExpanded}>
@@ -54,9 +251,10 @@ export default function PaginaDashboard() {
   const now = new Date();
   const [selectedClienteIds, setSelectedClienteIds] = useState([]);
   const [selectAllClientesToggle, setSelectAllClientesToggle] = useState(false);
-
-  const { selectedYears, selectedMonths, selectedAreas, handleManualAreaChange } = useDashboardFilters();
-
+  const [selectedYears, setSelectedYears] = useState([now.getFullYear()]);
+  const [selectedMonths, setSelectedMonths] = useState([now.getMonth()]);
+  const [selectedAreas, setSelectedAreas] = useState([]);
+  
   const [availableYears, setAvailableYears] = useState([]);
   const [availableAreas, setAvailableAreas] = useState([]);
 
@@ -130,8 +328,8 @@ export default function PaginaDashboard() {
     } else {
       setAvailableAreas([]);
     }
-    handleManualAreaChange([]); 
-}, [selectedClienteIds, userAllowedClientes, handleManualAreaChange]); 
+    setSelectedAreas([]);
+  }, [selectedClienteIds, userAllowedClientes]);
   
   useEffect(() => {
     if (recordsForComparison.length > 0) {
@@ -182,19 +380,15 @@ export default function PaginaDashboard() {
     });
   }, [recordsFullyFiltered, selectedAreas, loadingRecords]);
   
- 
-  const { impactCardData, evolutionChartData } = useCO2Data({
-    records: recordsForOtherCharts,
-    userAllowedClientes,
-    empresasColeta,
-    co2Config,
-    isVisible: isSustainabilityVisible,
-    loadingRecords,
-    loadingEmpresas,
-    loadingCO2Config,
-});
+  // ALTERAÇÃO 2 de 3: Lógica de cálculo do CO2
+  const co2CalculationData = useMemo(() => {
+    const isLoading = loadingRecords || loadingEmpresas || loadingCO2Config || !co2Config || !userAllowedClientes.length;
+    
+    // O hook useHybridWasteData pode retornar um array vazio enquanto carrega os resumos, então checamos a flag de loading.
+    if (isLoading) {
+        return { isLoading: true, netImpact: 0, totalEvitadas: 0, totalDiretas: 0, metodologia: 'Calculando...' };
+    }
 
-<<<<<<< HEAD
     const clientesMap = new Map(userAllowedClientes.map(c => [c.id, c]));
     const empresasMap = new Map(empresasColeta.map(e => [e.id, e]));
     
@@ -424,9 +618,6 @@ export default function PaginaDashboard() {
         
     return result;
   }, [recordsForOtherCharts, empresasColeta, isDestinationVisible, t]);
-=======
-  const { destinacaoData } = useDestinacaoData(recordsForOtherCharts, empresasColeta, isDestinationVisible);
->>>>>>> aprovacao
 
   const handleClienteSelectionChange = (clienteId) => {
     setSelectedClienteIds(prev => {
@@ -486,13 +677,28 @@ export default function PaginaDashboard() {
     setSelectedMonths(months);
   };
 
-  const { summaryData } = useSummaryData(recordsForOtherCharts);
-  const { wasteTypePieData } = useWasteTypePieData(recordsForOtherCharts, isCompositionVisible);
-  const { areaPieData } = useAreaPieData(recordsForOtherCharts, isCompositionVisible);
-  const { desvioDeAterroData } = useDesvioDeAterroData(recordsForOtherCharts, isDestinationVisible);
+  const summaryData = useMemo(() => processDataForSummaryCards(recordsForOtherCharts), [recordsForOtherCharts]);
 
+  const wasteTypePieData = useMemo(() => {
+    if (!isCompositionVisible) return [];
+    return processDataForAggregatedPieChart(recordsForOtherCharts, t);
+  }, [recordsForOtherCharts, isCompositionVisible, t]);
 
-  const { monthlyComparisonData, yearsToCompare } = useMonthlyComparisonData(recordsForMonthlyComparisonChart, isMonthlyComparisonVisible);
+  const areaPieData = useMemo(() => {
+    if (!isCompositionVisible) return [];
+    return processDataForAreaChartWithBreakdown(recordsForOtherCharts, t);
+  }, [recordsForOtherCharts, isCompositionVisible, t]);
+
+  const desvioDeAterroData = useMemo(() => {
+    if (!isDestinationVisible) return [];
+    return processDataForDesvioDeAterro(recordsForOtherCharts, "Rejeito");
+  }, [recordsForOtherCharts, isDestinationVisible]);
+
+  const { data: monthlyComparisonChartData, years: actualYearsInComparisonData } = useMemo(() => {
+    if (!isMonthlyComparisonVisible) return { data: [], years: [] };
+    return processDataForMonthlyYearlyComparison(recordsForMonthlyComparisonChart, t);
+  }, [recordsForMonthlyComparisonChart, isMonthlyComparisonVisible, t]);
+
 
   if (loadingAuth || loadingAllowedClientes) { return <div className="p-8 text-center text-rich-soil">A carregar...</div>; }
     
@@ -522,8 +728,15 @@ export default function PaginaDashboard() {
       />
       
       <DashboardFilters 
+        selectedYears={selectedYears} 
+        onYearToggle={handleYearToggle} 
         availableYears={availableYears} 
+        selectedMonths={selectedMonths} 
+        onSelectedMonthsChange={setSelectedMonths}
+        selectedAreas={selectedAreas} 
+        onSelectedAreasChange={setSelectedAreas} 
         availableAreas={availableAreas} 
+        onQuickPeriodSelect={handleQuickPeriodSelect}
         isLoading={loadingRecords || loadingComparisonRecords || selectedYears.length === 0} 
       />
       
@@ -541,18 +754,21 @@ export default function PaginaDashboard() {
           !selectedClienteIds.length ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.selectClient')}</div>) :
           recordsForComparison.length === 0 ? (<div className="p-6 bg-white rounded-lg shadow text-center text-rich-soil">{t('dashboard:paginaDashboard.filters.noData')}</div>) : (
             <>
+              {/* ALTERAÇÃO 3 de 3: A seção de resumo agora é uma grid para incluir o card de CO2 */}
               <section>
                   <SectionTitle title={t('dashboard:paginaDashboard.sections.overview')} isExpanded={sectionsVisibility.summary} onClick={() => toggleSection('summary')} />
                   {sectionsVisibility.summary && (
-                    <div className="pt-4">
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-4">
                         <div className="lg:col-span-2">
                             <SummaryCards summaryData={summaryData} isLoading={loadingRecords} />
                         </div>
+                       {/* <div className="h-full">
+                            <CO2ImpactCard data={co2CalculationData} isLoading={co2CalculationData.isLoading} />
+                        </div> */}
                     </div>
                   )}
               </section>
 
-<<<<<<< HEAD
               <LazySection onVisible={() => setIsSustainabilityVisible(true)}>
                 <section>
                     <SectionTitle title="Sustentabilidade e Impacto de Carbono" isExpanded={sectionsVisibility.sustainability} onClick={() => toggleSection('sustainability')} />
@@ -564,14 +780,11 @@ export default function PaginaDashboard() {
                     )}
                 </section>
               </LazySection>
-=======
-              
->>>>>>> aprovacao
               
               <LazySection onVisible={() => setIsMonthlyComparisonVisible(true)}>
                 <section>
                     <SectionTitle title={t('dashboard:paginaDashboard.sections.monthlyGeneration')} isExpanded={sectionsVisibility.monthlyComparison} onClick={() => toggleSection('monthlyComparison')} />
-                    {sectionsVisibility.monthlyComparison && <MonthlyComparison chartData={monthlyComparisonData} yearsToCompare={yearsToCompare} isLoading={loadingComparisonRecords} />}
+                    {sectionsVisibility.monthlyComparison && <MonthlyComparison chartData={monthlyComparisonChartData} yearsToCompare={actualYearsInComparisonData} isLoading={loadingComparisonRecords} />}
                 </section>
               </LazySection>
 
@@ -594,18 +807,6 @@ export default function PaginaDashboard() {
                         <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-6">
                             <DesvioDeAterro data={desvioDeAterroData} isLoading={loadingRecords} />
                             <DestinacaoChart data={destinacaoData} isLoading={loadingRecords || loadingEmpresas} />
-                        </div>
-                    )}
-                </section>
-              </LazySection>
-
-              <LazySection onVisible={() => setIsSustainabilityVisible(true)}>
-                <section>
-                    <SectionTitle title="Sustentabilidade e Impacto de Carbono (fase de teste)" isExpanded={sectionsVisibility.sustainability} onClick={() => toggleSection('sustainability')} />
-                    {sectionsVisibility.sustainability && (
-                        <div className="bg-white p-4 md:p-6 rounded-b-lg shadow grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
-                            <CO2ImpactCard data={impactCardData} isLoading={impactCardData.isLoading} />
-                            <CO2EvolutionChart data={evolutionChartData} isLoading={loadingRecords || !isSustainabilityVisible} />
                         </div>
                     )}
                 </section>

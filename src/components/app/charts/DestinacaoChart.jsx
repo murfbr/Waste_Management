@@ -58,12 +58,27 @@ export default function DestinacaoChart({ data, isLoading }) {
     const chartTitle = t('dashboard:destinationChartComponent.chartTitle');
     const noDataMessage = t('dashboard:destinationChartComponent.noData');
 
-    // Corrigido: usa `entry.key` (fixo) para buscar tradução
     const chartData = data.map(entry => ({
         ...entry,
-        translatedName: t(`charts:chartLabels.${entry.key}`, entry.name) // ✅ usa chave fixa
+        translatedName: t(`charts:chartLabels.${entry.key}`, entry.name)
     }));
 
+ 
+    const renderCustomizedLabel = ({ cx, cy, midAngle, outerRadius, percent, value, fill }) => {
+        const RADIAN = Math.PI / 180;
+        // Posição do texto um pouco para fora do gráfico
+        const radius = outerRadius * 1.15;
+        const x = cx + radius * Math.cos(-midAngle * RADIAN);
+        const y = cy + radius * Math.sin(-midAngle * RADIAN);
+
+        return (
+            <text x={x} y={y} fill={fill} textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" className="font-comfortaa text-sm">
+                <tspan x={x} dy="0">{formatNumber(value, currentLocale, 1)} {unit}</tspan>
+                <tspan x={x} dy="1.2em">{`(${(percent).toFixed(1)}%)`}</tspan>
+            </text>
+        );
+    };
+ 
     if (isLoading) {
         return (
             <div className="bg-white p-4 rounded-lg shadow h-full min-h-[488px] flex flex-col items-center justify-center">
@@ -94,15 +109,16 @@ export default function DestinacaoChart({ data, isLoading }) {
                             data={chartData}
                             cx="50%"
                             cy="50%"
-                            labelLine={false}
-                            outerRadius="80%"
+                            // ▼▼▼ LINHAS MODIFICADAS ▼▼▼
+                            labelLine={true} // Recomendo ativar a linha para rótulos externos
+                            label={renderCustomizedLabel}
+                            outerRadius="70%" // Ajustei o raio para dar espaço para o rótulo
                             fill="#8884d8"
                             dataKey="value"
-                            nameKey="translatedName" // ✅ usa traduzido certo
-                            label={({percent }) => ` ${(percent).toFixed(1)}%`}
+                            nameKey="translatedName"
                         >
                             {chartData.map((entry, index) => (
-                                <Cell key={`cell-${index}`} fill={COLORS[entry.key]} /> // ✅ cor via chave fixa
+                                <Cell key={`cell-${index}`} fill={COLORS[entry.key]} />
                             ))}
                         </Pie>
                         <Tooltip content={<CustomTooltip locale={currentLocale} unit={unit} />} />

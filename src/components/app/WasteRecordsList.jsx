@@ -126,7 +126,12 @@ function WasteRecordsList({
                   <strong className="text-rich-soil">{t('wasteRecordsListComponent.itemType')}:</strong> {record.wasteType}
                   {record.wasteSubType && <span className="text-exotic-plume"> ({record.wasteSubType})</span>}
                 </p>
-
+                  {record.empresaColetaNome && (
+                    <p><strong className="text-rich-soil">Coletora:</strong> {record.empresaColetaNome}</p>
+                  )}
+                  {record.destinacaoFinal && (
+                    <p><strong className="text-rich-soil">Destinação:</strong> {record.destinacaoFinal}</p>
+                  )}
                 <p><strong className="text-rich-soil">{t('wasteRecordsListComponent.itemWeight')}:</strong> {record.peso} kg</p>
                 <div className="flex items-center space-x-2">
                     <p className="text-xs text-early-frost">{t('wasteRecordsListComponent.itemDate')}: {new Date(record.timestamp).toLocaleString(currentLocale)}</p>

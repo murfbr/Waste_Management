@@ -1,17 +1,17 @@
 // src/components/app/filters/AreaSelector.jsx
 import React, { useState, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useDashboardFilters } from '../../../context/DashboardFilterContext';
 
-const ChevronDownIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-400"><polyline points="6 9 12 15 18 9"></polyline></svg>;
+const ChevronDownIcon = () => <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 text-gray-400"><polyline points="6 9 12 15 18 9"></polyline></svg>;
 
-export default function AreaSelector({
-  availableAreas = [],
-  selectedAreas = [],
-  onSelectedAreasChange = () => {},
-}) {
+export default function AreaSelector({ availableAreas = [] }) {
   const { t } = useTranslation('dashboard');
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  // Pega o estado e a função diretamente do contexto
+  const { selectedAreas, handleManualAreaChange } = useDashboardFilters();
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -27,14 +27,13 @@ export default function AreaSelector({
     const newSelectedAreas = selectedAreas.includes(areaName)
       ? selectedAreas.filter(a => a !== areaName)
       : [...selectedAreas, areaName];
-    onSelectedAreasChange(newSelectedAreas);
+    handleManualAreaChange(newSelectedAreas); // Usa a função do contexto
   };
 
   const handleSelectAll = () => {
-    onSelectedAreasChange(selectedAreas.length === availableAreas.length ? [] : availableAreas.map(a => a));
+    handleManualAreaChange(selectedAreas.length === availableAreas.length ? [] : availableAreas.map(a => a)); // Usa a função do contexto
   };
 
-  // --- LÓGICA DE EXIBIÇÃO CORRIGIDA ---
   const getDisplayValue = () => {
     if (selectedAreas.length === 0 || selectedAreas.length === availableAreas.length) {
       return t('filtersComponent.areaSelector.allAreas');
@@ -42,7 +41,6 @@ export default function AreaSelector({
     if (selectedAreas.length === 1) {
       return selectedAreas[0];
     }
-    // A chamada correta para pluralização
     return t('filtersComponent.areaSelector.multipleSelected', { count: selectedAreas.length });
   };
 
