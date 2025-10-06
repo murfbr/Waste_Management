@@ -4,18 +4,19 @@ import { processDataForDesvioDeAterro } from '../../services/dashboardProcessor'
 
 /**
  * Hook customizado para os dados do gráfico de Desvio de Aterro.
- * @param {Array<Object>} dailyData A lista de documentos de totais diários.
+ * @param {Array<Object>} records A lista de registros de resíduos.
  * @param {boolean} isVisible Flag que indica se a seção do gráfico está visível.
  * @returns {{desvioDeAterroData: Array<Object>}} Objeto com os dados processados para o gráfico.
  */
-export function useDesvioDeAterroData(dailyData, isVisible) {
+export function useDesvioDeAterroData(records, isVisible) {
   const desvioDeAterroData = useMemo(() => {
-    if (!isVisible || !dailyData || dailyData.length === 0) {
+    if (!isVisible || !records || records.length === 0) {
       return [];
     }
+    // A lógica de negócio (qual categoria é considerada "Rejeito") fica encapsulada aqui.
     const REJECT_CATEGORY_NAME = "Rejeito";
-    return processDataForDesvioDeAterro(dailyData, REJECT_CATEGORY_NAME);
-  }, [dailyData, isVisible]);
+    return processDataForDesvioDeAterro(records, REJECT_CATEGORY_NAME);
+  }, [records, isVisible]);
 
   return { desvioDeAterroData };
 }

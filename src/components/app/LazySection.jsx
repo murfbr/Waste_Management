@@ -1,51 +1,41 @@
-// src/components/app/LazySection.jsx
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useRef, useEffect } from 'react';
 
-// Este componente usa a Intersection Observer API para detectar quando ele entra na tela.
-// Ele renderiza um placeholder até ser visível, e então renderiza seus 'children'.
-// A função 'onVisible' é chamada uma única vez quando o componente se torna visível.
-export default function LazySection({ children, onVisible, minHeight = '300px' }) {
-  const [isVisible, setIsVisible] = useState(false);
+export default function LazySection({ children, onVisible }) {
   const ref = useRef(null);
 
   useEffect(() => {
     const observer = new IntersectionObserver(
       ([entry]) => {
-        // Se o elemento está visível na tela
         if (entry.isIntersecting) {
-          setIsVisible(true);
-          if (onVisible) {
+          if(onVisible) {
             onVisible();
           }
-          // Para de observar após se tornar visível para não chamar a função múltiplas vezes
-          observer.unobserve(ref.current);
+          // Depois de se tornar visível uma vez, já não precisamos de o observar.
+          // A verificação 'currentRef' garante que não tentamos remover um observador de um elemento que já não existe.
+          if (ref.current) {
+            observer.unobserve(ref.current);
+          }
         }
       },
       {
-        rootMargin: '0px 0px 50px 0px', // Começa a carregar um pouco antes de chegar na tela
-        threshold: 0.01 // Mesmo que 1% do componente esteja visível
+        // Começa a carregar os dados 50px antes de a secção entrar completamente no ecrã.
+        rootMargin: '0px 0px 50px 0px',
       }
     );
 
-    if (ref.current) {
-      observer.observe(ref.current);
+    const currentRef = ref.current;
+    if (currentRef) {
+      observer.observe(currentRef);
     }
 
+    // Função de limpeza para quando o componente é desmontado
     return () => {
-      if (ref.current) {
-        observer.unobserve(ref.current);
+      if (currentRef) {
+        // A chave para a correção é remover o observador do mesmo elemento que foi observado
+        observer.unobserve(currentRef);
       }
     };
   }, [onVisible]);
 
-  return (
-    <div ref={ref} style={{ minHeight: isVisible ? 'auto' : minHeight }}>
-      {isVisible ? children : (
-        // Placeholder simples enquanto não está visível
-        <div className="w-full h-full flex items-center justify-center text-early-frost">
-          Carregando seção...
-        </div>
-      )}
-    </div>
-  );
+  return <div ref={ref}>{children}</div>;
 }

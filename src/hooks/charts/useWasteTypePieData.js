@@ -5,21 +5,19 @@ import { processDataForAggregatedPieChart } from '../../services/dashboardProces
 
 /**
  * Hook customizado para os dados do gráfico de pizza por TIPO de resíduo.
- * Encapsula a lógica de processamento e tradução necessária para este gráfico.
- * @param {Array<Object>} records A lista de registros de resíduos.
- * @param {boolean} isVisible Flag que indica se a seção do gráfico está visível (para otimização).
+ * @param {Array<Object>} dailyData A lista de documentos de totais diários.
+ * @param {boolean} isVisible Flag que indica se a seção do gráfico está visível.
  * @returns {{wasteTypePieData: Array<Object>}} Objeto com os dados processados.
  */
-export function useWasteTypePieData(records, isVisible) {
+export function useWasteTypePieData(dailyData, isVisible) {
   const { t } = useTranslation(['charts']);
 
   const wasteTypePieData = useMemo(() => {
-    // Só processa os dados se a seção estiver visível e houver registros.
-    if (!isVisible || !records || records.length === 0) {
+    if (!isVisible || !dailyData || dailyData.length === 0) {
       return [];
     }
-    return processDataForAggregatedPieChart(records, t);
-  }, [records, isVisible, t]);
+    return processDataForAggregatedPieChart(dailyData, t);
+  }, [dailyData, isVisible, t]);
 
   return { wasteTypePieData };
 }

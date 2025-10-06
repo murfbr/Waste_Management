@@ -58,6 +58,8 @@ export default function SummaryCards({ summaryData, isLoading }) {
   // Locale map
   const localeMap = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
   const currentLocale = localeMap[i18n.language] || 'pt-BR';
+// --- LOG DE DEPURAÇÃO 6: VERIFICANDO AS PROPS FINAIS ---
+  console.log('[DEPURAÇÃO ETAPA 6] Componente: SummaryCards. Props recebidas (summaryData):', summaryData);
 
   if (isLoading) {
     return (
@@ -69,7 +71,8 @@ export default function SummaryCards({ summaryData, isLoading }) {
     );
   }
 
-  if (!summaryData || summaryData.organico === undefined) {
+  // A condição foi ajustada para ser mais robusta
+  if (!summaryData || summaryData.organico === undefined || summaryData.organico.percent === undefined) {
     return (
       <div className="bg-white p-4 md:p-6 rounded-b-lg shadow">
         <p className="text-center text-rich-soil py-8 font-comfortaa">

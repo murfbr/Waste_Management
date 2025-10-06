@@ -3,7 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { getApp } from 'firebase/app';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 import { collection, query, where, orderBy, getDocs, doc, updateDoc, deleteDoc, getDoc } from 'firebase/firestore';
-import { FaCalculator, FaUserShield, FaFileSignature, FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
+import { FaCalculator, FaUserShield, FaFileSignature, FaEdit, FaTrash, FaPlus, FaCalendarDay } from 'react-icons/fa';
 
 import AuthContext from '../../context/AuthContext';
 import { appId } from '../../firebase/config';
@@ -136,15 +136,15 @@ const LancamentosEditorCard = () => {
             <AdminCard 
                 icon={<FaFileSignature className="h-8 w-8 text-white" />} 
                 title="Editor de Lançamentos Individuais" 
-                description="Ferramenta para corrigir ou remover registros de pesagem. Use com cuidado."
-                className="col-span-1 md:col-span-2 lg:col-span-3"
+                description="Ferramenta para corrigir ou remover registos de pesagem. Use com cuidado."
+                className="col-span-1 lg:col-span-2"
             >
                 {/* Filtros */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end mb-6">
                     <div>
                         <label htmlFor="cliente-selector" className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
                         <select id="cliente-selector" value={selectedClienteId} onChange={(e) => setSelectedClienteId(e.target.value)} disabled={loadingAllowedClientes} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-apricot-orange focus:border-apricot-orange disabled:bg-gray-100">
-                            <option value="" disabled>{loadingAllowedClientes ? 'Carregando...' : 'Selecione'}</option>
+                            <option value="" disabled>{loadingAllowedClientes ? 'A carregar...' : 'Selecione'}</option>
                             {userAllowedClientes.map(c => (<option key={c.id} value={c.id}>{c.nome}</option>))}
                         </select>
                     </div>
@@ -157,12 +157,12 @@ const LancamentosEditorCard = () => {
                         <input type="date" id="end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md shadow-sm" />
                     </div>
                     <button onClick={handleBuscarLancamentos} disabled={loading || loadingCliente || !selectedClienteId} className="w-full h-10 bg-apricot-orange text-white font-lexend py-2 px-4 rounded-md hover:opacity-90 transition-opacity disabled:bg-early-frost disabled:cursor-not-allowed">
-                        {loading || loadingCliente ? 'Carregando...' : 'Buscar'}
+                        {loading || loadingCliente ? 'A carregar...' : 'Procurar'}
                     </button>
                 </div>
 
                 {/* Tabela de Resultados */}
-                {loading && <p className="text-center text-gray-500 py-8">Buscando lançamentos...</p>}
+                {loading && <p className="text-center text-gray-500 py-8">A procurar lançamentos...</p>}
                 {!loading && lancamentos.length > 0 && (
                     <div className="overflow-x-auto rounded-lg border border-gray-200">
                         <table className="min-w-full text-sm">
@@ -214,33 +214,66 @@ const LancamentosEditorCard = () => {
 export default function PaginaAdminMaster() {
     const { userAllowedClientes, loadingAllowedClientes } = useContext(AuthContext);
 
-    const [isLoadingRetro, setIsLoadingRetro] = useState(false);
-    const [resultRetro, setResultRetro] = useState(null);
+    const [isLoadingMonthly, setIsLoadingMonthly] = useState(false);
+    const [resultMonthly, setResultMonthly] = useState(null);
+    const [isLoadingDaily, setIsLoadingDaily] = useState(false);
+    const [resultDaily, setResultDaily] = useState(null);
     const [isLoadingInea, setIsLoadingInea] = useState(false);
     const [resultInea, setResultInea] = useState(null);
-    
-    const [selectedClientRetro, setSelectedClientRetro] = useState('');
-    const [selectedClientInea, setSelectedClientInea] = useState('');
+
+    const [selectedClientMonthly, setSelectedClientMonthly] = useState('');
     const [selectedMonth, setSelectedMonth] = useState(new Date().toISOString().slice(0, 7));
+
+    const [selectedClientDaily, setSelectedClientDaily] = useState('');
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().slice(0, 10));
     
+    const [selectedClientInea, setSelectedClientInea] = useState('');
+
     const app = getApp();
     const functions = getFunctions(app, "southamerica-east1");
     
-    const generateMonthlySummary = httpsCallable(functions, 'generateMonthlySummaryOnDemand');
+    const backfillMonthly = httpsCallable(functions, 'backfillMonthlyOnDemand');
+    const backfillDaily = httpsCallable(functions, 'backfillDailyOnDemand');
     const testIneaConnection = httpsCallable(functions, 'testIneaConnection');
 
-    const handleSumMonths = async () => {
-        if (!selectedClientRetro || !selectedMonth) return;
-        setIsLoadingRetro(true); setResultRetro(null);
+    const handleMonthlyBackfill = async () => {
+        if (!selectedClientMonthly || !selectedMonth) return;
+        setIsLoadingMonthly(true); 
+        setResultMonthly(null);
         const [yearStr, monthStr] = selectedMonth.split('-');
-        const payload = { clienteId: selectedClientRetro, ano: parseInt(yearStr, 10), mes: parseInt(monthStr, 10) - 1 };
+        const payload = { 
+            clienteId: selectedClientMonthly, 
+            ano: parseInt(yearStr, 10), 
+            mes: parseInt(monthStr, 10) - 1
+        };
         try {
-            const response = await generateMonthlySummary(payload);
-            setResultRetro({ status: 'success', message: response.data.message });
+            const response = await backfillMonthly(payload);
+            setResultMonthly({ status: 'success', message: response.data.message });
         } catch (error) {
-            console.error("Erro ao gerar resumo:", error);
-            setResultRetro({ status: 'error', message: `Falha: ${error.message}` });
-        } finally { setIsLoadingRetro(false); }
+            console.error("Erro ao executar backfill mensal:", error);
+            setResultMonthly({ status: 'error', message: `Falha: ${error.message}` });
+        } finally { 
+            setIsLoadingMonthly(false); 
+        }
+    };
+
+    const handleDailyBackfill = async () => {
+        if (!selectedClientDaily || !selectedDate) return;
+        setIsLoadingDaily(true);
+        setResultDaily(null);
+        const payload = {
+            clienteId: selectedClientDaily,
+            date: selectedDate
+        };
+        try {
+            const response = await backfillDaily(payload);
+            setResultDaily({ status: 'success', message: response.data.message });
+        } catch (error) {
+            console.error("Erro ao executar backfill diário:", error);
+            setResultDaily({ status: 'error', message: `Falha: ${error.message}` });
+        } finally {
+            setIsLoadingDaily(false);
+        }
     };
     
     const handleCheckInea = async () => {
@@ -259,18 +292,22 @@ export default function PaginaAdminMaster() {
         <div className="p-4 sm:p-6 md:p-8 bg-gray-50 min-h-full font-comfortaa">
             <header className="mb-8">
                 <h1 className="text-3xl font-lexend font-bold text-blue-coral">Painel de Administração Master</h1>
-                <p className="text-md text-gray-600 mt-1">Ferramentas e funções avançadas para gerenciamento do sistema.</p>
+                <p className="text-md text-gray-600 mt-1">Ferramentas e funções avançadas para gestão do sistema.</p>
             </header>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                 
-                {/* Card 1: Cálculo Retroativo (FUNÇÃO RESTAURADA) */}
-                <AdminCard icon={<FaCalculator className="h-8 w-8 text-white" />} title="Cálculo Retroativo" description="Recalcular manualmente os dados do dashboard para um cliente e mês.">
+                {/* Card de Backfill Mensal */}
+                <AdminCard 
+                    icon={<FaCalculator className="h-8 w-8 text-white" />} 
+                    title="Processar Mês Inteiro" 
+                    description="Recalcula todos os placares diários e o placar mensal para um período."
+                >
                     <div className="space-y-4">
                         <div>
-                            <label htmlFor="client-select-retro" className="block text-sm font-medium text-gray-700 mb-1">Cliente:</label>
-                            <select id="client-select-retro" value={selectedClientRetro} onChange={(e) => setSelectedClientRetro(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                                <option value="" disabled>{loadingAllowedClientes ? 'Carregando...' : 'Selecione'}</option>
+                            <label htmlFor="client-select-monthly" className="block text-sm font-medium text-gray-700 mb-1">Cliente:</label>
+                            <select id="client-select-monthly" value={selectedClientMonthly} onChange={(e) => setSelectedClientMonthly(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="" disabled>{loadingAllowedClientes ? 'A carregar...' : 'Selecione'}</option>
                                 {userAllowedClientes.map(c => (<option key={c.id} value={c.id}>{c.nome}</option>))}
                             </select>
                         </div>
@@ -278,42 +315,69 @@ export default function PaginaAdminMaster() {
                             <label htmlFor="month-select" className="block text-sm font-medium text-gray-700 mb-1">Mês/Ano:</label>
                             <input type="month" id="month-select" value={selectedMonth} onChange={(e) => setSelectedMonth(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md shadow-sm"/>
                         </div>
-                        <button onClick={handleSumMonths} disabled={!selectedClientRetro || isLoadingRetro} className="w-full bg-apricot-orange text-white font-lexend py-2 px-4 rounded-md hover:opacity-90 disabled:opacity-50">
-                            {isLoadingRetro ? 'Processando...' : 'Gerar Resumo do Mês'}
+                        <button onClick={handleMonthlyBackfill} disabled={!selectedClientMonthly || isLoadingMonthly} className="w-full bg-apricot-orange text-white font-lexend py-2 px-4 rounded-md hover:opacity-90 disabled:opacity-50">
+                            {isLoadingMonthly ? 'A processar...' : 'Processar Mês'}
                         </button>
-                        <ResultDisplay result={resultRetro} />
+                        <ResultDisplay result={resultMonthly} />
                     </div>
                 </AdminCard>
 
-                {/* Card 2: Verificador de Conexão INEA (FUNÇÃO RESTAURADA) */}
+                {/* Card de Backfill Diário */}
+                <AdminCard 
+                    icon={<FaCalendarDay className="h-8 w-8 text-white" />} 
+                    title="Reprocessar um Dia" 
+                    description="Recalcula o placar para um dia específico e atualiza o total mensal."
+                >
+                    <div className="space-y-4">
+                        <div>
+                            <label htmlFor="client-select-daily" className="block text-sm font-medium text-gray-700 mb-1">Cliente:</label>
+                            <select id="client-select-daily" value={selectedClientDaily} onChange={(e) => setSelectedClientDaily(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="" disabled>{loadingAllowedClientes ? 'A carregar...' : 'Selecione'}</option>
+                                {userAllowedClientes.map(c => (<option key={c.id} value={c.id}>{c.nome}</option>))}
+                            </select>
+                        </div>
+                        <div>
+                            <label htmlFor="date-select" className="block text-sm font-medium text-gray-700 mb-1">Data:</label>
+                            <input type="date" id="date-select" value={selectedDate} onChange={(e) => setSelectedDate(e.tarefa.value)} className="w-full p-2 border border-gray-300 rounded-md shadow-sm"/>
+                        </div>
+                        <button onClick={handleDailyBackfill} disabled={!selectedClientDaily || isLoadingDaily} className="w-full bg-apricot-orange text-white font-lexend py-2 px-4 rounded-md hover:opacity-90 disabled:opacity-50">
+                            {isLoadingDaily ? 'A processar...' : 'Processar Dia'}
+                        </button>
+                        <ResultDisplay result={resultDaily} />
+                    </div>
+                </AdminCard>
+
+                <div className="lg:col-span-2">
+                    <LancamentosEditorCard />
+                </div>
+                
+                <div className="lg:col-span-2">
+                    <ConfigEmissoesCard />
+                </div>
+                
+                {/* Card de Verificador de Conexão INEA */}
                 <AdminCard icon={<FaUserShield className="h-8 w-8 text-white" />} title="Verificador de Conexão INEA" description="Teste a conexão com a API do INEA usando as credenciais do cliente.">
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="client-select-inea" className="block text-sm font-medium text-gray-700 mb-1">Cliente:</label>
-                            <select id="client-select-inea" value={selectedClientInea} onChange={(e) => setSelectedClientInea(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
-                                <option value="" disabled>{loadingAllowedClientes ? 'Carregando...' : 'Selecione'}</option>
+                            <select id="client-select-inea" value={selectedClientInea} onChange={(e) => setSelectedClientInea(e.tarefa.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                                <option value="" disabled>{loadingAllowedClientes ? 'A carregar...' : 'Selecione'}</option>
                                 {userAllowedClientes.map(c => (<option key={c.id} value={c.id}>{c.nome}</option>))}
                             </select>
                         </div>
                         <button onClick={handleCheckInea} disabled={!selectedClientInea || isLoadingInea} className="w-full bg-apricot-orange text-white font-lexend py-2 px-4 rounded-md hover:opacity-90 disabled:opacity-50">
-                            {isLoadingInea ? 'Verificando...' : 'Testar Conexão'}
+                            {isLoadingInea ? 'A verificar...' : 'Testar Conexão'}
                         </button>
                         <ResultDisplay result={resultInea} />
                     </div>
                 </AdminCard>
-
-                {/* Card Futuro (Placeholder) */}
-                 <AdminCard icon={<FaPlus className="h-8 w-8 text-white" />} title="Futura Função" description="Espaço reservado para uma nova ferramenta de sistema.">
-                     <div className="text-center text-gray-500 flex items-center justify-center h-full"><p>Aguardando implementação.</p></div>
-                </AdminCard>
-
-                {/* CARD DE EDIÇÃO DE LANÇAMENTOS */}
-                <LancamentosEditorCard />
                 
-                {/* --- NOVO CARD DE CONFIGURAÇÃO DE EMISSÕES --- */}
-                <ConfigEmissoesCard />
-
+                {/* Card Futuro */}
+                <AdminCard icon={<FaPlus className="h-8 w-8 text-white" />} title="Futura Função" description="Espaço reservado para uma nova ferramenta de sistema.">
+                    <div className="text-center text-gray-500 flex items-center justify-center h-full"><p>Aguardando implementação.</p></div>
+                </AdminCard>
             </div>
         </div>
     );
 }
+
