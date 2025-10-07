@@ -6,7 +6,8 @@ import AuthContext from '../../context/AuthContext';
 import { addPendingRecord } from '../../services/offlineSyncService';
 import { wasteTypeColors } from '../../utils/wasteTypeColors'; 
 
-const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
+// Adicionado "Geral" para Recicláveis.
+const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Geral", "Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
 const SUBTIPOS_ORGANICOS_FALLBACK = ["Geral", "Pré-serviço", "Pós-serviço"];
 
 export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSuccessfulSubmit, formResetKey, empresasColetaDisponiveis }) { 
@@ -95,15 +96,24 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     }, 4000);
   };
   
+  // --- LÓGICA ALTERADA ---
+  // Agora define "Geral" como padrão para recicláveis, se aplicável.
   const handleSelectMainCategory = (categoria) => {
     if (selectedMainCategory === categoria) {
         setSelectedMainCategory('');
         setSelectedSubType('');
     } else {
         setSelectedMainCategory(categoria);
+        // Se a categoria for Orgânico E o cliente detalha orgânicos, define o subtipo padrão como 'Geral'.
         if (categoria === 'Orgânico' && clienteSelecionado?.fazSeparacaoOrganicosCompleta) {
-            setSelectedSubType('Geral'); 
-        } else {
+            setSelectedSubType('Geral');
+        } 
+        // LÓGICA ESPELHADA: Se a categoria for Reciclável E o cliente detalha recicláveis E "Geral" é uma opção, define o subtipo padrão como 'Geral'.
+        else if (categoria === 'Reciclável' && clienteSelecionado?.fazSeparacaoReciclaveisCompleta && (clienteSelecionado?.tiposReciclaveisPersonalizados || []).includes('Geral')) {
+            setSelectedSubType('Geral');
+        }
+        // Caso contrário, limpa o subtipo.
+        else {
             setSelectedSubType('');
         }
     }
@@ -146,7 +156,6 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
 
     setSubmitting(true);
     
-    // --- INÍCIO DA INSTRUMENTAÇÃO COM LOGS ---
     console.clear(); 
     console.log("--- INICIANDO DEBUG DO CONTRATO DE COLETA ---");
     console.log(`1. TIPO DE RESÍDUO SELECIONADO: "${selectedMainCategory}"`);
@@ -199,7 +208,6 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
 
     console.log("5. DADOS FINAIS A SEREM SALVOS (recordData):", recordData);
     console.log("--- FIM DO DEBUG ---");
-    // --- FIM DA INSTRUMENTAÇÃO ---
 
     const limites = clienteSelecionado.limitesPorResiduo || {};
     const limiteDaCategoria = limites[categoriaParaVerificarLimite] || 0;
