@@ -30,6 +30,7 @@ const PaginaEconomiaCircular = React.lazy(() => import('../pages/app/PaginaEcono
 const PaginaGlossario = React.lazy(() => import('../pages/app/PaginaGlossario'));
 const PaginaGestaoMTR = React.lazy(() => import('../pages/app/PaginaGestaoMTR'));
 const PaginaAdminMaster = React.lazy(() => import('../pages/app/PaginaAdminMaster'));
+const PainelSigor = React.lazy(() => import('../pages/app/PainelSigor'));
 
 const PageLoader = () => (
   <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -100,6 +101,7 @@ export default function AppRoutes() {
               <Route path="admin/empresas-coleta" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminEmpresasColeta /></ProtectedRoute>} />
               <Route path="admin/gestao-mtr" element={<ProtectedRoute allowedRoles={['master']}><PaginaGestaoMTR /></ProtectedRoute>} />
               <Route path="admin/master-tools" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminMaster /></ProtectedRoute>} />
+              <Route path="painelsigor" element={<ProtectedRoute allowedRoles={['master']}><PainelSigor /></ProtectedRoute>} />
           </Route>
 
           {/* ROTAS PRIVADAS (APP) INTERNACIONAIS */}

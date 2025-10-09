@@ -10,7 +10,7 @@ export default defineConfig({
       // Qualquer requisição que comece com /api será redirecionada
       '/api': {
         // Redireciona para o servidor que o 'vercel dev' cria
-        target: 'http://localhost:3000', 
+        target: 'http://localhost:3001', 
         changeOrigin: true,
       },
     },
