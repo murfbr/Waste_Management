@@ -6,8 +6,7 @@ import AuthContext from '../../context/AuthContext';
 import { addPendingRecord } from '../../services/offlineSyncService';
 import { wasteTypeColors } from '../../utils/wasteTypeColors'; 
 
-// Adicionado "Geral" para Recicláveis.
-const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Geral", "Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
+const SUBTIPOS_RECICLAVEIS_FALLBACK = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
 const SUBTIPOS_ORGANICOS_FALLBACK = ["Geral", "Pré-serviço", "Pós-serviço"];
 
 export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSuccessfulSubmit, formResetKey, empresasColetaDisponiveis }) { 
@@ -96,24 +95,15 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     }, 4000);
   };
   
-  // --- LÓGICA ALTERADA ---
-  // Agora define "Geral" como padrão para recicláveis, se aplicável.
   const handleSelectMainCategory = (categoria) => {
     if (selectedMainCategory === categoria) {
         setSelectedMainCategory('');
         setSelectedSubType('');
     } else {
         setSelectedMainCategory(categoria);
-        // Se a categoria for Orgânico E o cliente detalha orgânicos, define o subtipo padrão como 'Geral'.
         if (categoria === 'Orgânico' && clienteSelecionado?.fazSeparacaoOrganicosCompleta) {
-            setSelectedSubType('Geral');
-        } 
-        // LÓGICA ESPELHADA: Se a categoria for Reciclável E o cliente detalha recicláveis E "Geral" é uma opção, define o subtipo padrão como 'Geral'.
-        else if (categoria === 'Reciclável' && clienteSelecionado?.fazSeparacaoReciclaveisCompleta && (clienteSelecionado?.tiposReciclaveisPersonalizados || []).includes('Geral')) {
-            setSelectedSubType('Geral');
-        }
-        // Caso contrário, limpa o subtipo.
-        else {
+            setSelectedSubType('Geral'); 
+        } else {
             setSelectedSubType('');
         }
     }
@@ -155,31 +145,25 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     }
 
     setSubmitting(true);
-    
-    console.clear(); 
-    console.log("--- INICIANDO DEBUG DO CONTRATO DE COLETA ---");
-    console.log(`1. TIPO DE RESÍDUO SELECIONADO: "${selectedMainCategory}"`);
-    console.log("2. CONTRATOS DISPONÍVEIS PARA ESTE CLIENTE:", clienteSelecionado.contratosColeta);
 
     const contratoAplicavel = (clienteSelecionado.contratosColeta || []).find(c => 
         c.tiposResiduoColetados?.includes(selectedMainCategory)
     );
-    
-    console.log("3. RESULTADO DA BUSCA POR CONTRATO (.find()):", contratoAplicavel);
 
     let empresaColetaCompleta = null;
     let destinacaoFinal = null;
 
     if (contratoAplicavel && empresasColetaDisponiveis) {
+      // Encontra a empresa inteira na lista que recebemos via props
       empresaColetaCompleta = empresasColetaDisponiveis.find(
         emp => emp.id === contratoAplicavel.empresaColetaId
       );
     }
     
-    console.log("4. EMPRESA DE COLETA ENCONTRADA:", empresaColetaCompleta);
-
     if (empresaColetaCompleta) {
+      // Pega as destinações para o tipo de resíduo principal
       const destinacoesPossiveis = empresaColetaCompleta.destinacoes?.[selectedMainCategory] || [];
+      // Assume a primeira destinação da lista como a principal.
       destinacaoFinal = destinacoesPossiveis.length > 0 ? destinacoesPossiveis[0] : null;
     }
 
@@ -196,7 +180,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
       empresaColetaNome: empresaColetaCompleta?.nomeFantasia || null,
       destinacaoFinal: destinacaoFinal,
     };
-    
+
     let categoriaParaVerificarLimite = selectedMainCategory;
     let tipoParaExibir = selectedMainCategory;
 
@@ -205,9 +189,6 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
       const translatedSubType = t(`wasteFormComponent.fallbackSubtypes.${selectedMainCategory.toLowerCase()}.${selectedSubType}`, selectedSubType);
       tipoParaExibir = `${selectedMainCategory} (${translatedSubType})`;
     }
-
-    console.log("5. DADOS FINAIS A SEREM SALVOS (recordData):", recordData);
-    console.log("--- FIM DO DEBUG ---");
 
     const limites = clienteSelecionado.limitesPorResiduo || {};
     const limiteDaCategoria = limites[categoriaParaVerificarLimite] || 0;
@@ -324,6 +305,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
               <button
                 key={`type-${tipo}`} type="button" onClick={() => handleSelectMainCategory(tipo)}
                 style={getButtonStyles(tipo, selectedMainCategory === tipo)}
+                // --- ALTERAÇÃO APLICADA AQUI ---
                 className={`flex-grow basis-full sm:basis-[45%] md:basis-[30%] relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2 
                     ${selectedMainCategory === tipo 
                         ? 'ring-rich-soil shadow-lg' 
@@ -343,6 +325,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
                   <button
                     key={`subtype-${subtipoKey}`} type="button" onClick={() => setSelectedSubType(subtipoKey)}
                     style={getButtonStyles(subtipoKey, selectedSubType === subtipoKey)}
+                    // --- ALTERAÇÃO APLICADA AQUI ---
                     className={`flex-grow basis-full sm:basis-[45%] md:basis-[30%] relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
                         ${selectedSubType === subtipoKey
                             ? 'ring-rich-soil shadow-lg'
@@ -364,6 +347,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
                   <button
                     key={`subtype-${subtipoKey}`} type="button" onClick={() => setSelectedSubType(subtipoKey)}
                     style={getButtonStyles(subtipoKey, selectedSubType === subtipoKey)}
+                    // --- ALTERAÇÃO APLICADA AQUI ---
                     className={`flex-grow basis-full sm:basis-[45%] md:basis-[30%] relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-200 ease-in-out focus:outline-none ring-2 ring-offset-2
                         ${selectedSubType === subtipoKey
                             ? 'ring-rich-soil shadow-lg'
@@ -389,6 +373,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
               <button
                 key={`area-${areaOption}`} type="button"
                 onClick={() => { setAreaLancamento(areaOption); if (formError) setFormError(''); if (formSuccess) setFormSuccess(''); }}
+                // --- ALTERAÇÃO APLICADA AQUI ---
                 className={`flex-grow basis-full sm:basis-[45%] md:basis-[30%] relative flex items-center justify-center p-4 border-2 rounded-xl font-lexend text-subtitulo transition-all duration-150 ease-in-out focus:outline-none
                     ${areaLancamento === areaOption
                         ? 'bg-blue-coral text-white border-blue-coral shadow-lg'

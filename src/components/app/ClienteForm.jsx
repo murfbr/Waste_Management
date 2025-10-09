@@ -3,7 +3,7 @@ import { validaDocumento } from '../../utils/validadorCPF-CNPJ.js';
 import ViewPasswordButton from './admin/ViewPasswordButton.jsx';
 
 const CATEGORIAS_PRINCIPAIS_PADRAO = ["Reciclável", "Orgânico", "Rejeito"];
-const SUBTIPOS_RECICLAVEIS_COMUNS = ["Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
+const SUBTIPOS_RECICLAVEIS_COMUNS = ["Geral", "Papel", "Vidro", "Metal", "Plástico", "Baterias", "Eletrônicos"];
 const SUBTIPOS_ORGANICOS_COMUNS = ["Geral", "Pré-serviço", "Pós-serviço"];
 const NOVA_CATEGORIA_VALUE = "__NOVA__";
 
@@ -200,6 +200,15 @@ export default function ClienteForm({
     const todasCategorias = new Set([...categoriasPrincipaisSelecionadas, ...outrasCategorias]);
     return Array.from(todasCategorias);
   }, [categoriasPrincipaisSelecionadas, outrasCategoriasInput]);
+
+  // --- LÓGICA ALTERADA ---
+  // Pré-seleciona "Geral" ao marcar a separação de recicláveis pela primeira vez
+  const handleToggleSeparacaoReciclaveis = (checked) => {
+    setFazSeparacaoReciclaveisCompleta(checked);
+    if (checked && !subtiposComunsReciclaveisSelecionados.includes("Geral")) {
+      setSubtiposComunsReciclaveisSelecionados(prev => [...prev, "Geral"]);
+    }
+  };
 
   const handleLocalSubmit = async (e) => {
     e.preventDefault();

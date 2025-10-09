@@ -4,22 +4,22 @@ import { useTranslation } from 'react-i18next';
 import { processDataForDestinacaoChart } from '../../services/dashboardProcessor';
 
 /**
- * Hook customizado para os dados do gráfico de Destinação (Valorização vs. Descarte).
- * Gerencia as dependências de registros, empresas de coleta e traduções.
- * @param {Array<Object>} records A lista de registros de resíduos.
- * @param {Array<Object>} empresasColeta A lista de empresas de coleta para consulta de destinação.
+ * Hook para os dados do gráfico de Destinação (Valorização vs. Descarte).
+ * @param {Array<Object>} dailyData A lista de documentos de totais diários.
  * @param {boolean} isVisible Flag que indica se a seção do gráfico está visível.
- * @returns {{destinacaoData: Array<Object>}} Objeto com os dados processados para o gráfico.
+ * @returns {{destinacaoData: Array<Object>}}
  */
-export function useDestinacaoData(records, empresasColeta, isVisible) {
+export function useDestinacaoData(dailyData, isVisible) {
   const { t } = useTranslation(['charts']);
 
   const destinacaoData = useMemo(() => {
-    if (!isVisible || !records || records.length === 0 || !empresasColeta || empresasColeta.length === 0) {
+    if (!isVisible || !dailyData || dailyData.length === 0) {
       return [];
     }
-    return processDataForDestinacaoChart(records, empresasColeta, t);
-  }, [records, empresasColeta, isVisible, t]);
+    // NOTA: A dependência de `empresasColeta` foi removida pois os dados de destinação
+    // agora vêm diretamente dos documentos diários.
+    return processDataForDestinacaoChart(dailyData, t);
+  }, [dailyData, isVisible, t]);
 
   return { destinacaoData };
 }
