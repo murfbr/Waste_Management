@@ -8,7 +8,7 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "start:api": "nodemon api/index.js"
+    "start:api": "nodemon api/local.js"
   },
   "dependencies": {
     "@vercel/analytics": "^1.5.0",
