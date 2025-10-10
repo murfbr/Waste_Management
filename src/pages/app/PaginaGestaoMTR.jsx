@@ -227,13 +227,13 @@ export default function PaginaGestaoMTR() {
   };
 
   // Gate simples de permissão
-  if (userProfile && userProfile.role !== 'master') {
-    return (
-      <div className="p-8 text-center text-red-600">
-        Acesso negado. Esta página é restrita a administradores.
-      </div>
-    );
-  }
+ // if (userProfile && userProfile.role !== 'master') {
+ //   return (
+ //     <div className="p-8 text-center text-red-600">
+ //       Acesso negado. Esta página é restrita a administradores.
+ //     </div>
+ //   );
+ // }
 
   // Lógica de cálculo da paginação
   const indexOfLastItem = currentPage * itemsPerPage;
