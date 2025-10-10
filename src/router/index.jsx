@@ -99,7 +99,7 @@ export default function AppRoutes() {
               <Route path="admin/usuarios" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaAdminUsuarios /></ProtectedRoute>} />
               <Route path="admin/clientes" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminClientes /></ProtectedRoute>} />
               <Route path="admin/empresas-coleta" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminEmpresasColeta /></ProtectedRoute>} />
-              <Route path="admin/gestao-mtr" element={<ProtectedRoute allowedRoles={['master']}><PaginaGestaoMTR /></ProtectedRoute>} />
+              <Route path="admin/gestao-mtr" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaGestaoMTR /></ProtectedRoute>} />
               <Route path="admin/master-tools" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminMaster /></ProtectedRoute>} />
               <Route path="painelsigor" element={<ProtectedRoute allowedRoles={['master']}><PainelSigor /></ProtectedRoute>} />
           </Route>
