@@ -356,19 +356,21 @@ useEffect(() => {
   return (
     <div className="space-y-6 font-comfortaa">
       <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-x-4 gap-y-2">
-        <div className="flex items-center space-x-4 order-2 sm:order-1 justify-center sm:justify-start">
-          {selectedClienteData && selectedClienteData.logoUrl && (
-            <img 
-              src={selectedClienteData.logoUrl} 
-              alt={`Logo de ${selectedClienteData.nome || 'Cliente'}`} 
-              className="h-12 w-12 object-contain rounded-md"
-              onError={(e) => { e.target.style.display = 'none'; }}
-            />
-          )}
-          {selectedClienteData && (
-            <span className="text-xl font-lexend text-rich-soil">{selectedClienteData.nome}</span>
-          )}
-        </div>
+        <div className="flex items-center gap-4 order-2 sm:order-1 justify-center sm:justify-start">
+  {selectedClienteData?.logoUrl && (
+    <img
+      src={selectedClienteData.logoUrl}
+      alt={`Logo de ${selectedClienteData.nome || 'Cliente'}`}
+      className="h-10 sm:h-12 lg:h-14 w-auto object-contain rounded-md shrink-0"
+      onError={(e) => { e.currentTarget.style.display = 'none'; }}
+    />
+  )}
+  {selectedClienteData && (
+    <span className="font-lexend text-acao text-rich-soil">
+      {selectedClienteData.nome}
+    </span>
+  )}
+</div>
         <div className="text-center order-1 sm:order-2">
           <h1 className="font-lexend text-subtitulo text-rain-forest">{t('paginaLancamento.title')}</h1>
         </div>
