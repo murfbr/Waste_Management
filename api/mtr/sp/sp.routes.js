@@ -1,21 +1,16 @@
-// api/mtr/sp/sp.routes.js
 import { Router } from 'express';
-// CORREÇÃO: Importando as funções explicitamente para maior clareza.
 import {
   handleAuthentication,
   handleGetList,
-  handleCreateMtr
+  handleCreateMtr,
+  handleSyncAllLists
 } from './sp.controller.js';
 
 const router = Router();
 
-// Rota de autenticação
 router.post('/auth', handleAuthentication);
-
-// Rota para buscar listas
-router.get('/lists/:listName', handleGetList);
-
-// Rota para criar um novo MTR
+router.get('/lists/:listName', handleGetList); // GET para buscar
 router.post('/mtr', handleCreateMtr);
+router.post('/sync', handleSyncAllLists);
 
 export default router;
