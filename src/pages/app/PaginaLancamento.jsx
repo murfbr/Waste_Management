@@ -15,7 +15,8 @@ import ConfirmationModal from '../../components/app/ConfirmationModal';
 import SyncStatusIndicator from '../../components/app/SyncStatusIndicator';
 import { exportToCsv } from '../../utils/csvExport';
 
-const REGISTROS_POR_PAGINA = 10; 
+const REGISTROS_POR_PAGINA = 10;
+const CLIENTE_STORAGE_KEY = 'lastSelectedClienteId';  
 
 export default function PaginaLancamento() {
   const { db, auth, currentUser, appId, userProfile, userAllowedClientes, loadingUserClientes } = useContext(AuthContext);
@@ -89,20 +90,38 @@ export default function PaginaLancamento() {
     });
   };
 
-  useEffect(() => {
-    if (!loadingUserClientes && userAllowedClientes.length > 0 && !selectedClienteId) {
-        setSelectedClienteId(userAllowedClientes[0].id);
-    }
-  }, [loadingUserClientes, userAllowedClientes, selectedClienteId]);
+ useEffect(() => {
+    if (!loadingUserClientes && userAllowedClientes.length > 0) {
+        const savedClienteId = sessionStorage.getItem(CLIENTE_STORAGE_KEY);
+        
+        // Verifica se o cliente salvo existe na lista de clientes permitidos para o usuário
+        const isSavedClienteAllowed = userAllowedClientes.some(c => c.id === savedClienteId);
 
-  useEffect(() => {
-    if (selectedClienteId && userAllowedClientes.length > 0) {
-      const cliente = userAllowedClientes.find(c => c.id === selectedClienteId);
-      setSelectedClienteData(cliente || null);
-    } else { 
-      setSelectedClienteData(null); 
+        if (savedClienteId && isSavedClienteAllowed) {
+            setSelectedClienteId(savedClienteId);
+        } else if (!selectedClienteId) {
+            // Se não houver cliente salvo ou ele não for válido, seleciona o primeiro da lista
+            setSelectedClienteId(userAllowedClientes[0].id);
+        }
     }
-  }, [selectedClienteId, userAllowedClientes]);
+}, [loadingUserClientes, userAllowedClientes]);
+
+useEffect(() => {
+    if (selectedClienteId) {
+        sessionStorage.setItem(CLIENTE_STORAGE_KEY, selectedClienteId);
+    }
+}, [selectedClienteId]);
+
+useEffect(() => {
+    if (selectedClienteId && userAllowedClientes.length > 0) {
+        const cliente = userAllowedClientes.find(c => c.id === selectedClienteId);
+        setSelectedClienteData(cliente);
+    } else {
+        // Limpa os dados se nenhum cliente for selecionado
+        setSelectedClienteData(null);
+    }
+}, [selectedClienteId, userAllowedClientes]); // Executa sempre que o ID ou a lista de clientes mudar
+
 
 useEffect(() => {
   const fetchEmpresasColeta = async () => {

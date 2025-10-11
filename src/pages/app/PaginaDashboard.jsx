@@ -29,6 +29,8 @@ import { useCO2Data } from '../../hooks/charts/useCO2Data';
 import { useDashboardFilters } from '../../context/DashboardFilterContext.jsx';
 import ReportGeneratorButton from '../../components/app/ReportGeneratorButton';
 
+const CLIENTE_STORAGE_KEY = 'lastSelectedClienteId';
+
 const SectionTitle = ({ title, isExpanded, onClick }) => (
     <button onClick={onClick} className={`w-full flex justify-between items-center bg-rain-forest text-white py-2 px-4 rounded-t-lg text-left focus:outline-none ${!isExpanded ? 'rounded-b-lg' : ''}`} aria-expanded={isExpanded}>
         <h2 className="font-lexend text-acao font-semibold">{title}</h2>
@@ -87,14 +89,22 @@ export default function PaginaDashboard() {
 
 
   useEffect(() => {
-    if (!loadingAllowedClientes && userAllowedClientes?.length > 0) {
-        if (selectedClienteIds.length === 0) {
-            const firstClienteId = userAllowedClientes[0].id;
-            setSelectedClienteIds([firstClienteId]);
-            setSelectAllClientesToggle(false);
-        }
-    }
-  }, [userAllowedClientes, loadingAllowedClientes, selectedClienteIds]);
+  // A guarda `selectedClienteIds.length === 0` impede que ele re-selecione
+  // um cliente se o usuário já tiver feito alguma seleção.
+  if (!loadingAllowedClientes && userAllowedClientes?.length > 0 && selectedClienteIds.length === 0) {
+      const savedClienteId = sessionStorage.getItem(CLIENTE_STORAGE_KEY);
+      const isSavedClienteAllowed = userAllowedClientes.some(c => c.id === savedClienteId);
+
+      if (savedClienteId && isSavedClienteAllowed) {
+          setSelectedClienteIds([savedClienteId]);
+      } else {
+          const firstClienteId = userAllowedClientes[0].id;
+          setSelectedClienteIds([firstClienteId]);
+      }
+      setSelectAllClientesToggle(false);
+  }
+// Remova `selectedClienteIds` daqui. Este efeito só precisa rodar quando os clientes disponíveis mudam.
+}, [userAllowedClientes, loadingAllowedClientes]); 
 
   // CORREÇÃO ROBUSTA: Define os filtros de data iniciais apenas uma vez, 
   // quando as funções estão disponíveis e os filtros ainda não foram definidos.
