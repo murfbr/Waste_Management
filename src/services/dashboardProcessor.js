@@ -3,7 +3,6 @@
 /**
  * @fileoverview Versão final que lê a estrutura de dados enriquecida,
  * com subtipos de resíduos aninhados dentro das áreas de lançamento.
- * A lógica de estimativa foi removida em favor da leitura direta dos dados agregados.
  */
 
 
@@ -51,8 +50,6 @@ const parseSelectedAreas = (selectedAreas) => {
     return selectionMap;
 };
 
-// --- FUNÇÃO ATUALIZADA ---
-// Agora lê e agrega a nova estrutura de byWasteSubType que vem de dentro de cada área.
 const buildFilteredDay = (day, selectedAreasForClient) => {
     const filteredDay = {
         id: day.id,
@@ -80,7 +77,6 @@ const buildFilteredDay = (day, selectedAreasForClient) => {
                 const wasteKg = typeData.totalKg || 0;
                 filteredDay.byWasteType[wasteType].totalKg += wasteKg;
 
-                // Lê a estrutura de subtipo aninhada, que agora existe nos dados
                 if (typeData.byWasteSubType) {
                     Object.entries(typeData.byWasteSubType).forEach(([subType, subTypeData]) => {
                         if (!filteredDay.byWasteType[wasteType].byWasteSubType[subType]) {
@@ -111,8 +107,6 @@ const buildFilteredDay = (day, selectedAreasForClient) => {
     return filteredDay;
 };
 
-// --- FUNÇÃO ATUALIZADA ---
-// Lógica de cálculo proporcional removida. Agora a função é mais simples e direta.
 export const processDataForAggregatedPieChart = (dailyData, t, selectedAreas = []) => {
     if (!Array.isArray(dailyData) || dailyData.length === 0) return [];
     
@@ -125,7 +119,6 @@ export const processDataForAggregatedPieChart = (dailyData, t, selectedAreas = [
         if (areaSelection) {
             const selectedAreasForClient = areaSelection.get(dayToProcess.clienteId);
             if (selectedAreasForClient) {
-                // A função buildFilteredDay agora fornece os dados completos e já filtrados.
                 dayToProcess = buildFilteredDay(dayToProcess, selectedAreasForClient);
             } else {
                 return;
@@ -140,7 +133,6 @@ export const processDataForAggregatedPieChart = (dailyData, t, selectedAreas = [
             }
             finalAggregation[translatedMainType].value += typeData.totalKg || 0;
 
-            // Esta lógica agora funciona perfeitamente, pois 'typeData' contém os subtipos corretos.
             if (typeData.byWasteSubType) {
                 Object.entries(typeData.byWasteSubType).forEach(([subType, subTypeData]) => {
                     const translatedSubType = t(`charts:wasteSubTypes.${toCamelCaseKey(subType)}`, subType);
