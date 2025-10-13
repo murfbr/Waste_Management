@@ -84,7 +84,6 @@ export const AuthProvider = ({ children }) => {
             if (!navigator.onLine || !db || !appId || isSyncing.current) return;
 
             isSyncing.current = true; // Trava para evitar nova chamada.
-            console.log('AuthContext: Disparando sincronização...');
             
             // Chama o serviço e verifica se ele realmente fez alguma alteração.
             const changesWereMade = await syncPendingRecords(db, appId);
@@ -95,20 +94,18 @@ export const AuthProvider = ({ children }) => {
             // Isso fará com que a PaginaLancamento recarregue os dados e
             // o contador de pendentes seja atualizado para 0.
             if (changesWereMade) {
-                console.log('AuthContext: Sincronização concluída. Notificando a aplicação.');
+                
                 window.dispatchEvent(new CustomEvent('pending-records-updated'));
             }
         };
 
         const handleOnline = () => {
             setIsOnline(true);
-            console.log("AuthContext: Status -> Online. Tentando sincronizar.");
             handleSync(); 
         };
 
         const handleOffline = () => {
             setIsOnline(false);
-            console.log("AuthContext: Status -> Offline");
         };
         
         // CORREÇÃO: Handler para o evento de atualização de pendentes.

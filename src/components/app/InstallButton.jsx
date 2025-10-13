@@ -13,7 +13,7 @@ const InstallButton = () => {
       event.preventDefault();
       // Guarda o evento para que ele possa ser disparado mais tarde.
       setInstallPrompt(event);
-      console.log("Evento de instalação capturado!");
+      
     };
 
     window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
@@ -32,7 +32,6 @@ const InstallButton = () => {
 
     // 4. Mostra o diálogo de instalação oficial do navegador
     const result = await installPrompt.prompt();
-    console.log(`Resultado da instalação: ${result.outcome}`);
 
     // O prompt só pode ser usado uma vez. Limpamos o estado.
     setInstallPrompt(null);

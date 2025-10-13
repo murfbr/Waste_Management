@@ -59,9 +59,6 @@ export default function useAggregatedData(selectedClienteIds, selectedYears, sel
                 start: `${year}-01`,
                 end: `${year}-12`
             }));
-            
-            // LOG DE VALIDAÇÃO
-            console.log(`[DEPURAÇÃO GRÁFICO MENSAL] Hook: useAggregatedData. Ranges de busca para dados mensais:`, monthRanges);
 
             monthRanges.forEach((range, index) => {
                 const monthlyRef = collection(db, `monthly_totals/${clienteId}/months`);
@@ -70,9 +67,6 @@ export default function useAggregatedData(selectedClienteIds, selectedYears, sel
                 const monthlyUnsubscribe = onSnapshot(q, (snapshot) => {
                     const results = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                     
-                    // LOG DE VALIDAÇÃO
-                    console.log(`[DEPURAÇÃO GRÁFICO MENSAL] Hook: useAggregatedData. Dados mensais brutos recebidos para o range ${range.start}-${range.end}:`, results);
-
                     allMonthlyResults[`${clienteId}-${index}`] = results;
                     setMonthlyData(Object.values(allMonthlyResults).flat());
                 }, (error) => {

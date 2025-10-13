@@ -92,22 +92,29 @@ export default function ImportadorHistoricoCliente({ cliente, isOpen, onClose, o
           }
           
           // **NOVO: Validação da Empresa de Coleta e Destinação**
-          const empresaEncontrada = empresasMap.get(String(EmpresaColeta).trim().toLowerCase());
-          if (!empresaEncontrada) {
-            localErrors.push({ row: rowIndex, message: `Empresa de coleta "${EmpresaColeta}" não encontrada ou não associada a este cliente.` });
-            return;
-          }
-          if (empresaEncontrada.destinacao.toLowerCase() !== String(Destinacao).trim().toLowerCase()) {
-            localErrors.push({ row: rowIndex, message: `A destinação "${Destinacao}" não corresponde à configurada para a empresa "${EmpresaColeta}" (${empresaEncontrada.destinacao}).` });
-            return;
-          }
+          
+    const empresaEncontrada = empresasMap.get(String(EmpresaColeta).trim().toLowerCase());
+      if (!empresaEncontrada) {
+          localErrors.push({ row: rowIndex, message: `Empresa de coleta "${EmpresaColeta}" não encontrada.` });
+         return;
+      }
+
+// Lógica corrigida para buscar a destinação dentro do mapa 'destinacoes'
+const destinacoesConfiguradas = empresaEncontrada.destinacoes?.[TipoResiduo] || [];
+const destinacaoCSV = String(Destinacao).trim().toLowerCase();
+const destinacaoValida = destinacoesConfiguradas.some(d => d.toLowerCase() === destinacaoCSV);
+
+if (!destinacaoValida) {
+    localErrors.push({ row: rowIndex, message: `A destinação "${Destinacao}" não é válida para o resíduo "${TipoResiduo}" na empresa "${EmpresaColeta}". Destinos esperados: ${destinacoesConfiguradas.join(', ')}.` });
+    return;
+}
           
           validRecords.push({
             clienteId: cliente.id, areaLancamento: Area, wasteType: TipoResiduo, peso: pesoNum, timestamp: timestamp,
             userId: currentUser.uid, userEmail: currentUser.email, importadoEm: serverTimestamp(), appId: appId || 'default-app-id',
             // **NOVO: Adiciona os novos campos ao objeto do registro**
             empresaColetaId: empresaEncontrada.id,
-            destinacao: empresaEncontrada.destinacao,
+            destinacao: String(Destinacao).trim(),
           });
         });
         

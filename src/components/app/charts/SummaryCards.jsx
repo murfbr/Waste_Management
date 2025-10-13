@@ -58,8 +58,6 @@ export default function SummaryCards({ summaryData, isLoading }) {
   // Locale map
   const localeMap = { pt: 'pt-BR', en: 'en-US', es: 'es-ES' };
   const currentLocale = localeMap[i18n.language] || 'pt-BR';
-// --- LOG DE DEPURAÇÃO 6: VERIFICANDO AS PROPS FINAIS ---
-  console.log('[DEPURAÇÃO ETAPA 6] Componente: SummaryCards. Props recebidas (summaryData):', summaryData);
 
   if (isLoading) {
     return (
