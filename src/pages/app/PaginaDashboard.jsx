@@ -107,7 +107,7 @@ export default function PaginaDashboard() {
         setSelectedAreas(allAreaIds);
       }
     }
-  }, [userAllowedClientes, loadingAllowedClientes, setSelectedAreas, selectedClienteIds.length]);
+  }, [userAllowedClientes, loadingAllowedClientes, setSelectedAreas]);
 
 
   useEffect(() => {
