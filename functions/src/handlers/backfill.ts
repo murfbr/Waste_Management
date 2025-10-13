@@ -1,5 +1,5 @@
 // functions/src/handlers/backfill.ts
-// Versão 1.1.1 - Removida a função 'createIncrements' não utilizada.
+// Versão 2.1 - Adicionada a estrutura de destinação aninhada.
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions";
@@ -42,7 +42,6 @@ async function fetchEmpresasMap(): Promise<Map<string, any>> {
     return map;
 }
 
-// SUBSTITUA A FUNÇÃO ANTIGA POR ESTA VERSÃO COMPLETA E CORRIGIDA
 async function recalculateMonthFromDailies(clienteId: string, ano: number, mes: number) {
     const monthId = `${ano}-${String(mes + 1).padStart(2, '0')}`;
     logger.info(`recalculateMonthFromDailies: Iniciando recálculo com ESTRUTURA COMPLETA para ${monthId}.`);
@@ -76,7 +75,6 @@ async function recalculateMonthFromDailies(clienteId: string, ano: number, mes: 
         monthlyTotalObject.totalKg += day.totalKg || 0;
         monthlyTotalObject.entryCount += day.entryCount || 0;
 
-        // Agregação completa para byWasteType (incluindo subtipos)
         if (day.byWasteType) {
             for (const type in day.byWasteType) {
                 deepSet(monthlyTotalObject, ['byWasteType', type, 'totalKg'], day.byWasteType[type].totalKg || 0);
@@ -88,7 +86,7 @@ async function recalculateMonthFromDailies(clienteId: string, ano: number, mes: 
             }
         }
         
-        // Agregação completa para byArea (incluindo byWasteType interno)
+        // --- INÍCIO DA ALTERAÇÃO ESTRITAMENTE NECESSÁRIA ---
         if (day.byArea) {
             for (const area in day.byArea) {
                 deepSet(monthlyTotalObject, ['byArea', area, 'totalKg'], day.byArea[area].totalKg || 0);
@@ -96,12 +94,18 @@ async function recalculateMonthFromDailies(clienteId: string, ano: number, mes: 
                 if (day.byArea[area].byWasteType) {
                     for (const type in day.byArea[area].byWasteType) {
                         deepSet(monthlyTotalObject, ['byArea', area, 'byWasteType', type, 'totalKg'], day.byArea[area].byWasteType[type].totalKg || 0);
+                        // Adiciona a agregação da nova estrutura aninhada de destinação
+                        if (day.byArea[area].byWasteType[type].byDestination) {
+                            for (const dest in day.byArea[area].byWasteType[type].byDestination) {
+                                deepSet(monthlyTotalObject, ['byArea', area, 'byWasteType', type, 'byDestination', dest, 'totalKg'], day.byArea[area].byWasteType[type].byDestination[dest].totalKg || 0);
+                            }
+                        }
                     }
                 }
             }
         }
+        // --- FIM DA ALTERAÇÃO ESTRITAMENTE NECESSÁRIA ---
         
-        // Agregação completa para byDestination (incluindo byWasteType interno)
         if (day.byDestination) {
             for (const dest in day.byDestination) {
                 deepSet(monthlyTotalObject, ['byDestination', dest, 'totalKg'], day.byDestination[dest].totalKg || 0);
@@ -188,13 +192,18 @@ export const backfillMonthlyOnDemand = onCall(functionOptions, async (request) =
                 deepSet(dailyTotals, ['byWasteType', record.wasteType, 'byWasteSubType', wasteSubType, 'totalKg'], peso);
                 deepSet(dailyTotals, ['byArea', record.areaLancamento, 'totalKg'], peso);
                 deepSet(dailyTotals, ['byArea', record.areaLancamento, 'byWasteType', record.wasteType, 'totalKg'], peso);
+                
+                // --- INÍCIO DA ALTERAÇÃO ESTRITAMENTE NECESSÁRIA ---
+                deepSet(dailyTotals, ['byArea', record.areaLancamento, 'byWasteType', record.wasteType, 'byDestination', destination, 'totalKg'], peso);
+                // --- FIM DA ALTERAÇÃO ESTRITAMENTE NECESSÁRIA ---
+
                 deepSet(dailyTotals, ['byDestination', destination, 'totalKg'], peso);
                 deepSet(dailyTotals, ['byDestination', destination, 'byWasteType', record.wasteType, 'totalKg'], peso);
             });
             dailyTotals.clienteId = clienteId;
             dailyTotals.updatedAt = FieldValue.serverTimestamp();
             const dailyDocRef = db.doc(`daily_totals/${clienteId}/days/${dayId}`);
-            batch.set(dailyDocRef, dailyTotals); // Sobrescreve completamente
+            batch.set(dailyDocRef, dailyTotals);
         }
         
         await batch.commit();
@@ -220,7 +229,7 @@ export const backfillDailyOnDemand = onCall(functionOptions, async (request) => 
     const callerProfileSnap = await db.collection("users").doc(request.auth.uid).get();
     if (callerProfileSnap.data()?.role !== 'master') throw new HttpsError("permission-denied", "Apenas administradores podem executar esta função.");
 
-    const { clienteId, date } = request.data; // date no formato 'YYYY-MM-DD'
+    const { clienteId, date } = request.data;
     if (!clienteId || !date || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
         throw new HttpsError("invalid-argument", "'clienteId' e 'date' (YYYY-MM-DD) são obrigatórios.");
     }
@@ -255,6 +264,11 @@ export const backfillDailyOnDemand = onCall(functionOptions, async (request) => 
             deepSet(dailyTotals, ['byWasteType', record.wasteType, 'byWasteSubType', wasteSubType, 'totalKg'], peso);
             deepSet(dailyTotals, ['byArea', record.areaLancamento, 'totalKg'], peso);
             deepSet(dailyTotals, ['byArea', record.areaLancamento, 'byWasteType', record.wasteType, 'totalKg'], peso);
+
+            // --- INÍCIO DA ALTERAÇÃO ESTRITAMENTE NECESSÁRIA ---
+            deepSet(dailyTotals, ['byArea', record.areaLancamento, 'byWasteType', record.wasteType, 'byDestination', destination, 'totalKg'], peso);
+            // --- FIM DA ALTERAÇÃO ESTRITAMENTE NECESSÁRIA ---
+
             deepSet(dailyTotals, ['byDestination', destination, 'totalKg'], peso);
             deepSet(dailyTotals, ['byDestination', destination, 'byWasteType', record.wasteType, 'totalKg'], peso);
         });
@@ -264,7 +278,7 @@ export const backfillDailyOnDemand = onCall(functionOptions, async (request) => 
         const dailyDocRef = db.doc(`daily_totals/${clienteId}/days/${date}`);
         
         logger.info(`backfillDailyOnDemand: Salvando total diário reprocessado para ${date}.`, { dailyTotals });
-        await dailyDocRef.set(dailyTotals); // Sobrescreve completamente o documento do dia
+        await dailyDocRef.set(dailyTotals);
 
         await recalculateMonthFromDailies(clienteId, year, month - 1);
 

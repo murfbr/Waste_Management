@@ -8,10 +8,13 @@ export function DashboardFilterProvider({ children }) {
   const [selectedYears, setSelectedYears] = useState([now.getFullYear()]);
   const [selectedMonths, setSelectedMonths] = useState([now.getMonth()]);
   const [selectedAreas, setSelectedAreas] = useState([]);
+  
+  // AQUI ESTÁ A GARANTIA QUE O BOTÃO COMEÇA SELECIONADO
   const [activePeriod, setActivePeriod] = useState('thisMonth');
 
   
   const handleManualYearToggle = useCallback((year) => {
+    // Ao selecionar ano manual, desmarca o botão "Este Mês"
     setActivePeriod(null);
     setSelectedYears(prev => {
       const newSelection = prev.includes(year) ? prev.filter(y => y !== year) : [...prev, year];
@@ -20,12 +23,13 @@ export function DashboardFilterProvider({ children }) {
   }, []);
 
   const handleManualMonthChange = useCallback((months) => {
+    // Ao selecionar mês manual, desmarca o botão "Este Mês"
     setActivePeriod(null);
     setSelectedMonths(months);
   }, []);
 
   const handleManualAreaChange = useCallback((areas) => {
-    setActivePeriod(null);
+    // A seleção de área NÃO mexe na seleção de período rápido
     setSelectedAreas(areas);
   }, []);
 
@@ -42,17 +46,25 @@ export function DashboardFilterProvider({ children }) {
         break;
       case 'last3Months':
         let tempDate = new Date();
-        for (let i = 0; i < 3; i++) { years.push(tempDate.getFullYear()); months.push(tempDate.getMonth()); tempDate.setMonth(tempDate.getMonth() - 1); }
-        years = [...new Set(years)]; months = [...new Set(months)];
+        for (let i = 0; i < 3; i++) { 
+          years.push(tempDate.getFullYear()); 
+          months.push(tempDate.getMonth()); 
+          tempDate.setMonth(tempDate.getMonth() - 1); 
+        }
+        years = [...new Set(years)]; 
+        months = [...new Set(months)];
         break;
       case 'thisYear':
-        years = [currentDate.getFullYear()]; months = TODOS_OS_MESES_INDICES;
+        years = [currentDate.getFullYear()]; 
+        months = TODOS_OS_MESES_INDICES;
         break;
       case 'lastYear':
-        years = [currentDate.getFullYear() - 1]; months = TODOS_OS_MESES_INDICES;
+        years = [currentDate.getFullYear() - 1]; 
+        months = TODOS_OS_MESES_INDICES;
         break;
       default:
-        years = [currentDate.getFullYear()]; months = [currentDate.getMonth()];
+        years = [currentDate.getFullYear()]; 
+        months = [currentDate.getMonth()];
     }
     setSelectedYears(years);
     setSelectedMonths(months);
