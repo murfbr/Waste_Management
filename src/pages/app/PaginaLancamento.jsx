@@ -1,4 +1,4 @@
-// src/pages/app/PaginaLancamento.jsx
+// src/pages/app/PaginaLancamento.jsx (versão final e completa)
 
 import React, { useState, useEffect, useContext, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -6,14 +6,15 @@ import { signOut } from 'firebase/auth';
 import { useTranslation } from 'react-i18next';
 import AuthContext from '../../context/AuthContext';
 import { collection, deleteDoc, doc, query, where, getDocs, orderBy, limit, startAfter } from 'firebase/firestore';
+import { FaDownload } from 'https://esm.sh/react-icons/fa';
 
 import MessageBox from '../../components/app/MessageBox';
 import WasteForm from '../../components/app/WasteForm';
 import WasteRecordsList from '../../components/app/WasteRecordsList';
+import ExportarHistoricoCliente from '../../components/app/ExportarHistoricoCliente';
 import { getPendingRecords, deletePendingRecord, addPendingRecord } from '../../services/offlineSyncService';
 import ConfirmationModal from '../../components/app/ConfirmationModal';
 import SyncStatusIndicator from '../../components/app/SyncStatusIndicator';
-import { exportToCsv } from '../../utils/csvExport';
 
 const REGISTROS_POR_PAGINA = 10;
 const CLIENTE_STORAGE_KEY = 'lastSelectedClienteId';  
@@ -35,6 +36,7 @@ export default function PaginaLancamento() {
   const [unifiedRecords, setUnifiedRecords] = useState([]);
   const [loadingRecords, setLoadingRecords] = useState(false); 
   const [isRecordsVisible, setIsRecordsVisible] = useState(false);
+  const toggleRecordsVisibility = () => setIsRecordsVisible(!isRecordsVisible);
   const [lastVisibleFirestoreRecord, setLastVisibleFirestoreRecord] = useState(null); 
   const [hasMoreRecords, setHasMoreRecords] = useState(false); 
   const [loadingMore, setLoadingMore] = useState(false);
@@ -46,7 +48,8 @@ export default function PaginaLancamento() {
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
 
   const [formResetKey, setFormResetKey] = useState(0);
-  const [isExporting, setIsExporting] = useState(false);
+  
+  const [clienteParaExportar, setClienteParaExportar] = useState(null);
   
   const [modalState, setModalState] = useState({
     isOpen: false,
@@ -58,6 +61,8 @@ export default function PaginaLancamento() {
     onConfirm: () => {},
     content: null,
   });
+
+  // Nenhuma alteração nas funções ou useEffects. O restante do código até o return permanece idêntico.
 
   const showMessage = (msg, error = false) => {
     setMessage(msg);
@@ -93,14 +98,11 @@ export default function PaginaLancamento() {
  useEffect(() => {
     if (!loadingUserClientes && userAllowedClientes.length > 0) {
         const savedClienteId = sessionStorage.getItem(CLIENTE_STORAGE_KEY);
-        
-        // Verifica se o cliente salvo existe na lista de clientes permitidos para o usuário
         const isSavedClienteAllowed = userAllowedClientes.some(c => c.id === savedClienteId);
 
         if (savedClienteId && isSavedClienteAllowed) {
             setSelectedClienteId(savedClienteId);
         } else if (!selectedClienteId) {
-            // Se não houver cliente salvo ou ele não for válido, seleciona o primeiro da lista
             setSelectedClienteId(userAllowedClientes[0].id);
         }
     }
@@ -117,10 +119,9 @@ useEffect(() => {
         const cliente = userAllowedClientes.find(c => c.id === selectedClienteId);
         setSelectedClienteData(cliente);
     } else {
-        // Limpa os dados se nenhum cliente for selecionado
         setSelectedClienteData(null);
     }
-}, [selectedClienteId, userAllowedClientes]); // Executa sempre que o ID ou a lista de clientes mudar
+}, [selectedClienteId, userAllowedClientes]);
 
 
 useEffect(() => {
@@ -142,7 +143,7 @@ useEffect(() => {
   };
 
   fetchEmpresasColeta();
-}, [db]);;
+}, [db]);
 
 
   const loadAndCombineRecords = useCallback(async () => {
@@ -201,62 +202,6 @@ useEffect(() => {
     return () => window.removeEventListener('pending-records-updated', loadAndCombineRecords);
   }, [loadAndCombineRecords]);
 
-  const handleExportRequest = async (period, clienteNome) => {
-    if (!selectedClienteId) {
-        showMessage(t('paginaLancamento.messages.exportClientError'), true);
-        return;
-    }
-    setIsExporting(true);
-    try {
-        const now = new Date();
-        let startDate;
-
-        switch (period) {
-            case 'today':
-                startDate = new Date(now.setHours(0, 0, 0, 0));
-                break;
-            case '7days':
-                startDate = new Date(now.setDate(now.getDate() - 7));
-                startDate.setHours(0, 0, 0, 0);
-                break;
-            case '30days':
-                startDate = new Date(now.setDate(now.getDate() - 30));
-                startDate.setHours(0, 0, 0, 0);
-                break;
-            default:
-                startDate = new Date(now.setDate(now.getDate() - 7));
-                startDate.setHours(0, 0, 0, 0);
-        }
-
-        const allPendingRecords = await getPendingRecords();
-        const pendingRecordsInPeriod = allPendingRecords.filter(p => 
-            p.clienteId === selectedClienteId && p.timestamp >= startDate.getTime()
-        ).map(p => ({ ...p, id: p.localId, isPending: true }));
-
-        const firestoreQuery = query(
-            collection(db, `artifacts/${appId}/public/data/wasteRecords`),
-            where("clienteId", "==", selectedClienteId),
-            where("timestamp", ">=", startDate.getTime()),
-            orderBy("timestamp", "desc")
-        );
-        const firestoreSnap = await getDocs(firestoreQuery);
-        const firestoreRecords = firestoreSnap.docs.map(docSnap => ({ id: docSnap.id, ...docSnap.data() }));
-
-        const pendingLocalIds = new Set(pendingRecordsInPeriod.map(p => p.localId));
-        const filteredFirestoreRecords = firestoreRecords.filter(f => !pendingLocalIds.has(f.localId));
-        
-        const combined = [...pendingRecordsInPeriod, ...filteredFirestoreRecords];
-        combined.sort((a, b) => b.timestamp - a.timestamp);
-
-        exportToCsv(combined, clienteNome, showMessage);
-
-    } catch (error) {
-        console.error("Erro ao gerar relatório CSV:", error);
-        showMessage(t('paginaLancamento.messages.exportError'), true);
-    } finally {
-        setIsExporting(false);
-    }
-  };
 
   const carregarMaisRegistros = async () => {
     if (!lastVisibleFirestoreRecord || !selectedClienteId || loadingMore) return; 
@@ -357,9 +302,6 @@ useEffect(() => {
     setModalState({ isOpen: false });
   };
 
-  const toggleRecordsVisibility = () => setIsRecordsVisible(!isRecordsVisible);
-  
-
   if (loadingUserClientes && !userProfile) return <div className="text-center text-gray-600 p-8">{t('paginaLancamento.loadingData')}</div>;
   if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">{t('paginaLancamento.loadingProfile')}</div>;
   if (!userProfile || !['master', 'gerente', 'operacional'].includes(userProfile.role)) {
@@ -371,25 +313,25 @@ useEffect(() => {
   if (userProfile.role === 'master' && userAllowedClientes.length === 0 && !loadingUserClientes) {
     return <div className="text-center text-orange-600 p-8">{t('paginaLancamento.noClientsRegistered')}</div>;
   }
-
+  
   return (
     <div className="space-y-6 font-comfortaa">
       <div className="grid grid-cols-1 sm:grid-cols-3 items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-4 order-2 sm:order-1 justify-center sm:justify-start">
-  {selectedClienteData?.logoUrl && (
-    <img
-      src={selectedClienteData.logoUrl}
-      alt={`Logo de ${selectedClienteData.nome || 'Cliente'}`}
-      className="h-10 sm:h-12 lg:h-14 w-auto object-contain rounded-md shrink-0"
-      onError={(e) => { e.currentTarget.style.display = 'none'; }}
-    />
-  )}
-  {selectedClienteData && (
-    <span className="font-lexend text-acao text-rich-soil">
-      {selectedClienteData.nome}
-    </span>
-  )}
-</div>
+            {selectedClienteData?.logoUrl && (
+              <img
+                src={selectedClienteData.logoUrl}
+                alt={`Logo de ${selectedClienteData.nome || 'Cliente'}`}
+                className="h-10 sm:h-12 lg:h-14 w-auto object-contain rounded-md shrink-0"
+                onError={(e) => { e.currentTarget.style.display = 'none'; }}
+              />
+            )}
+            {selectedClienteData && (
+              <span className="font-lexend text-acao text-rich-soil">
+                {selectedClienteData.nome}
+              </span>
+            )}
+        </div>
         <div className="text-center order-1 sm:order-2">
           <h1 className="font-lexend text-subtitulo text-rain-forest">{t('paginaLancamento.title')}</h1>
         </div>
@@ -458,16 +400,34 @@ useEffect(() => {
           </div>
           <div className="bg-white rounded-lg shadow">
             <button 
-              onClick={toggleRecordsVisibility} 
+              onClick={toggleRecordsVisibility}
               className="w-full flex justify-between items-center p-6 text-left focus:outline-none"
-              aria-expanded={isRecordsVisible} 
+              aria-expanded={isRecordsVisible}
               aria-controls="waste-records-list-lancamento"
             >
-              <h2 className="font-lexend text-acao text-rain-forest">
-                {t('paginaLancamento.recentRecords')} <span className="text-blue-coral">{selectedClienteData?.nome || ''}</span>
-              </h2>
-              <span className="text-2xl text-exotic-plume transform transition-transform duration-200">{isRecordsVisible ? '▲' : '▼'}</span>
+              <div className="flex items-center">
+                <h2 className="font-lexend text-acao text-rain-forest">
+                  {t('paginaLancamento.recentRecords')} <span className="text-blue-coral">{selectedClienteData?.nome || ''}</span>
+                </h2>
+                <span className="ml-4 text-2xl text-exotic-plume transform transition-transform duration-200">{isRecordsVisible ? '▲' : '▼'}</span>
+              </div>
+              
+              {/* --- CONDIÇÃO DE RENDERIZAÇÃO ADICIONADA AQUI --- */}
+              {userProfile && ['master', 'gerente'].includes(userProfile.role) && (
+                <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setClienteParaExportar(selectedClienteData);
+                    }}
+                    title="Exportar Histórico"
+                    className="flex items-center px-4 py-2 bg-abundant-green text-white font-lexend text-sm rounded-md shadow-sm hover:opacity-90 transition-colors"
+                >
+                    <FaDownload className="mr-2" />
+                    Exportar
+                </button>
+              )}
             </button>
+            
             {isRecordsVisible && (
               <div id="waste-records-list-lancamento" className="p-6 border-t border-early-frost">
                 <WasteRecordsList
@@ -478,9 +438,6 @@ useEffect(() => {
                   hasMoreRecords={hasMoreRecords}
                   onLoadMore={carregarMaisRegistros}
                   loadingMore={loadingMore}
-                  onExport={handleExportRequest}
-                  isExporting={isExporting}
-                  clienteNome={selectedClienteData?.nome}
                 />
               </div>
             )}
@@ -502,6 +459,13 @@ useEffect(() => {
       >
         {modalState.content}
       </ConfirmationModal>
+
+      <ExportarHistoricoCliente
+        isOpen={!!clienteParaExportar}
+        cliente={clienteParaExportar}
+        onClose={() => setClienteParaExportar(null)}
+        empresasColeta={empresasColeta}
+      />
     </div>
   );
 }
