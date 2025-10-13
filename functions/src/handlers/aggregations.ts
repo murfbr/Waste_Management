@@ -1,5 +1,5 @@
 // functions/src/handlers/aggregations.ts
-// Versão Final 2.2 - Corrigida a lógica de transação nos gatilhos de update e delete.
+// Versão 3.0 - Adicionada a estrutura de subtipo aninhada em byArea.
 
 import { onDocumentCreated, onDocumentUpdated, onDocumentDeleted } from "firebase-functions/v2/firestore";
 import { FieldValue } from "firebase-admin/firestore";
@@ -48,6 +48,8 @@ async function createUpdateObject(record: any, multiplier: 1 | -1): Promise<{ [k
         [`byArea.${record.areaLancamento}.totalKg`]: increment,
         [`byArea.${record.areaLancamento}.entryCount`]: entryIncrement,
         [`byArea.${record.areaLancamento}.byWasteType.${record.wasteType}.totalKg`]: increment,
+        // --- NOVA LINHA ADICIONADA ---
+        [`byArea.${record.areaLancamento}.byWasteType.${record.wasteType}.byWasteSubType.${wasteSubType}.totalKg`]: increment,
         [`byArea.${record.areaLancamento}.byWasteType.${record.wasteType}.byDestination.${destination}.totalKg`]: increment,
         [`byDestination.${destination}.totalKg`]: increment,
         [`byDestination.${destination}.byWasteType.${record.wasteType}.totalKg`]: increment,
@@ -55,6 +57,7 @@ async function createUpdateObject(record: any, multiplier: 1 | -1): Promise<{ [k
 }
 
 // --- GATILHOS (TRIGGERS) ---
+// Nenhuma alteração necessária nos gatilhos, pois eles usam a função createUpdateObject.
 
 export const onWasteRecordCreated = onDocumentCreated(
     "artifacts/default-app-id/public/data/wasteRecords/{recordId}",
@@ -74,7 +77,6 @@ export const onWasteRecordCreated = onDocumentCreated(
         const updateData = await createUpdateObject(record, 1);
         if (!updateData) return;
 
-        // Usar transação para garantir atomicidade
         await firestore.runTransaction(async (transaction) => {
             const dailyDoc = await transaction.get(dailyRef);
             const monthlyDoc = await transaction.get(monthlyRef);
@@ -94,7 +96,6 @@ export const onWasteRecordCreated = onDocumentCreated(
     }
 );
 
-// --- CORREÇÃO APLICADA AQUI ---
 export const onWasteRecordUpdated = onDocumentUpdated(
     "artifacts/default-app-id/public/data/wasteRecords/{recordId}",
     async (event) => {
@@ -111,7 +112,6 @@ export const onWasteRecordUpdated = onDocumentUpdated(
         }
 
         await firestore.runTransaction(async (transaction) => {
-            // Referências para os documentos antigos e novos
             const oldDate = new Date(before.timestamp);
             const oldDayId = `${oldDate.getFullYear()}-${String(oldDate.getMonth() + 1).padStart(2, '0')}-${String(oldDate.getDate()).padStart(2, '0')}`;
             const oldMonthId = `${oldDate.getFullYear()}-${String(oldDate.getMonth() + 1).padStart(2, '0')}`;
@@ -124,17 +124,13 @@ export const onWasteRecordUpdated = onDocumentUpdated(
             const newDailyRef = db.doc(`daily_totals/${after.clienteId}/days/${newDayId}`);
             const newMonthlyRef = db.doc(`monthly_totals/${after.clienteId}/months/${newMonthId}`);
 
-            // --- LÓGICA REVISADA ---
-            // 1. LER todos os documentos que serão modificados
             const [oldDailyDoc, oldMonthlyDoc, newDailyDoc, newMonthlyDoc] = await Promise.all([
                 transaction.get(oldDailyRef),
                 transaction.get(oldMonthlyRef),
-                // Se os IDs novos e antigos forem os mesmos, não precisa ler de novo
                 oldDayId === newDayId ? Promise.resolve(null) : transaction.get(newDailyRef),
                 oldMonthId === newMonthId ? Promise.resolve(null) : transaction.get(newMonthlyRef)
             ]);
 
-            // 2. Decrementar os valores antigos
             if (oldDailyDoc.exists) {
                 transaction.update(oldDailyRef, oldUpdate);
             }
@@ -142,7 +138,6 @@ export const onWasteRecordUpdated = onDocumentUpdated(
                 transaction.update(oldMonthlyRef, oldUpdate);
             }
 
-            // 3. Incrementar/criar os novos valores
             const finalNewDailyDoc = newDailyDoc || (oldDayId === newDayId ? oldDailyDoc : null);
             if (finalNewDailyDoc?.exists) {
                 transaction.update(newDailyRef, newUpdate);
@@ -160,7 +155,6 @@ export const onWasteRecordUpdated = onDocumentUpdated(
     }
 );
 
-// --- CORREÇÃO APLICADA AQUI ---
 export const onWasteRecordDeleted = onDocumentDeleted(
     "artifacts/default-app-id/public/data/wasteRecords/{recordId}",
     async (event) => {
@@ -178,13 +172,10 @@ export const onWasteRecordDeleted = onDocumentDeleted(
         const dailyRef = db.doc(`daily_totals/${deletedRecord.clienteId}/days/${dayId}`);
         const monthlyRef = db.doc(`monthly_totals/${deletedRecord.clienteId}/months/${monthId}`);
 
-        // --- LÓGICA REVISADA ---
-        // Usar uma transação para garantir que a operação seja atômica e segura.
         await firestore.runTransaction(async (transaction) => {
             const dailyDoc = await transaction.get(dailyRef);
             const monthlyDoc = await transaction.get(monthlyRef);
 
-            // Apenas atualiza se o documento existir para evitar erros.
             if (dailyDoc.exists) {
                 transaction.update(dailyRef, update);
             }

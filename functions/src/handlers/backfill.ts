@@ -1,5 +1,5 @@
 // functions/src/handlers/backfill.ts
-// Versão 2.1 - Adicionada a estrutura de destinação aninhada.
+// Versão 3.0 - Adicionada a estrutura de subtipo aninhada em byArea.
 
 import { onCall, HttpsError } from "firebase-functions/v2/https";
 import { logger } from "firebase-functions";
@@ -86,7 +86,6 @@ async function recalculateMonthFromDailies(clienteId: string, ano: number, mes: 
             }
         }
         
-        // --- INÍCIO DA ALTERAÇÃO ESTRITAMENTE NECESSÁRIA ---
         if (day.byArea) {
             for (const area in day.byArea) {
                 deepSet(monthlyTotalObject, ['byArea', area, 'totalKg'], day.byArea[area].totalKg || 0);
@@ -94,7 +93,13 @@ async function recalculateMonthFromDailies(clienteId: string, ano: number, mes: 
                 if (day.byArea[area].byWasteType) {
                     for (const type in day.byArea[area].byWasteType) {
                         deepSet(monthlyTotalObject, ['byArea', area, 'byWasteType', type, 'totalKg'], day.byArea[area].byWasteType[type].totalKg || 0);
-                        // Adiciona a agregação da nova estrutura aninhada de destinação
+                        
+                        if (day.byArea[area].byWasteType[type].byWasteSubType) {
+                            for (const subType in day.byArea[area].byWasteType[type].byWasteSubType) {
+                                deepSet(monthlyTotalObject, ['byArea', area, 'byWasteType', type, 'byWasteSubType', subType, 'totalKg'], day.byArea[area].byWasteType[type].byWasteSubType[subType].totalKg || 0);
+                            }
+                        }
+
                         if (day.byArea[area].byWasteType[type].byDestination) {
                             for (const dest in day.byArea[area].byWasteType[type].byDestination) {
                                 deepSet(monthlyTotalObject, ['byArea', area, 'byWasteType', type, 'byDestination', dest, 'totalKg'], day.byArea[area].byWasteType[type].byDestination[dest].totalKg || 0);
@@ -104,7 +109,6 @@ async function recalculateMonthFromDailies(clienteId: string, ano: number, mes: 
                 }
             }
         }
-        // --- FIM DA ALTERAÇÃO ESTRITAMENTE NECESSÁRIA ---
         
         if (day.byDestination) {
             for (const dest in day.byDestination) {
@@ -120,8 +124,6 @@ async function recalculateMonthFromDailies(clienteId: string, ano: number, mes: 
 
     monthlyTotalObject.updatedAt = FieldValue.serverTimestamp();
     const monthlyDocRef = db.doc(`monthly_totals/${clienteId}/months/${monthId}`);
-    
-    logger.info(`recalculateMonthFromDailies: Salvando (sobrescrevendo) total mensal com estrutura completa.`);
     
     await monthlyDocRef.set(monthlyTotalObject); 
 
@@ -192,11 +194,8 @@ export const backfillMonthlyOnDemand = onCall(functionOptions, async (request) =
                 deepSet(dailyTotals, ['byWasteType', record.wasteType, 'byWasteSubType', wasteSubType, 'totalKg'], peso);
                 deepSet(dailyTotals, ['byArea', record.areaLancamento, 'totalKg'], peso);
                 deepSet(dailyTotals, ['byArea', record.areaLancamento, 'byWasteType', record.wasteType, 'totalKg'], peso);
-                
-                // --- INÍCIO DA ALTERAÇÃO ESTRITAMENTE NECESSÁRIA ---
+                deepSet(dailyTotals, ['byArea', record.areaLancamento, 'byWasteType', record.wasteType, 'byWasteSubType', wasteSubType, 'totalKg'], peso);
                 deepSet(dailyTotals, ['byArea', record.areaLancamento, 'byWasteType', record.wasteType, 'byDestination', destination, 'totalKg'], peso);
-                // --- FIM DA ALTERAÇÃO ESTRITAMENTE NECESSÁRIA ---
-
                 deepSet(dailyTotals, ['byDestination', destination, 'totalKg'], peso);
                 deepSet(dailyTotals, ['byDestination', destination, 'byWasteType', record.wasteType, 'totalKg'], peso);
             });
@@ -264,11 +263,8 @@ export const backfillDailyOnDemand = onCall(functionOptions, async (request) => 
             deepSet(dailyTotals, ['byWasteType', record.wasteType, 'byWasteSubType', wasteSubType, 'totalKg'], peso);
             deepSet(dailyTotals, ['byArea', record.areaLancamento, 'totalKg'], peso);
             deepSet(dailyTotals, ['byArea', record.areaLancamento, 'byWasteType', record.wasteType, 'totalKg'], peso);
-
-            // --- INÍCIO DA ALTERAÇÃO ESTRITAMENTE NECESSÁRIA ---
+            deepSet(dailyTotals, ['byArea', record.areaLancamento, 'byWasteType', record.wasteType, 'byWasteSubType', wasteSubType, 'totalKg'], peso);
             deepSet(dailyTotals, ['byArea', record.areaLancamento, 'byWasteType', record.wasteType, 'byDestination', destination, 'totalKg'], peso);
-            // --- FIM DA ALTERAÇÃO ESTRITAMENTE NECESSÁRIA ---
-
             deepSet(dailyTotals, ['byDestination', destination, 'totalKg'], peso);
             deepSet(dailyTotals, ['byDestination', destination, 'byWasteType', record.wasteType, 'totalKg'], peso);
         });

@@ -1,9 +1,9 @@
 // src/services/dashboardProcessor.js
 
 /**
- * @fileoverview Versão refatorada para trabalhar com dados pré-agregados.
- * As funções agora recebem arrays de documentos `daily_totals` ou `monthly_totals`
- * e somam os valores, em vez de processar registos individuais.
+ * @fileoverview Versão final que lê a estrutura de dados enriquecida,
+ * com subtipos de resíduos aninhados dentro das áreas de lançamento.
+ * A lógica de estimativa foi removida em favor da leitura direta dos dados agregados.
  */
 
 
@@ -51,6 +51,8 @@ const parseSelectedAreas = (selectedAreas) => {
     return selectionMap;
 };
 
+// --- FUNÇÃO ATUALIZADA ---
+// Agora lê e agrega a nova estrutura de byWasteSubType que vem de dentro de cada área.
 const buildFilteredDay = (day, selectedAreasForClient) => {
     const filteredDay = {
         id: day.id,
@@ -73,10 +75,20 @@ const buildFilteredDay = (day, selectedAreasForClient) => {
         if (areaData.byWasteType) {
             Object.entries(areaData.byWasteType).forEach(([wasteType, typeData]) => {
                 if (!filteredDay.byWasteType[wasteType]) {
-                    filteredDay.byWasteType[wasteType] = { totalKg: 0, byDestination: {} };
+                    filteredDay.byWasteType[wasteType] = { totalKg: 0, byDestination: {}, byWasteSubType: {} };
                 }
                 const wasteKg = typeData.totalKg || 0;
                 filteredDay.byWasteType[wasteType].totalKg += wasteKg;
+
+                // Lê a estrutura de subtipo aninhada, que agora existe nos dados
+                if (typeData.byWasteSubType) {
+                    Object.entries(typeData.byWasteSubType).forEach(([subType, subTypeData]) => {
+                        if (!filteredDay.byWasteType[wasteType].byWasteSubType[subType]) {
+                            filteredDay.byWasteType[wasteType].byWasteSubType[subType] = { totalKg: 0 };
+                        }
+                        filteredDay.byWasteType[wasteType].byWasteSubType[subType].totalKg += subTypeData.totalKg || 0;
+                    });
+                }
 
                 if (typeData.byDestination) {
                      Object.entries(typeData.byDestination).forEach(([destination, destData]) => {
@@ -99,7 +111,8 @@ const buildFilteredDay = (day, selectedAreasForClient) => {
     return filteredDay;
 };
 
-
+// --- FUNÇÃO ATUALIZADA ---
+// Lógica de cálculo proporcional removida. Agora a função é mais simples e direta.
 export const processDataForAggregatedPieChart = (dailyData, t, selectedAreas = []) => {
     if (!Array.isArray(dailyData) || dailyData.length === 0) return [];
     
@@ -112,6 +125,7 @@ export const processDataForAggregatedPieChart = (dailyData, t, selectedAreas = [
         if (areaSelection) {
             const selectedAreasForClient = areaSelection.get(dayToProcess.clienteId);
             if (selectedAreasForClient) {
+                // A função buildFilteredDay agora fornece os dados completos e já filtrados.
                 dayToProcess = buildFilteredDay(dayToProcess, selectedAreasForClient);
             } else {
                 return;
@@ -126,6 +140,7 @@ export const processDataForAggregatedPieChart = (dailyData, t, selectedAreas = [
             }
             finalAggregation[translatedMainType].value += typeData.totalKg || 0;
 
+            // Esta lógica agora funciona perfeitamente, pois 'typeData' contém os subtipos corretos.
             if (typeData.byWasteSubType) {
                 Object.entries(typeData.byWasteSubType).forEach(([subType, subTypeData]) => {
                     const translatedSubType = t(`charts:wasteSubTypes.${toCamelCaseKey(subType)}`, subType);
@@ -141,7 +156,7 @@ export const processDataForAggregatedPieChart = (dailyData, t, selectedAreas = [
     return Object.values(finalAggregation).map(mainCategory => ({
       ...mainCategory,
       value: parseFloat(mainCategory.value.toFixed(2)),
-      subtypes: Object.values(mainCategory.subtypes).map(sub => ({ ...sub, value: parseFloat(sub.value.toFixed(2)) })).sort((a, b) => b.value - a.value)
+      subtypes: Object.values(mainCategory.subtypes).map(sub => ({ ...sub, value: parseFloat(sub.value.toFixed(2)) })).filter(s => s.value > 0).sort((a, b) => b.value - a.value)
     }));
 };
 
@@ -192,7 +207,6 @@ export const processDataForAreaChartWithBreakdown = (dailyData, t, selectedAreas
 };
 
 export const processDataForDesvioDeAterro = (dailyData, rejectCategoryName, selectedAreas = []) => {
-    console.log('[DEPURAÇÃO GRÁFICO DESVIO] Iniciando processamento.');
     if (!Array.isArray(dailyData) || dailyData.length === 0) return [];
     
     const areaSelection = parseSelectedAreas(selectedAreas);
@@ -213,7 +227,6 @@ export const processDataForDesvioDeAterro = (dailyData, rejectCategoryName, sele
         const total = dayToProcess.totalKg || 0;
         const rejeito = dayToProcess.byWasteType?.[rejectCategoryName]?.totalKg || 0;
         
-        console.log(`[DEPURAÇÃO GRÁFICO DESVIO] Dia ${rawDay.id}: Total=${total}, Rejeito=${rejeito}`);
         const percentualRejeito = total > 0 ? (rejeito / total) * 100 : 0;
         const taxaDesvio = 100 - percentualRejeito;
         dataPoints.push({
@@ -224,7 +237,6 @@ export const processDataForDesvioDeAterro = (dailyData, rejectCategoryName, sele
     });
 
     const sortedDailyData = dataPoints.sort((a, b) => new Date(a.dateKey) - new Date(b.dateKey));
-    console.log('[DEPURAÇÃO GRÁFICO DESVIO] Pontos de dados ordenados:', sortedDailyData);
 
     let acumuladoSomaTaxaDesvio = 0;
     const finalData = sortedDailyData.map((dataPoint, index) => {
@@ -233,12 +245,10 @@ export const processDataForDesvioDeAterro = (dailyData, rejectCategoryName, sele
         return { ...dataPoint, mediaTaxaDesvio: parseFloat(mediaTaxaDesvio.toFixed(2)) };
     });
     
-    console.log('[DEPURAÇÃO GRÁFICO DESVIO] Dados finais com média:', finalData);
     return finalData;
 };
 
 export const processDataForMonthlyYearlyComparison = (monthlyData, t, selectedAreas = []) => {
-    console.log('[DEPURAÇÃO GRÁFICO MENSAL] Processor: Iniciando processamento com dados mensais:', monthlyData);
     if (!Array.isArray(monthlyData) || !monthlyData.length) return { data: [], years: [] };
 
     const areaSelection = parseSelectedAreas(selectedAreas);
@@ -251,7 +261,6 @@ export const processDataForMonthlyYearlyComparison = (monthlyData, t, selectedAr
 
     monthlyData.forEach(rawMonthDoc => {
         let monthToProcess = unflattenObject(rawMonthDoc);
-        console.log(`[DEPURAÇÃO GRÁFICO MENSAL] Processor: Documento mensal ${rawMonthDoc.id} após desachatamento:`, monthToProcess);
         
         if (areaSelection) {
             const selectedAreasForClient = areaSelection.get(monthToProcess.clienteId);
@@ -274,7 +283,6 @@ export const processDataForMonthlyYearlyComparison = (monthlyData, t, selectedAr
         
         chartDataPrecursor[monthIndex][year].total += monthToProcess.totalKg || 0;
         if (monthToProcess.byWasteType) {
-            console.log(`[DEPURAÇÃO GRÁFICO MENSAL] Processor: Documento ${monthToProcess.id} POSSUI 'byWasteType'.`);
             Object.entries(monthToProcess.byWasteType).forEach(([wasteType, typeData]) => {
                 const type = wasteType.toLowerCase();
                 if (type.includes('orgânico') || type.includes('compostavel')) chartDataPrecursor[monthIndex][year].breakdown[ORGANICO] += typeData.totalKg || 0;
@@ -309,14 +317,7 @@ export const processDataForMonthlyYearlyComparison = (monthlyData, t, selectedAr
 };
 
 
-/**
- * Calcula os dados para os cartões de resumo a partir dos TOTAIS DIÁRIOS.
- * @param {Array<Object>} dailyData Array de documentos de totais diários.
- * @returns {Object} Um objeto com os totais para os `SummaryCards`.
- */
 export const processDataForSummaryCards = (dailyData, selectedAreas = []) => {
-    console.log('[DEPURAÇÃO ETAPA 3] Processor: processDataForSummaryCards. Array recebido (dailyData):', JSON.parse(JSON.stringify(dailyData || [])));
-
     if (!Array.isArray(dailyData) || dailyData.length === 0) {
         return { totalGeralKg: 0, organico: { kg: 0, percent: 0 }, reciclavel: { kg: 0, percent: 0 }, rejeito: { kg: 0, percent: 0 } };
     }
@@ -324,20 +325,17 @@ export const processDataForSummaryCards = (dailyData, selectedAreas = []) => {
     const areaSelection = parseSelectedAreas(selectedAreas);
     let totalGeralKg = 0, totalOrganicoKg = 0, totalReciclavelKg = 0, totalRejeitoKg = 0;
 
-    dailyData.forEach((rawDay, index) => {
+    dailyData.forEach((rawDay) => {
         let dayToProcess = unflattenObject(rawDay);
         
-        // --- INÍCIO DA CORREÇÃO ---
-        // A Visão Geral (SummaryCards) agora também é filtrada
         if (areaSelection) {
             const selectedAreasForClient = areaSelection.get(dayToProcess.clienteId);
             if (selectedAreasForClient) {
                 dayToProcess = buildFilteredDay(dayToProcess, selectedAreasForClient);
             } else {
-                dayToProcess = { totalKg: 0, byWasteType: {} }; // Zera os dados do dia
+                dayToProcess = { totalKg: 0, byWasteType: {} };
             }
         }
-        // --- FIM DA CORREÇÃO ---
 
         totalGeralKg += dayToProcess.totalKg || 0;
         if (dayToProcess.byWasteType) {
@@ -354,8 +352,6 @@ export const processDataForSummaryCards = (dailyData, selectedAreas = []) => {
         }
     });
 
-    console.log('[DEPURAÇÃO ETAPA 5] Processor: Totais calculados antes da porcentagem.', { totalGeralKg, totalOrganicoKg, totalReciclavelKg, totalRejeitoKg });
-
     const percentOrganico = totalGeralKg > 0 ? (totalOrganicoKg / totalGeralKg) * 100 : 0;
     const percentReciclavel = totalGeralKg > 0 ? (totalReciclavelKg / totalGeralKg) * 100 : 0;
     const percentRejeito = totalGeralKg > 0 ? (totalRejeitoKg / totalGeralKg) * 100 : 0;
@@ -368,14 +364,7 @@ export const processDataForSummaryCards = (dailyData, selectedAreas = []) => {
     };
 };
 
-/**
- * Calcula a distribuição por Destinação a partir dos TOTAIS DIÁRIOS.
- * @param {Array<Object>} dailyData Array de documentos de totais diários.
- * @param {Function} t A função de tradução (t) do i18next.
- * @returns {Array<Object>} Dados formatados para o gráfico de Destinação.
- */
 export const processDataForDestinacaoChart = (dailyData, t, selectedAreas = []) => {
-    console.log('[DEPURAÇÃO GRÁFICO DESTINAÇÃO] Iniciando processamento.');
     if (!dailyData || dailyData.length === 0) return [];
     
     const areaSelection = parseSelectedAreas(selectedAreas);
@@ -413,8 +402,6 @@ export const processDataForDestinacaoChart = (dailyData, t, selectedAreas = []) 
         });
     });
 
-    console.log('[DEPURAÇÃO GRÁFICO DESTINAÇÃO] Dados agregados:', { recoveryData, disposalData });
-
     const formatBreakdown = (breakdown) => Object.entries(breakdown)
         .map(([name, value]) => ({ name, value: parseFloat(value.toFixed(2)) }))
         .sort((a, b) => b.value - a.value);
@@ -444,7 +431,6 @@ export const processDataForDestinacaoChart = (dailyData, t, selectedAreas = []) 
 
 
 export const calculateCO2Impact = ({ dailyData, userAllowedClientes, co2Config, selectedAreas = [] }) => {
-    console.log('[DEPURAÇÃO CO2 IMPACTO] Iniciando cálculo.');
     if (!dailyData || dailyData.length === 0 || !userAllowedClientes || !co2Config) {
         return { netImpact: 0, totalEvitadas: 0, totalDiretas: 0, metodologia: 'Dados insuficientes.' };
     }
@@ -509,7 +495,6 @@ export const calculateCO2Impact = ({ dailyData, userAllowedClientes, co2Config, 
         if (totalOrganicoAterradoKg > 0) totalDiretas += (totalOrganicoAterradoKg / 1000) * co2Config.fatoresEmissaoDireta['aterro-organico'];
         if (totalOrganicoCompostadoKg > 0) totalDiretas += (totalOrganicoCompostadoKg / 1000) * co2Config.fatoresEmissaoDireta['compostagem'];
         if (totalOrganicoBiometanizadoKg > 0) totalDiretas += (totalOrganicoBiometanizadoKg / 1000) * co2Config.fatoresEmissaoDireta['biometanizacao'];
-         console.log(`[DEPURAÇÃO CO2 IMPACTO] Pesos calculados para cliente ${clienteId}:`, { totalRecicladoKg, totalRejeitoKg });
     }
 
     const netImpact = totalEvitadas + totalDiretas;
