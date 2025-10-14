@@ -39,6 +39,9 @@ const LancamentosEditorCard = () => {
     const [startDate, setStartDate] = useState(new Date().toISOString().split('T')[0]);
     const [endDate, setEndDate] = useState(new Date().toISOString().split('T')[0]);
     
+    const [selectedArea, setSelectedArea] = useState('');
+    const [selectedWasteType, setSelectedWasteType] = useState('');
+
     const [lancamentos, setLancamentos] = useState([]);
     const [loading, setLoading] = useState(false);
     const fetchKeyRef = useRef(0);
@@ -68,6 +71,11 @@ const LancamentosEditorCard = () => {
         fetchClienteData();
     }, [selectedClienteId, db]);
 
+    useEffect(() => {
+        setSelectedArea('');
+        setSelectedWasteType('');
+    }, [selectedClienteId]);
+
 
     const handleBuscarLancamentos = useCallback(async () => {
         if (!selectedClienteId) { alert('Por favor, selecione um cliente.'); return; }
@@ -77,13 +85,24 @@ const LancamentosEditorCard = () => {
         const dataInicio = new Date(startDate); dataInicio.setHours(0, 0, 0, 0);
         const dataFim = new Date(endDate); dataFim.setHours(23, 59, 59, 999);
         try {
-            const q = query(
-                collection(db, `artifacts/${appId}/public/data/wasteRecords`),
+            const baseCollectionRef = collection(db, `artifacts/${appId}/public/data/wasteRecords`);
+            let queryConstraints = [
                 where('clienteId', '==', selectedClienteId),
                 where('timestamp', '>=', dataInicio.getTime()),
-                where('timestamp', '<=', dataFim.getTime()),
-                orderBy('timestamp', 'desc')
-            );
+                where('timestamp', '<=', dataFim.getTime())
+            ];
+
+            if (selectedArea) {
+                queryConstraints.push(where('areaLancamento', '==', selectedArea));
+            }
+            if (selectedWasteType) {
+                queryConstraints.push(where('wasteType', '==', selectedWasteType));
+            }
+            
+            queryConstraints.push(orderBy('timestamp', 'desc'));
+
+            const q = query(baseCollectionRef, ...queryConstraints);
+
             const querySnapshot = await getDocs(q);
             if (myKey === fetchKeyRef.current) {
                 const records = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -95,7 +114,7 @@ const LancamentosEditorCard = () => {
         } finally {
             if (myKey === fetchKeyRef.current) setLoading(false);
         }
-    }, [db, selectedClienteId, startDate, endDate]);
+    }, [db, selectedClienteId, startDate, endDate, selectedArea, selectedWasteType]);
 
     const handleOpenEditModal = (lancamento) => { setEditingLancamento(lancamento); setIsEditModalOpen(true); };
     const handleOpenDeleteModal = (lancamento) => { setDeletingLancamento(lancamento); setIsDeleteModalOpen(true); };
@@ -139,27 +158,54 @@ const LancamentosEditorCard = () => {
                 description="Ferramenta para corrigir ou remover registos de pesagem. Use com cuidado."
                 className="col-span-1 lg:col-span-2"
             >
-                {/* Filtros */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end mb-6">
-                    <div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 items-end mb-6">
+                    {/* Filtro de Cliente */}
+                    <div className="lg:col-span-1 xl:col-span-1">
                         <label htmlFor="cliente-selector" className="block text-sm font-medium text-gray-700 mb-1">Cliente</label>
                         <select id="cliente-selector" value={selectedClienteId} onChange={(e) => setSelectedClienteId(e.target.value)} disabled={loadingAllowedClientes} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-apricot-orange focus:border-apricot-orange disabled:bg-gray-100">
                             <option value="" disabled>{loadingAllowedClientes ? 'A carregar...' : 'Selecione'}</option>
                             {userAllowedClientes.map(c => (<option key={c.id} value={c.id}>{c.nome}</option>))}
                         </select>
                     </div>
-                    <div>
-                        <label htmlFor="start-date" className="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
-                        <input type="date" id="start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md shadow-sm" />
+
+                    {/* Filtro de Área */}
+                    <div className="lg:col-span-1 xl:col-span-1">
+                        <label htmlFor="area-selector" className="block text-sm font-medium text-gray-700 mb-1">Área de Lançamento</label>
+                        <select id="area-selector" value={selectedArea} onChange={(e) => setSelectedArea(e.target.value)} disabled={!clienteData || loadingCliente} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-apricot-orange focus:border-apricot-orange disabled:bg-gray-100">
+                            <option value="">Todas as áreas</option>
+                            {/* --- CORRIGIDO AQUI --- */}
+                            {clienteData?.areasPersonalizadas?.map(area => (<option key={area} value={area}>{area}</option>))}
+                        </select>
                     </div>
-                    <div>
-                        <label htmlFor="end-date" className="block text-sm font-medium text-gray-700 mb-1">Data Final</label>
-                        <input type="date" id="end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md shadow-sm" />
+                    
+                    {/* Filtro de Tipo de Resíduo */}
+                     <div className="lg:col-span-1 xl:col-span-1">
+                        <label htmlFor="waste-type-selector" className="block text-sm font-medium text-gray-700 mb-1">Tipo de Resíduo</label>
+                        <select id="waste-type-selector" value={selectedWasteType} onChange={(e) => setSelectedWasteType(e.target.value)} disabled={!clienteData || loadingCliente} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-apricot-orange focus:border-apricot-orange disabled:bg-gray-100">
+                             <option value="">Todos os tipos</option>
+                             {/* --- CORRIGIDO AQUI --- */}
+                             {clienteData?.categoriasPrincipaisResiduo?.map(tipo => (<option key={tipo} value={tipo}>{tipo}</option>))}
+                        </select>
                     </div>
-                    <button onClick={handleBuscarLancamentos} disabled={loading || loadingCliente || !selectedClienteId} className="w-full h-10 bg-apricot-orange text-white font-lexend py-2 px-4 rounded-md hover:opacity-90 transition-opacity disabled:bg-early-frost disabled:cursor-not-allowed">
-                        {loading || loadingCliente ? 'A carregar...' : 'Procurar'}
-                    </button>
+
+                    <div className="grid grid-cols-2 lg:grid-cols-1 xl:grid-cols-2 gap-4 lg:col-span-2 xl:col-span-1 items-end">
+                         <div>
+                            <label htmlFor="start-date" className="block text-sm font-medium text-gray-700 mb-1">Data Início</label>
+                            <input type="date" id="start-date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md shadow-sm" />
+                        </div>
+                        <div>
+                            <label htmlFor="end-date" className="block text-sm font-medium text-gray-700 mb-1">Data Final</label>
+                            <input type="date" id="end-date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md shadow-sm" />
+                        </div>
+                    </div>
+                   
+                    <div className="lg:col-span-3 xl:col-span-4">
+                        <button onClick={handleBuscarLancamentos} disabled={loading || loadingCliente || !selectedClienteId} className="w-full h-10 bg-apricot-orange text-white font-lexend py-2 px-4 rounded-md hover:opacity-90 transition-opacity disabled:bg-early-frost disabled:cursor-not-allowed">
+                            {loading || loadingCliente ? 'A carregar...' : 'Procurar'}
+                        </button>
+                    </div>
                 </div>
+
 
                 {/* Tabela de Resultados */}
                 {loading && <p className="text-center text-gray-500 py-8">A procurar lançamentos...</p>}
@@ -178,7 +224,7 @@ const LancamentosEditorCard = () => {
                             <tbody className="divide-y divide-gray-200">
                                 {lancamentos.map(lanc => (
                                     <tr key={lanc.id} className="hover:bg-gray-50">
-                                        <td className="px-4 py-3 whitespace-nowrap">{new Date(lanc.timestamp).toLocaleString('pt-BR')}</td>
+                                        <td className="px-4 py-3 whitespace-nowrap">{new Date(lanc.timestamp).toLocaleString('pt-BR', { timeZone: 'America/Sao_Paulo' })}</td>
                                         <td className="px-4 py-3">{lanc.areaLancamento || '-'}</td>
                                         <td className="px-4 py-3">{lanc.wasteType} {lanc.wasteSubType && `(${lanc.wasteSubType})`}</td>
                                         <td className="px-4 py-3 text-right font-semibold">{lanc.peso}</td>
@@ -203,7 +249,7 @@ const LancamentosEditorCard = () => {
 
             {/* Modais */}
             {isEditModalOpen && <EditLancamentoModal isOpen={isEditModalOpen} onClose={() => setIsEditModalOpen(false)} onSave={handleSaveChanges} lancamento={editingLancamento} cliente={clienteData} />}
-            {isDeleteModalOpen && <DeleteConfirmationModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleConfirmDelete} clienteNome={`o lançamento de ${deletingLancamento?.peso}kg de ${deletingLancamento?.wasteType} do dia ${new Date(deletingLancamento?.timestamp).toLocaleDateString('pt-BR')}`} />}
+            {isDeleteModalOpen && <DeleteConfirmationModal isOpen={isDeleteModalOpen} onClose={() => setIsDeleteModalOpen(false)} onConfirm={handleConfirmDelete} clienteNome={`o lançamento de ${deletingLancamento?.peso}kg de ${deletingLancamento?.wasteType} do dia ${new Date(deletingLancamento?.timestamp).toLocaleDateString('pt-BR', { timeZone: 'America/Sao_Paulo' })}`} />}
         </>
     );
 };
@@ -338,7 +384,7 @@ export default function PaginaAdminMaster() {
                         </div>
                         <div>
                             <label htmlFor="date-select" className="block text-sm font-medium text-gray-700 mb-1">Data:</label>
-                            <input type="date" id="date-select" value={selectedDate} onChange={(e) => setSelectedDate(e.tarefa.value)} className="w-full p-2 border border-gray-300 rounded-md shadow-sm"/>
+                            <input type="date" id="date-select" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} className="w-full p-2 border border-gray-300 rounded-md shadow-sm"/>
                         </div>
                         <button onClick={handleDailyBackfill} disabled={!selectedClientDaily || isLoadingDaily} className="w-full bg-apricot-orange text-white font-lexend py-2 px-4 rounded-md hover:opacity-90 disabled:opacity-50">
                             {isLoadingDaily ? 'A processar...' : 'Processar Dia'}
@@ -360,7 +406,7 @@ export default function PaginaAdminMaster() {
                     <div className="space-y-4">
                         <div>
                             <label htmlFor="client-select-inea" className="block text-sm font-medium text-gray-700 mb-1">Cliente:</label>
-                            <select id="client-select-inea" value={selectedClientInea} onChange={(e) => setSelectedClientInea(e.tarefa.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
+                            <select id="client-select-inea" value={selectedClientInea} onChange={(e) => setSelectedClientInea(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm">
                                 <option value="" disabled>{loadingAllowedClientes ? 'A carregar...' : 'Selecione'}</option>
                                 {userAllowedClientes.map(c => (<option key={c.id} value={c.id}>{c.nome}</option>))}
                             </select>
@@ -380,4 +426,3 @@ export default function PaginaAdminMaster() {
         </div>
     );
 }
-

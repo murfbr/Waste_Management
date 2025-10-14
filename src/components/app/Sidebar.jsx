@@ -377,6 +377,13 @@ export default function Sidebar({
                     isCollapsed={isCollapsed}
                     onClick={handleLinkClick}
                   />
+                   <NavItem
+                    to={`${langPrefix}/app/admin/gestao-mtr`}
+                    icon={<MtrIcon />}
+                    text="Gestão MTR/CDF"
+                    isCollapsed={isCollapsed}
+                    onClick={handleLinkClick}
+                  />
                 </>
               )}
               {userProfile.role === "master" && (
@@ -395,13 +402,7 @@ export default function Sidebar({
                     isCollapsed={isCollapsed}
                     onClick={handleLinkClick}
                   />
-                  <NavItem
-                    to={`${langPrefix}/app/admin/gestao-mtr`}
-                    icon={<MtrIcon />}
-                    text="Gestão MTR/CDF"
-                    isCollapsed={isCollapsed}
-                    onClick={handleLinkClick}
-                  />
+                 
                   <NavItem
                     to={`${langPrefix}/app/admin/master-tools`}
                     icon={<ToolsIcon />}

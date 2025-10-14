@@ -155,17 +155,11 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     }
 
     setSubmitting(true);
-    
-    console.clear(); 
-    console.log("--- INICIANDO DEBUG DO CONTRATO DE COLETA ---");
-    console.log(`1. TIPO DE RESÍDUO SELECIONADO: "${selectedMainCategory}"`);
-    console.log("2. CONTRATOS DISPONÍVEIS PARA ESTE CLIENTE:", clienteSelecionado.contratosColeta);
 
     const contratoAplicavel = (clienteSelecionado.contratosColeta || []).find(c => 
         c.tiposResiduoColetados?.includes(selectedMainCategory)
     );
     
-    console.log("3. RESULTADO DA BUSCA POR CONTRATO (.find()):", contratoAplicavel);
 
     let empresaColetaCompleta = null;
     let destinacaoFinal = null;
@@ -176,7 +170,6 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
       );
     }
     
-    console.log("4. EMPRESA DE COLETA ENCONTRADA:", empresaColetaCompleta);
 
     if (empresaColetaCompleta) {
       const destinacoesPossiveis = empresaColetaCompleta.destinacoes?.[selectedMainCategory] || [];
@@ -206,16 +199,13 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
       tipoParaExibir = `${selectedMainCategory} (${translatedSubType})`;
     }
 
-    console.log("5. DADOS FINAIS A SEREM SALVOS (recordData):", recordData);
-    console.log("--- FIM DO DEBUG ---");
-
     const limites = clienteSelecionado.limitesPorResiduo || {};
     const limiteDaCategoria = limites[categoriaParaVerificarLimite] || 0;
 
     if (limiteDaCategoria > 0 && parsedPeso > limiteDaCategoria) {
         onLimitExceeded({
             ...recordData,
-            wasteType: tipoParaExibir,
+            displayWasteType: tipoParaExibir,
             limite: limiteDaCategoria,
         });
         setSubmitting(false);

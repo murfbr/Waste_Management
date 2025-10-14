@@ -1,11 +1,12 @@
-// src/pages/app/PaginaDashboard.jsx
 import React, { useContext, useEffect, useState, useMemo } from 'react';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { useTranslation } from 'react-i18next';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 
-// Importações dos componentes
+// A linha 16, que causa o erro, está aqui. Ela precisa do 'export default' do outro arquivo.
+import DashboardFilters from '../../components/app/filters/DashboardFilters';
+
 import AuthContext from '../../context/AuthContext';
 import ClienteSelectorDropdown from '../../components/app/ClienteSelectorDropdown';
 import useAggregatedData from '../../hooks/useAggregatedData';
@@ -14,7 +15,6 @@ import DesvioDeAterro from '../../components/app/charts/DesvioDeAterro';
 import WasteTypePieChart from '../../components/app/charts/WasteTypePieChart';
 import AreaPieChart from '../../components/app/charts/AreaPieChart';
 import SummaryCards from '../../components/app/charts/SummaryCards';
-import DashboardFilters from '../../components/app/filters/DashboardFilters';
 import DestinacaoChart from '../../components/app/charts/DestinacaoChart';
 import CO2ImpactCard from '../../components/app/charts/CO2ImpactCard';
 import CO2EvolutionChart from '../../components/app/charts/CO2EvolutionChart';
@@ -28,6 +28,8 @@ import { useDestinacaoData } from '../../hooks/charts/useDestinacaoData';
 import { useCO2Data } from '../../hooks/charts/useCO2Data';
 import { useDashboardFilters } from '../../context/DashboardFilterContext.jsx';
 import ReportGeneratorButton from '../../components/app/ReportGeneratorButton';
+
+const CLIENTE_STORAGE_KEY = 'lastSelectedClienteId';
 
 const SectionTitle = ({ title, isExpanded, onClick }) => (
     <button onClick={onClick} className={`w-full flex justify-between items-center bg-rain-forest text-white py-2 px-4 rounded-t-lg text-left focus:outline-none ${!isExpanded ? 'rounded-b-lg' : ''}`} aria-expanded={isExpanded}>
@@ -43,14 +45,12 @@ export default function PaginaDashboard() {
   const [selectedClienteIds, setSelectedClienteIds] = useState([]);
   const [selectAllClientesToggle, setSelectAllClientesToggle] = useState(false);
 
-  const { selectedYears, setSelectedYears, selectedMonths, setSelectedMonths, selectedAreas, handleManualAreaChange } = useDashboardFilters();
+  const { selectedYears, setSelectedYears, selectedMonths, setSelectedMonths, selectedAreas, handleManualAreaChange: setSelectedAreas } = useDashboardFilters();
 
   const availableYears = useMemo(() => {
     const currentYear = new Date().getFullYear();
     return [currentYear, currentYear - 1, currentYear - 2];
   }, []);
-
-  const [availableAreas, setAvailableAreas] = useState([]);
 
   const [empresasColeta, setEmpresasColeta] = useState([]);
   const [loadingEmpresas, setLoadingEmpresas] = useState(true);
@@ -87,17 +87,29 @@ export default function PaginaDashboard() {
 
 
   useEffect(() => {
-    if (!loadingAllowedClientes && userAllowedClientes?.length > 0) {
-        if (selectedClienteIds.length === 0) {
-            const firstClienteId = userAllowedClientes[0].id;
-            setSelectedClienteIds([firstClienteId]);
-            setSelectAllClientesToggle(false);
-        }
-    }
-  }, [userAllowedClientes, loadingAllowedClientes, selectedClienteIds]);
+    if (!loadingAllowedClientes && userAllowedClientes?.length > 0 && selectedClienteIds.length === 0) {
+      let initialClienteId = null;
+      const savedClienteId = sessionStorage.getItem(CLIENTE_STORAGE_KEY);
+      const isSavedClienteAllowed = userAllowedClientes.some(c => c.id === savedClienteId);
 
-  // CORREÇÃO ROBUSTA: Define os filtros de data iniciais apenas uma vez, 
-  // quando as funções estão disponíveis e os filtros ainda não foram definidos.
+      if (savedClienteId && isSavedClienteAllowed) {
+        initialClienteId = savedClienteId;
+      } else {
+        initialClienteId = userAllowedClientes[0].id;
+      }
+      
+      setSelectedClienteIds([initialClienteId]);
+      setSelectAllClientesToggle(false);
+
+      const cliente = userAllowedClientes.find(c => c.id === initialClienteId);
+      if (cliente && cliente.areasPersonalizadas) {
+        const allAreaIds = cliente.areasPersonalizadas.map(area => `${cliente.id}_${area}`);
+        setSelectedAreas(allAreaIds);
+      }
+    }
+  }, [userAllowedClientes, loadingAllowedClientes, setSelectedAreas]);
+
+
   useEffect(() => {
     if (setSelectedYears && setSelectedMonths && selectedYears.length === 0) {
       const currentDate = new Date();
@@ -107,77 +119,110 @@ export default function PaginaDashboard() {
   }, [setSelectedYears, setSelectedMonths, selectedYears]);
 
 
-useEffect(() => {
-    console.log('[DEBUG CO2] useEffect de busca disparado.');
+  useEffect(() => {
     if (!db || selectedYears.length === 0) {
-        console.warn('[DEBUG CO2] Saindo: `selectedYears` está vazio.');
         return;
     }
     const fetchCO2Config = async () => {
         setLoadingCO2Config(true);
         const anoReferencia = Math.max(...selectedYears);
         const docRef = doc(db, 'emissoesConfig', `config_${anoReferencia}`);
-        console.log(`[DEBUG CO2] 1. Preparando para buscar documento em: "emissoesConfig/config_${anoReferencia}"`);
         try {
             const docSnap = await getDoc(docRef);
-            console.log('[DEBUG CO2] 2. Chamada getDoc() concluída.');
             if (docSnap.exists()) {
-                const data = docSnap.data();
-                console.log('[DEBUG CO2] 3. SUCESSO: Documento encontrado.', data);
-                setCo2Config(data);
+                setCo2Config(docSnap.data());
             } else {
-                console.error(`[DEBUG CO2] 3. FALHA: Documento em "emissoesConfig/config_${anoReferencia}" NÃO foi encontrado.`);
                 setCo2Config(null);
             }
         } catch (error) {
-            console.error(`[DEBUG CO2] 3. ERRO CRÍTICO ao tentar buscar o documento:`, error);
+            console.error(`Erro ao buscar configuração de CO2:`, error);
             setCo2Config(null);
         } finally {
-            console.log('[DEBUG CO2] 4. Bloco finally executado.');
             setLoadingCO2Config(false);
         }
     };
     fetchCO2Config();
-}, [db, selectedYears]);
+  }, [db, selectedYears]);
 
 
-// --- INÍCIO DA CORREÇÃO ---
+  const areaFilterData = useMemo(() => {
+    if (!userAllowedClientes || selectedClienteIds.length === 0) {
+      return { isMultiClient: false, areas: [] };
+    }
 
-// 1. Crie uma variável que unifica os estados de carregamento relevantes.
-const isSustainabilityLoading = loadingRecords || loadingCO2Config;
+    if (selectedClienteIds.length === 1) {
+      const clienteId = selectedClienteIds[0];
+      const cliente = userAllowedClientes.find(c => c.id === clienteId);
+      return {
+        isMultiClient: false,
+        clientId: clienteId,
+        areas: cliente?.areasPersonalizadas?.sort((a, b) => a.localeCompare(b)) || []
+      };
+    }
 
-// 2. Chame o hook 'useCO2Data' com a nova prop 'isLoading' e as props corretas.
-const { impactCardData, evolutionChartData } = useCO2Data({
-    dailyData, // Corrigido de 'records' para 'dailyData'
-    userAllowedClientes,
-    co2Config,
-    isVisible: isSustainabilityVisible,
-    isLoading: isSustainabilityLoading, // Passando o estado unificado
-});
+    const selectedClientsWithAreas = selectedClienteIds.map(id => {
+      const cliente = userAllowedClientes.find(c => c.id === id);
+      return {
+        clientId: id,
+        clientName: cliente?.nome || 'Cliente Desconhecido',
+        areas: cliente?.areasPersonalizadas?.sort((a, b) => a.localeCompare(b)) || []
+      };
+    }).sort((a, b) => a.clientName.localeCompare(b.clientName));
 
-  const { destinacaoData } = useDestinacaoData(dailyData, empresasColeta, isDestinationVisible);
+    return {
+      isMultiClient: true,
+      clients: selectedClientsWithAreas
+    };
+  }, [selectedClienteIds, userAllowedClientes]);
+  
+  const { summaryData } = useSummaryData(dailyData, selectedAreas);
+  const { wasteTypePieData } = useWasteTypePieData(dailyData, isCompositionVisible, selectedAreas);
+  const { areaPieData } = useAreaPieData(dailyData, isCompositionVisible, selectedAreas);
+  const { desvioDeAterroData } = useDesvioDeAterroData(dailyData, isDestinationVisible, selectedAreas);
+  const { destinacaoData } = useDestinacaoData(dailyData, empresasColeta, isDestinationVisible, selectedAreas);
+  const { monthlyComparisonData, yearsToCompare } = useMonthlyComparisonData(monthlyData, isMonthlyComparisonVisible, selectedYears, selectedAreas);
+  
+  const isSustainabilityLoading = loadingRecords || loadingCO2Config;
+  const { impactCardData, evolutionChartData } = useCO2Data({
+      dailyData,
+      userAllowedClientes,
+      co2Config,
+      isVisible: isSustainabilityVisible,
+      isLoading: isSustainabilityLoading,
+      selectedAreas,
+  });
 
   const handleClienteSelectionChange = (clienteId) => {
-    setSelectedClienteIds(prev => {
-        const newSelection = prev.includes(clienteId) ? prev.filter(id => id !== clienteId) : [...prev, clienteId];
-        if (userAllowedClientes) { setSelectAllClientesToggle(newSelection.length === userAllowedClientes.length); }
-        return newSelection;
-    });
+    const newSelection = selectedClienteIds.includes(clienteId) 
+      ? selectedClienteIds.filter(id => id !== clienteId)
+      : [...selectedClienteIds, clienteId];
+
+    setSelectedClienteIds(newSelection);
+
+    if (newSelection.length === 1) {
+      const cliente = userAllowedClientes.find(c => c.id === newSelection[0]);
+      if (cliente && cliente.areasPersonalizadas) {
+        const allAreaIds = cliente.areasPersonalizadas.map(area => `${cliente.id}_${area}`);
+        setSelectedAreas(allAreaIds);
+      }
+    } else {
+      setSelectedAreas([]);
+    }
+
+    if (userAllowedClientes) {
+      setSelectAllClientesToggle(newSelection.length === userAllowedClientes.length);
+    }
   };
   const handleSelectAllClientesToggleChange = () => {
     setSelectAllClientesToggle(prev => {
         const newToggleState = !prev;
-        setSelectedClienteIds(newToggleState ? userAllowedClientes.map(c => c.id) : []);
+        const newSelection = newToggleState ? userAllowedClientes.map(c => c.id) : [];
+        setSelectedClienteIds(newSelection);
+        setSelectedAreas([]);
         return newToggleState;
     });
   };
   
-  const { summaryData } = useSummaryData(dailyData);
-  const { wasteTypePieData } = useWasteTypePieData(dailyData, isCompositionVisible);
-  const { areaPieData } = useAreaPieData(dailyData, isCompositionVisible);
-  const { desvioDeAterroData } = useDesvioDeAterroData(dailyData, isDestinationVisible);
-  const { monthlyComparisonData, yearsToCompare } = useMonthlyComparisonData(monthlyData, isMonthlyComparisonVisible, selectedYears);
-
   if (loadingAuth || loadingAllowedClientes) { return <div className="p-8 text-center text-rich-soil">A carregar...</div>; }
     
   return (
@@ -198,7 +243,7 @@ const { impactCardData, evolutionChartData } = useCO2Data({
       
       <DashboardFilters 
         availableYears={availableYears} 
-        availableAreas={availableAreas} 
+        areaFilterData={areaFilterData} 
         isLoading={loadingRecords} 
       />
       
@@ -276,4 +321,3 @@ const { impactCardData, evolutionChartData } = useCO2Data({
     </div>
   );
 }
-

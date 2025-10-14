@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo, useContext } from 'react';
 import { collection, getDocs, query } from 'firebase/firestore';
-import AuthContext from '../../../context/AuthContext'; // Certifique-se que o caminho para seu AuthContext está correto
+import AuthContext from '../../../context/AuthContext';
 
 export default function EditLancamentoModal({ isOpen, onClose, onSave, lancamento, cliente }) {
   const { db } = useContext(AuthContext);
@@ -25,7 +25,6 @@ export default function EditLancamentoModal({ isOpen, onClose, onSave, lancament
     return [];
   }, [cliente, formData.wasteType]);
 
-  // NOVO: Memoiza as opções de destinação com base na empresa e tipo de resíduo selecionados
   const destinacaoOptions = useMemo(() => {
     if (!formData.empresaColetaId || !formData.wasteType || !empresasColeta.length) {
       return [];
@@ -42,8 +41,20 @@ export default function EditLancamentoModal({ isOpen, onClose, onSave, lancament
 
   useEffect(() => {
     if (lancamento) {
-      const localDateTime = new Date(lancamento.timestamp - (new Date().getTimezoneOffset() * 60000)).toISOString().slice(0, 16);
-      const data = { ...lancamento, timestamp: localDateTime };
+      // --- ATUALIZADO: Lógica de fuso horário mais robusta ---
+      // Converte o timestamp UTC para uma data no fuso de São Paulo
+      // e formata para o padrão 'YYYY-MM-DDTHH:MM' que o input datetime-local espera.
+      const dateInSaoPaulo = new Date(lancamento.timestamp);
+      
+      const year = dateInSaoPaulo.getFullYear();
+      const month = String(dateInSaoPaulo.getMonth() + 1).padStart(2, '0');
+      const day = String(dateInSaoPaulo.getDate()).padStart(2, '0');
+      const hours = String(dateInSaoPaulo.getHours()).padStart(2, '0');
+      const minutes = String(dateInSaoPaulo.getMinutes()).padStart(2, '0');
+
+      const localDateTimeString = `${year}-${month}-${day}T${hours}:${minutes}`;
+
+      const data = { ...lancamento, timestamp: localDateTimeString };
       setFormData(data);
       setOriginalData(data);
     }
@@ -74,7 +85,6 @@ export default function EditLancamentoModal({ isOpen, onClose, onSave, lancament
   const handleChange = (e) => {
     const { name, value } = e.target;
     
-    // Se o tipo de resíduo for alterado, recalcula a empresa e destino padrão
     if (name === 'wasteType') {
         const contratoAplicavel = (cliente.contratosColeta || []).find(c => 
             c.tiposResiduoColetados?.includes(value)
@@ -99,20 +109,19 @@ export default function EditLancamentoModal({ isOpen, onClose, onSave, lancament
         setFormData(prev => ({
             ...prev,
             wasteType: value,
-            wasteSubType: '', // Reseta o subtipo
+            wasteSubType: '',
             empresaColetaId: defaultEmpresaId,
             empresaColetaNome: defaultEmpresaNome,
             destinacaoFinal: defaultDestinacao,
         }));
 
-    // Se a empresa de coleta for alterada manualmente, reseta a destinação
     } else if (name === 'empresaColetaId') {
         const selectedEmpresa = empresasColeta.find(emp => emp.id === value);
         setFormData(prev => ({
             ...prev,
             empresaColetaId: value,
             empresaColetaNome: selectedEmpresa?.nomeFantasia || null,
-            destinacaoFinal: '', // Força o usuário a escolher uma nova destinação válida
+            destinacaoFinal: '',
         }));
     } else {
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -120,6 +129,7 @@ export default function EditLancamentoModal({ isOpen, onClose, onSave, lancament
   };
   
   const handleSave = () => {
+    // Ao salvar, converte a data/hora local do input de volta para um timestamp UTC
     const timestamp = new Date(formData.timestamp).getTime();
     const pesoAsNumber = parseFloat(String(formData.peso).replace(',', '.'));
     if (isNaN(pesoAsNumber)) {
@@ -143,14 +153,12 @@ export default function EditLancamentoModal({ isOpen, onClose, onSave, lancament
         <form onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               
-              {/* Campos de formulário */}
               <div><label htmlFor="timestamp" className="block text-sm font-medium text-gray-700">Data e Hora</label><input type="datetime-local" id="timestamp" name="timestamp" value={formData.timestamp || ''} onChange={handleChange} className="mt-1 w-full p-2 border border-gray-300 rounded-md shadow-sm"/></div>
               <div><label htmlFor="areaLancamento" className="block text-sm font-medium text-gray-700">Área de Lançamento</label><select id="areaLancamento" name="areaLancamento" value={formData.areaLancamento || ''} onChange={handleChange} className="mt-1 w-full p-2 border border-gray-300 rounded-md shadow-sm"><option value="">Selecione...</option>{areaOptions.map(area => <option key={area} value={area}>{area}</option>)}</select></div>
               <div><label htmlFor="wasteType" className="block text-sm font-medium text-gray-700">Tipo de Resíduo</label><select id="wasteType" name="wasteType" value={formData.wasteType || ''} onChange={handleChange} className="mt-1 w-full p-2 border border-gray-300 rounded-md shadow-sm"><option value="">Selecione...</option>{wasteTypeOptions.map(type => <option key={type} value={type}>{type}</option>)}</select></div>
               {wasteSubTypeOptions.length > 0 && (<div><label htmlFor="wasteSubType" className="block text-sm font-medium text-gray-700">Subtipo de Resíduo</label><select id="wasteSubType" name="wasteSubType" value={formData.wasteSubType || ''} onChange={handleChange} className="mt-1 w-full p-2 border border-gray-300 rounded-md shadow-sm"><option value="">Selecione...</option>{wasteSubTypeOptions.map(subType => <option key={subType} value={subType}>{subType}</option>)}</select></div>)}
               <div><label htmlFor="peso" className="block text-sm font-medium text-gray-700">Peso (kg)</label><input type="text" id="peso" name="peso" value={formData.peso || ''} onChange={handleChange} className="mt-1 w-full p-2 border border-gray-300 rounded-md shadow-sm"/></div>
               
-              {/* --- ALTERAÇÃO: Campos de Coleta e Destinação agora são selecionáveis --- */}
               <div className="pt-4 mt-4 border-t border-gray-200">
                   <div>
                       <label htmlFor="empresaColetaId" className="block text-sm font-medium text-gray-700">Empresa de Coleta</label>

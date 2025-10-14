@@ -65,7 +65,9 @@ firestore-debug.log
 # Ignora as pastas temporárias que o emulador cria durante a exportação.
 firebase-export-*/
 
+# Chaves de serviço do Firebase
+api/config/serviceAccountKey_dev.json
+
 #Ignora a pasta old
 zzz_old/
-api
 Documentacao

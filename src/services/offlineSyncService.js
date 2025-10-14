@@ -27,7 +27,6 @@ export const addPendingRecord = async (recordData) => {
     const recordWithLocalId = { ...recordData, localId };
     
     await localDb.pending_records.add(recordWithLocalId);
-    console.log('Registro salvo localmente com sucesso!', recordWithLocalId);
     
     // Notifica a aplicação que a lista de registros pendentes mudou.
     // Isso permite que a UI (ex: o contador de status) se atualize imediatamente.
@@ -58,8 +57,6 @@ export const syncPendingRecords = async (firestoreDb, appId) => {
     return false;
   }
 
-  console.log(`Sincronizando ${pending.length} registros pendentes em lote...`);
-
   // Cria um "lote" de escrita. Todas as operações são agrupadas.
   const batch = writeBatch(firestoreDb);
   const recordsCollectionRef = collection(firestoreDb, `artifacts/${appId}/public/data/wasteRecords`);
@@ -78,14 +75,11 @@ export const syncPendingRecords = async (firestoreDb, appId) => {
     // Executa o lote. Esta é uma ÚNICA chamada para o Firestore.
     // É uma operação atômica: ou tudo funciona, ou nada é salvo.
     await batch.commit();
-    
-    console.log('Lote sincronizado com sucesso no Firestore. Limpando registros locais...');
 
     // Se o lote foi salvo com sucesso, remove os registros correspondentes do IndexedDB.
     const idsToDelete = pending.map(record => record.id);
     await localDb.pending_records.bulkDelete(idsToDelete);
 
-    console.log('Registros locais limpos com sucesso.');
     return true; // Indica que a sincronização realizou alterações.
 
   } catch (error) {
@@ -136,7 +130,6 @@ export const deletePendingRecord = async (localId) => {
         const recordToDelete = await localDb.pending_records.where('localId').equals(localId).first();
         if (recordToDelete) {
             await localDb.pending_records.delete(recordToDelete.id);
-            console.log(`Registro pendente ${localId} deletado com sucesso.`);
             // Notifica a aplicação para atualizar a UI.
             window.dispatchEvent(new CustomEvent('pending-records-updated'));
         }

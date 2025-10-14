@@ -7,7 +7,6 @@ import MessageBox from '../../components/app/MessageBox';
 import UserForm from '../../components/app/UserForm';
 
 export default function PaginaAdminUsuarios() {
-  console.log("PaginaAdminUsuarios: Renderizando a página.");
   // --- CORREÇÃO: Usando a lista de clientes SEGURA do contexto ---
   const { functions, userProfile, currentUser, userAllowedClientes, loadingAllowedClientes } = useContext(AuthContext);
   
@@ -31,32 +30,25 @@ export default function PaginaAdminUsuarios() {
   };
 
   const fetchUsers = useCallback(() => {
-    console.log("PaginaAdminUsuarios: fetchUsers foi chamada.");
     if (!userProfile) {
-      console.log("PaginaAdminUsuarios: fetchUsers abortada - perfil do usuário ainda não carregado.");
       return;
     }
 
-    console.log("PaginaAdminUsuarios: Chamando a Cloud Function 'getVisibleUsers'...");
     setLoadingUsers(true);
     getVisibleUsersFunction()
       .then((result) => {
         const fetchedUsers = result.data.users || [];
-        console.log(`PaginaAdminUsuarios: Cloud Function retornou ${fetchedUsers.length} usuários.`, fetchedUsers);
         setUsers(fetchedUsers);
       })
       .catch((error) => {
-        console.error("PaginaAdminUsuarios: Erro CRÍTICO ao chamar 'getVisibleUsers': ", error);
         showMessage("Erro ao carregar a lista de Usuários.", true);
       })
       .finally(() => {
-        console.log("PaginaAdminUsuarios: fetchUsers finalizada.");
         setLoadingUsers(false);
       });
   }, [userProfile, getVisibleUsersFunction]);
 
   useEffect(() => {
-    console.log("PaginaAdminUsuarios: useEffect para chamar fetchUsers foi acionado.");
     fetchUsers();
   }, [fetchUsers]);
 
@@ -81,7 +73,6 @@ export default function PaginaAdminUsuarios() {
 
   const handleFormSubmit = async (formData) => {
     const action = editingUser ? 'update' : 'create';
-    console.log(`PaginaAdminUsuarios: Submetendo formulário com ação '${action}'`, formData);
     try {
       const result = await manageUserPermissions({ action, userData: formData });
       showMessage(result.data.message, false);
@@ -93,16 +84,13 @@ export default function PaginaAdminUsuarios() {
     }
   };
 
-  console.log("PaginaAdminUsuarios: Verificando permissões de acesso...");
   if (!userProfile && currentUser) {
-      console.log("PaginaAdminUsuarios: Acesso pendente, aguardando perfil...");
       return <div className="p-8 text-center">A carregar perfil...</div>;
   }
   if (!userProfile || !['master', 'gerente'].includes(userProfile.role)) {
     console.error(`PaginaAdminUsuarios: ACESSO NEGADO! Role do usuário: '${userProfile?.role}'`);
     return <div className="p-8 text-center text-red-600">Acesso negado.</div>;
   }
-  console.log(`PaginaAdminUsuarios: Acesso PERMITIDO para role '${userProfile.role}'.`);
 
   return (
     <div className="space-y-8 font-comfortaa">

@@ -5,7 +5,7 @@ import { Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import AuthContext from '../context/AuthContext';
 import ProtectedRoute from './ProtectedRoute';
-import RouteChangeTracker from './RouteChangeTracker'; // <-- IMPORTAÇÃO ATUALIZADA
+import RouteChangeTracker from './RouteChangeTracker';
 
 import MainLayout from '../layouts/MainLayout';
 import PublicLayout from '../layouts/PublicLayout';
@@ -31,6 +31,7 @@ const PaginaGlossario = React.lazy(() => import('../pages/app/PaginaGlossario'))
 const PaginaGestaoMTR = React.lazy(() => import('../pages/app/PaginaGestaoMTR'));
 const PaginaAdminMaster = React.lazy(() => import('../pages/app/PaginaAdminMaster'));
 const PainelSigor = React.lazy(() => import('../pages/app/PainelSigor'));
+const GerarMtrSP = React.lazy(() => import('../pages/app/GerarMtrSP')); // <-- NOVA PÁGINA IMPORTADA
 
 const PageLoader = () => (
   <div className="flex justify-center items-center min-h-screen bg-gray-100">
@@ -64,7 +65,7 @@ export default function AppRoutes() {
 
   return (
     <>
-      <RouteChangeTracker /> {/* <-- TRACKER ADICIONADO */}
+      <RouteChangeTracker />
       <Suspense fallback={<PageLoader />}>
         <Routes>
 
@@ -99,9 +100,13 @@ export default function AppRoutes() {
               <Route path="admin/usuarios" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaAdminUsuarios /></ProtectedRoute>} />
               <Route path="admin/clientes" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminClientes /></ProtectedRoute>} />
               <Route path="admin/empresas-coleta" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminEmpresasColeta /></ProtectedRoute>} />
-              <Route path="admin/gestao-mtr" element={<ProtectedRoute allowedRoles={['master']}><PaginaGestaoMTR /></ProtectedRoute>} />
+              <Route path="admin/gestao-mtr" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaGestaoMTR /></ProtectedRoute>} />
               <Route path="admin/master-tools" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminMaster /></ProtectedRoute>} />
               <Route path="painelsigor" element={<ProtectedRoute allowedRoles={['master']}><PainelSigor /></ProtectedRoute>} />
+              
+              {/* --- NOVA ROTA ADICIONADA --- */}
+              <Route path="mtr/sp/gerar" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><GerarMtrSP /></ProtectedRoute>} />
+
           </Route>
 
           {/* ROTAS PRIVADAS (APP) INTERNACIONAIS */}
@@ -116,7 +121,7 @@ export default function AppRoutes() {
               <Route path="admin/usuarios" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaAdminUsuarios /></ProtectedRoute>} />
               <Route path="admin/clientes" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminClientes /></ProtectedRoute>} />
               <Route path="admin/empresas-coleta" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminEmpresasColeta /></ProtectedRoute>} />
-              <Route path="admin/gestao-mtr" element={<ProtectedRoute allowedRoles={['master']}><PaginaGestaoMTR /></ProtectedRoute>} />
+              <Route path="admin/gestao-mtr" element={<ProtectedRoute allowedRoles={['master', 'gerente']}><PaginaGestaoMTR /></ProtectedRoute>} />
               <Route path="admin/master-tools" element={<ProtectedRoute allowedRoles={['master']}><PaginaAdminMaster /></ProtectedRoute>} />
             </Route>
           ))}
