@@ -127,3 +127,19 @@ export const syncAllListsToFirestore = async (token) => {
     console.log('3d. [SERVIÇO] Sincronização com o Firestore concluída.');
     return report;
 };
+
+// --- NOVA FUNÇÃO ADICIONADA ---
+// Busca todos os documentos da coleção 'destinadores' no Firestore.
+export const fetchAllDestinadores = async () => {
+    console.log('3. [SERVIÇO] Buscando todos os destinadores do Firestore.');
+    const destinadoresRef = db.collection('destinadores');
+    const snapshot = await destinadoresRef.orderBy('nome').get();
+    
+    if (snapshot.empty) {
+        return [];
+    }
+    
+    const destinadoresList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    console.log(`3d. [SERVIÇO] ${destinadoresList.length} destinadores encontrados.`);
+    return destinadoresList;
+};

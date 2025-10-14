@@ -1,3 +1,5 @@
+// api/mtr/sp/sp.controller.js
+
 import * as spService from './sp.service.js';
 
 export const handleAuthentication = async (req, res) => {
@@ -39,7 +41,6 @@ export const handleGetList = async (req, res) => {
   }
 };
 
-// ... (restante do ficheiro com a mesma lógica de logs)
 export const handleCreateMtr = async (req, res) => {
   const mtrData = req.body;
   const token = req.headers.authorization?.split(' ')[1];
@@ -70,3 +71,15 @@ export const handleSyncAllLists = async (req, res) => {
         res.status(500).json({ error: `Erro na sincronização: ${error.message}` });
     }
 };
+
+// --- NOVA FUNÇÃO ADICIONADA ---
+// Função para buscar a lista genérica de destinadores.
+export const handleGetDestinadores = async (req, res) => {
+  try {
+    const destinadores = await spService.fetchAllDestinadores();
+    res.status(200).json(destinadores);
+  } catch (error) {
+    console.error('ERRO [CONTROLADOR] ao buscar destinadores:', error);
+    res.status(500).json({ error: 'Erro ao buscar a lista de destinadores.' });
+  }
+}; // <-- A CHAVE '}' FALTANTE FOI ADICIONADA AQUI, FECHANDO A FUNÇÃO
