@@ -205,7 +205,7 @@ export default function WasteForm({ clienteSelecionado, onLimitExceeded, onSucce
     if (limiteDaCategoria > 0 && parsedPeso > limiteDaCategoria) {
         onLimitExceeded({
             ...recordData,
-            wasteType: tipoParaExibir,
+            displayWasteType: tipoParaExibir,
             limite: limiteDaCategoria,
         });
         setSubmitting(false);

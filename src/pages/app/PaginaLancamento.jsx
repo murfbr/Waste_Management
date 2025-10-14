@@ -270,37 +270,45 @@ useEffect(() => {
   };
 
   const handleLimitExceeded = (data) => {
-    const { peso, limite, wasteType } = data;
-    setModalState({
-        isOpen: true,
-        title: t('paginaLancamento.limitModal.title'),
-        message: t('paginaLancamento.limitModal.message'),
-        confirmText: t('paginaLancamento.limitModal.confirm'),
-        theme: 'warning',
-        onConfirm: () => handleConfirmLimit(data),
-        content: (
-            <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2 mb-6 text-left">
-                <div className="flex justify-between text-lg"><span className="font-medium text-gray-500">{t('paginaLancamento.limitModal.itemType')}:</span><span className="font-bold text-gray-900">{wasteType}</span></div>
-                <div className="flex justify-between text-lg"><span className="font-medium text-gray-500">{t('paginaLancamento.limitModal.limit')}:</span><span className="font-bold text-gray-900">{limite} kg</span></div>
-                <div className="flex justify-between text-2xl"><span className="font-medium text-gray-500">{t('paginaLancamento.limitModal.submitted')}:</span><span className="font-extrabold text-red-600">{peso} kg</span></div>
-            </div>
-        )
-    });
-  };
+  // Use o novo campo 'displayWasteType' para o conteúdo do modal
+  const { peso, limite, displayWasteType } = data; 
+  setModalState({
+      isOpen: true,
+      title: t('paginaLancamento.limitModal.title'),
+      message: t('paginaLancamento.limitModal.message'),
+      confirmText: t('paginaLancamento.limitModal.confirm'),
+      theme: 'warning',
+      // 'data' aqui é o objeto completo, incluindo o wasteType correto.
+      onConfirm: () => handleConfirmLimit(data), 
+      content: (
+          <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 space-y-2 mb-6 text-left">
+              <div className="flex justify-between text-lg">
+                <span className="font-medium text-gray-500">{t('paginaLancamento.limitModal.itemType')}:</span>
+                {/* Use a variável de exibição aqui */}
+                <span className="font-bold text-gray-900">{displayWasteType}</span>
+              </div>
+              <div className="flex justify-between text-lg"><span className="font-medium text-gray-500">{t('paginaLancamento.limitModal.limit')}:</span><span className="font-bold text-gray-900">{limite} kg</span></div>
+              <div className="flex justify-between text-2xl"><span className="font-medium text-gray-500">{t('paginaLancamento.limitModal.submitted')}:</span><span className="font-extrabold text-red-600">{peso} kg</span></div>
+          </div>
+      )
+  });
+};
 
-  const handleConfirmLimit = async (limitModalData) => {
-    if (!limitModalData) return;
-    const { limite, ...recordData } = limitModalData;
-    const result = await addPendingRecord(recordData);
-    if (result.success) {
-      showMessage(result.message);
-      loadAndCombineRecords(); 
-      setFormResetKey(key => key + 1);
-    } else {
-      showMessage(result.message, true);
-    }
-    setModalState({ isOpen: false });
-  };
+const handleConfirmLimit = async (limitModalData) => {
+  if (!limitModalData) return;
+  // Remova os campos extras que não fazem parte do registro antes de salvar.
+  const { limite, displayWasteType, ...recordData } = limitModalData; 
+  const result = await addPendingRecord(recordData); // recordData agora está correto.
+  if (result.success) {
+    showMessage(result.message);
+    loadAndCombineRecords(); 
+    setFormResetKey(key => key + 1);
+  } else {
+    showMessage(result.message, true);
+  }
+  setModalState({ isOpen: false });
+};
+
 
   if (loadingUserClientes && !userProfile) return <div className="text-center text-gray-600 p-8">{t('paginaLancamento.loadingData')}</div>;
   if (!userProfile && currentUser) return <div className="text-center text-gray-600 p-8">{t('paginaLancamento.loadingProfile')}</div>;
