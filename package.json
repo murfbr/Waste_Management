@@ -24,6 +24,7 @@
     "node-fetch": "^3.3.2",
     "papaparse": "^5.5.3",
     "react": "^19.1.0",
+    "react-datepicker": "^8.8.0",
     "react-dom": "^19.1.0",
     "react-ga4": "^2.1.0",
     "react-i18next": "^15.6.1",
@@ -49,4 +50,3 @@
     "vite": "^5.4.2"
   }
 }
-

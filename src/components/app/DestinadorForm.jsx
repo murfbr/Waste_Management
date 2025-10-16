@@ -1,5 +1,5 @@
 // src/pages/DestinadorForm.jsx (VERSÃO CORRIGIDA COM ACESSO DIRETO AO DB)
-import React, { useState, useEffect, useContext } from 'react'; // Adicionado 'useContext'
+import React, { useState, useEffect, useRef, useContext } from 'react'; // Adicionado 'useContext'
 import AuthContext from '../../context/AuthContext'; // Importado o AuthContext
 import { collection, getDocs, query } from 'firebase/firestore'; // Importado as funções do Firestore
 
@@ -7,7 +7,8 @@ import { collection, getDocs, query } from 'firebase/firestore'; // Importado as
 const estadosBrasileiros = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO'].sort();
 
 export default function DestinadorForm({ initialData, onSubmit, onCancel, isEditing }) {
-  const { db } = useContext(AuthContext); // Acessando o 'db' do context
+  const { db } = useContext(AuthContext);
+  const isInitialLoad = useRef(true); 
 
   // Estados para os campos do formulário
   const [nome, setNome] = useState('');
@@ -41,10 +42,16 @@ export default function DestinadorForm({ initialData, onSubmit, onCancel, isEdit
   }, [initialData, isEditing]);
 
   // Efeito para buscar os tratamentos DIRETAMENTE DO FIRESTORE quando o estado muda
-  useEffect(() => {
+    useEffect(() => {
+    // Se for uma mudança de estado feita pelo usuário (e não o carregamento inicial),
+    // limpa os tratamentos selecionados anteriormente.
+    if (!isInitialLoad.current) {
+      setTratamentosSelecionados([]);
+    }
+
     if (!estado || !db) {
       setTratamentosDisponiveis([]);
-      setTratamentosSelecionados([]);
+      
       return;
     }
 
@@ -53,21 +60,21 @@ export default function DestinadorForm({ initialData, onSubmit, onCancel, isEdit
       setTratamentosDisponiveis([]);
       
       try {
-        // Caminho da subcoleção no Firestore: /Mtr/{estado}/Tratamento
         const listPath = collection(db, 'Mtr', estado.toUpperCase(), 'tratamento');
         const q = query(listPath);
         const querySnapshot = await getDocs(q);
         
         const nomesTratamentos = querySnapshot.docs
-          .map(doc => doc.data().traDescricao) // Pega a descrição de cada tratamento
-          .sort(); // Ordena alfabeticamente
+          .map(doc => doc.data().traDescricao)
+          .sort();
         
         setTratamentosDisponiveis(nomesTratamentos);
-
       } catch (error) {
         console.error("Erro na busca de tratamentos:", error);
       } finally {
         setIsLoadingTratamentos(false);
+        // Após a primeira carga, definimos a ref como false.
+        isInitialLoad.current = false;
       }
     };
 

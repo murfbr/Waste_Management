@@ -61,16 +61,15 @@ export default function ClienteForm({
   const [selectedTemplateId, setSelectedTemplateId] = useState('');
   const [realtimeDashboardEnabled, setRealtimeDashboardEnabled] = useState(false);
 
-  const [ineaLogin, setIneaLogin] = useState('');
-  const [ineaSenha, setIneaSenha] = useState('');
-  const [ineaCodigoDaUnidade, setIneaCodigoDaUnidade] = useState('');
-  const [ineaResponsavel, setIneaResponsavel] = useState('');
-  const [ineaCargo, setIneaCargo] = useState('');
+  const [mtrLogin, setMtrLogin] = useState('');
+  const [mtrSenha, setMtrSenha] = useState('');
+  const [mtrCodigoDaUnidade, setMtrCodigoDaUnidade] = useState('');
+  const [mtrResponsavel, setMtrResponsavel] = useState('');
+  const [mtrCargo, setMtrCargo] = useState('');
 
   const [isCnpjValid, setIsCnpjValid] = useState(true);
   const [isCpfValid, setIsCpfValid] = useState(true);
   
-  // --- NOVOS ESTADOS PARA A COMPOSIÇÃO GRAVIMÉTRICA ---
   const [possuiEstudoGravimetrico, setPossuiEstudoGravimetrico] = useState(false);
   const [composicaoGravimetricaPropria, setComposicaoGravimetricaPropria] = useState({...COMPOSICAO_GRAVIMETRICA_PADRAO});
 
@@ -99,14 +98,13 @@ export default function ClienteForm({
     setSubtiposComunsOrganicosSelecionados([]);
     setOutrosSubtiposOrganicosInput('');
     setContratosColetaForm([{ empresaColetaId: '', tiposResiduoColetados: [] }]);
-    setIneaLogin(''); setIneaSenha(''); setIneaCodigoDaUnidade(''); setIneaResponsavel(''); setIneaCargo('');
+    setMtrLogin(''); setMtrSenha(''); setMtrCodigoDaUnidade(''); setMtrResponsavel(''); setMtrCargo('');
     setLimitesPorResiduo({...LIMITES_PADRAO});
     setSelectedTemplateId('');
     setRealtimeDashboardEnabled(false);
     setIsCnpjValid(true);
     setIsCpfValid(true);
     setErrors({});
-    // Reseta os novos estados
     setPossuiEstudoGravimetrico(false);
     setComposicaoGravimetricaPropria({...COMPOSICAO_GRAVIMETRICA_PADRAO});
   };
@@ -150,14 +148,14 @@ export default function ClienteForm({
             }))
           : [{ empresaColetaId: '', tiposResiduoColetados: [] }]);
       
-      if (initialData.configINEA) {
-        setIneaLogin(initialData.configINEA.ineaLogin || '');
-        setIneaCodigoDaUnidade(initialData.configINEA.ineaCodigoDaUnidade || '');
-        setIneaResponsavel(initialData.configINEA.ineaResponsavel || '');
-        setIneaCargo(initialData.configINEA.ineaCargo || '');
-        setIneaSenha('');
+      if (initialData.configMTR) {
+        setMtrLogin(initialData.configMTR.mtrLogin || '');
+        setMtrCodigoDaUnidade(initialData.configMTR.mtrCodigoDaUnidade || '');
+        setMtrResponsavel(initialData.configMTR.mtrResponsavel || '');
+        setMtrCargo(initialData.configMTR.mtrCargo || '');
+        setMtrSenha('');
       } else {
-        setIneaLogin(''); setIneaCodigoDaUnidade(''); setIneaResponsavel(''); setIneaCargo(''); setIneaSenha('');
+        setMtrLogin(''); setMtrCodigoDaUnidade(''); setMtrResponsavel(''); setMtrCargo(''); setMtrSenha('');
       }
 
       setLimitesPorResiduo({ ...LIMITES_PADRAO, ...(initialData.limitesPorResiduo || {}) });
@@ -165,7 +163,6 @@ export default function ClienteForm({
       setIsCnpjValid(true);
       setIsCpfValid(true);
 
-      // Popula os dados de sustentabilidade
       if (initialData.composicaoGravimetricaPropria && Object.keys(initialData.composicaoGravimetricaPropria).length > 0) {
         setPossuiEstudoGravimetrico(true);
         setComposicaoGravimetricaPropria({ ...COMPOSICAO_GRAVIMETRICA_PADRAO, ...initialData.composicaoGravimetricaPropria });
@@ -201,8 +198,6 @@ export default function ClienteForm({
     return Array.from(todasCategorias);
   }, [categoriasPrincipaisSelecionadas, outrasCategoriasInput]);
 
-  // --- LÓGICA ALTERADA ---
-  // Pré-seleciona "Geral" ao marcar a separação de recicláveis pela primeira vez
   const handleToggleSeparacaoReciclaveis = (checked) => {
     setFazSeparacaoReciclaveisCompleta(checked);
     if (checked && !subtiposComunsReciclaveisSelecionados.includes("Geral")) {
@@ -291,12 +286,12 @@ export default function ClienteForm({
       fazSeparacaoOrganicosCompleta,
       tiposOrganicosPersonalizados: finaisTiposOrganicosPersonalizados,
       contratosColeta: contratosColetaForm.filter(c => c.empresaColetaId && c.tiposResiduoColetados.length > 0),
-      configINEA: {
-        ineaLogin: ineaLogin.trim(),
-        ineaSenha: ineaSenha,
-        ineaCodigoDaUnidade: ineaCodigoDaUnidade.trim(),
-        ineaResponsavel: ineaResponsavel.trim(),
-        ineaCargo: ineaCargo.trim(),
+      configMTR: {
+        mtrLogin: mtrLogin.trim(),
+        mtrSenha: mtrSenha,
+        mtrCodigoDaUnidade: mtrCodigoDaUnidade.trim(),
+        mtrResponsavel: mtrResponsavel.trim(),
+        mtrCargo: mtrCargo.trim(),
       },
       limitesPorResiduo: limitesNumericos,
       realtimeDashboardEnabled: realtimeDashboardEnabled,
@@ -312,8 +307,8 @@ export default function ClienteForm({
         clienteData.composicaoGravimetricaPropria = null; 
     }
 
-    if (isEditing && !ineaSenha) {
-      delete clienteData.configINEA.ineaSenha;
+    if (isEditing && !mtrSenha) {
+      delete clienteData.configMTR.mtrSenha;
     }
 
     await onSubmit(clienteData);
@@ -333,7 +328,7 @@ export default function ClienteForm({
 
   const handleCpfChange = (e) => {
     const value = e.target.value;
-    setIneaLogin(value);
+    setMtrLogin(value);
     if (value.trim()) {
       setIsCpfValid(validaDocumento(value));
     } else {
@@ -355,7 +350,6 @@ export default function ClienteForm({
   const removeContratoForm = (index) => { if (contratosColetaForm.length <= 1 && !isEditing && contratosColetaForm.length === 1 && contratosColetaForm[0].empresaColetaId === '' && contratosColetaForm[0].tiposResiduoColetados.length === 0) return; if (contratosColetaForm.length === 1) { setContratosColetaForm([{ empresaColetaId: '', tiposResiduoColetados: [] }]); return; } setContratosColetaForm(contratosColetaForm.filter((_, i) => i !== index)); };
   const handleCategoriaPrincipalChange = (categoria) => { setCategoriasPrincipaisSelecionadas(prev => prev.includes(categoria) ? prev.filter(c => c !== categoria) : [...prev, categoria]); };
   const handleSubtipoComumChange = (subtipo, type) => { if (type === 'reciclavel') { setSubtiposComunsReciclaveisSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); } else if (type === 'organico') { setSubtiposComunsOrganicosSelecionados(prev => prev.includes(subtipo) ? prev.filter(s => s !== subtipo) : [...prev, subtipo]); } };
-  /*const opcoesResiduoContrato = useMemo(() => { const outrasCategorias = arrayFromString(outrasCategoriasInput); const todasCategorias = Array.from(new Set([...categoriasPrincipaisSelecionadas, ...outrasCategorias])); const categoriasBaseContrato = ["Reciclável", "Orgânico", "Rejeito"]; return todasCategorias.filter(op => categoriasBaseContrato.includes(op)); }, [categoriasPrincipaisSelecionadas, outrasCategoriasInput]);*/
   
   const inputStyle = "mt-1 block w-full p-2 border rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm";
   const labelStyle = "block text-sm font-medium text-gray-700";
@@ -424,7 +418,7 @@ export default function ClienteForm({
                   <option value="">Selecione...</option>
                   {estadosPrioritarios.map(uf => ( <option key={`prioritario-${uf}`} value={uf}>{uf}</option> ))}
                   <option disabled style={{ borderTop: '1px solid #ccc', marginTop: '4px', paddingTop: '4px' }}> </option>
-                  {estadosBrasileiros.map(uf => ( <option key={`geral-${uf}`} value={uf}>{uf}</option> ))}
+                  {estadosBrasileiros.map(uf => ( <option key={`geral-${uf}`} value={uf}>{uf}</option>))}
                 </select>
               </div>
             </div>
@@ -454,7 +448,7 @@ export default function ClienteForm({
                 {errors.categorias && <p className="text-red-600 text-xs mt-1">{errors.categorias}</p>}
             </div>
             <div className="border border-gray-200 p-3 rounded-md mt-4">
-              <label htmlFor="fazSeparacaoReciclaveisCompleta" className="flex items-center text-sm font-medium text-gray-700"><input type="checkbox" id="fazSeparacaoReciclaveisCompleta" checked={fazSeparacaoReciclaveisCompleta} onChange={(e) => setFazSeparacaoReciclaveisCompleta(e.target.checked)} className={`${checkboxStyle} mr-2`} />Cliente detalha os tipos de <span className="font-bold ml-1">recicláveis</span>?</label>
+              <label htmlFor="fazSeparacaoReciclaveisCompleta" className="flex items-center text-sm font-medium text-gray-700"><input type="checkbox" id="fazSeparacaoReciclaveisCompleta" checked={fazSeparacaoReciclaveisCompleta} onChange={(e) => handleToggleSeparacaoReciclaveis(e.target.checked)} className={`${checkboxStyle} mr-2`} />Cliente detalha os tipos de <span className="font-bold ml-1">recicláveis</span>?</label>
               {fazSeparacaoReciclaveisCompleta && ( <div className="mt-3 pl-2"> <label className={labelStyle}>Sub-tipos de Recicláveis Detalhados*</label> <div className="mt-2 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2"> {SUBTIPOS_RECICLAVEIS_COMUNS.map(subtipo => (<label key={subtipo} className="flex items-center"><input type="checkbox" value={subtipo} checked={subtiposComunsReciclaveisSelecionados.includes(subtipo)} onChange={() => { handleSubtipoComumChange(subtipo, 'reciclavel'); clearError('subtiposReciclaveis'); }} className={`${checkboxStyle} mr-2`}/><span className="text-sm text-gray-700">{subtipo}</span></label>))} </div> <div className="mt-3"><label className={`${labelStyle} text-xs`}>Outros sub-tipos (separados por vírgula):</label><input type="text" value={outrosSubtiposReciclaveisInput} onChange={(e) => { setOutrosSubtiposReciclaveisInput(e.target.value); clearError('subtiposReciclaveis'); }} placeholder="Ex: Isopor, Embalagem Longa Vida" className={`${inputStyle} mt-1`} /></div> {errors.subtiposReciclaveis && <p className="text-red-600 text-xs mt-1">{errors.subtiposReciclaveis}</p>} </div> )}
             </div>
             <div className="border border-gray-200 p-3 rounded-md mt-4">
@@ -496,18 +490,12 @@ export default function ClienteForm({
                         <div><label htmlFor={`form-cliente-empresaColeta-${index}`} className={`${labelStyle} text-xs`}>Empresa de Coleta*</label><select id={`form-cliente-empresaColeta-${index}`} value={contrato.empresaColetaId} onChange={(e) => handleContratoChange(index, 'empresaColetaId', e.target.value)} className={`${inputStyle} text-sm p-1.5`}><option value="">Selecione...</option>{empresasColetaDisponiveis.map(emp => (<option key={emp.id} value={emp.id}>{emp.nomeFantasia}</option>))}</select></div>
                         <div>
                          <label className={`${labelStyle} text-xs mb-1`}>Tipos de Resíduo Coletados (para este contrato)*</label>
-    
-                            {/* Lógica Dinâmica Adicionada Aqui */}
                             {(() => {
-                                // 1. Encontra a empresa completa com base no ID selecionado no contrato
                                 const empresaSelecionada = empresasColetaDisponiveis.find(
                                     emp => emp.id === contrato.empresaColetaId
                                 );
-
-                                // 2. Extrai os tipos de resíduo dessa empresa. Se nenhuma empresa for selecionada, retorna um array vazio.
                                 const tiposDisponiveis = empresaSelecionada ? empresaSelecionada.tiposResiduo : [];
 
-                                // 3. Renderiza os checkboxes com base nos tipos corretos ou uma mensagem.
                                 if (empresaSelecionada && tiposDisponiveis && tiposDisponiveis.length > 0) {
                                     return (
                                         <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-2 pt-1">
@@ -540,7 +528,6 @@ export default function ClienteForm({
             </div>
         </fieldset>
         
-        {/* --- SEÇÃO NOVA --- */}
         <fieldset className="border border-gray-300 p-4 rounded-lg">
           <legend className="text-lg font-semibold text-green-700 px-2">Configurações de Sustentabilidade</legend>
           <div className="space-y-4 pt-3">
@@ -589,30 +576,30 @@ export default function ClienteForm({
         </fieldset>
 
         <fieldset className="border border-gray-300 p-4 rounded-lg">
-            <legend className="text-lg font-semibold text-indigo-700 px-2">Informações para Preenchimento MTR (INEA)</legend>
-            <p className="text-sm text-gray-500 mb-4">Dados utilizados para o preenchimento manual do MTR no sistema do INEA.</p>
+            <legend className="text-lg font-semibold text-indigo-700 px-2">Informações para Preenchimento MTR</legend>
+            <p className="text-sm text-gray-500 mb-4">Dados utilizados para o preenchimento do MTR no sistema do órgão ambiental.</p>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-x-6 gap-y-4 pt-3">
                 <div>
-                  <label htmlFor="form-cliente-inea-login" className={labelStyle}>Login INEA (CPF)</label>
-                  <input type="text" id="form-cliente-inea-login" value={ineaLogin} onChange={handleCpfChange} className={`${inputStyle} ${!isCpfValid ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'}`} placeholder="CPF do responsável pelo login" />
+                  <label htmlFor="form-cliente-mtr-login" className={labelStyle}>Login (CPF)</label>
+                  <input type="text" id="form-cliente-mtr-login" value={mtrLogin} onChange={handleCpfChange} className={`${inputStyle} ${!isCpfValid ? 'border-red-500 focus:border-red-500 focus:ring-red-500' : 'border-gray-300'}`} placeholder="CPF do responsável pelo login" />
                   {!isCpfValid && <p className="text-red-600 text-xs mt-1">CPF inválido.</p>}
                 </div>
-                <div><label htmlFor="form-cliente-inea-codunidade" className={labelStyle}>Código da Unidade</label><input type="text" id="form-cliente-inea-codunidade" value={ineaCodigoDaUnidade} onChange={(e) => setIneaCodigoDaUnidade(e.target.value)} className={inputStyle} placeholder="Código numérico da unidade no INEA" /></div>
+                <div><label htmlFor="form-cliente-mtr-codunidade" className={labelStyle}>Código da Unidade</label><input type="text" id="form-cliente-mtr-codunidade" value={mtrCodigoDaUnidade} onChange={(e) => setMtrCodigoDaUnidade(e.target.value)} className={inputStyle} placeholder="Código numérico da unidade" /></div>
                 <div>
-                  <label htmlFor="form-cliente-inea-responsavel" className={labelStyle}>Responsável pela Emissão</label>
-                  <input type="text" id="form-cliente-inea-responsavel" value={ineaResponsavel} onChange={(e) => setIneaResponsavel(e.target.value)} className={inputStyle} placeholder="Nome completo do responsável" />
+                  <label htmlFor="form-cliente-mtr-responsavel" className={labelStyle}>Responsável pela Emissão</label>
+                  <input type="text" id="form-cliente-mtr-responsavel" value={mtrResponsavel} onChange={(e) => setMtrResponsavel(e.target.value)} className={inputStyle} placeholder="Nome completo do responsável" />
                 </div>
-                <div><label htmlFor="form-cliente-inea-cargo" className={labelStyle}>Cargo do Responsável</label><input type="text" id="form-cliente-inea-cargo" value={ineaCargo} onChange={(e) => setIneaCargo(e.target.value)} className={inputStyle} placeholder="Ex: Gerente Ambiental" /></div>
+                <div><label htmlFor="form-cliente-mtr-cargo" className={labelStyle}>Cargo do Responsável</label><input type="text" id="form-cliente-mtr-cargo" value={mtrCargo} onChange={(e) => setMtrCargo(e.target.value)} className={inputStyle} placeholder="Ex: Gerente Ambiental" /></div>
                 <div className="md:col-span-2">
                     <div className="flex justify-between items-center mb-1">
-                        <label htmlFor="form-cliente-inea-senha" className={labelStyle}>Senha INEA</label>
+                        <label htmlFor="form-cliente-mtr-senha" className={labelStyle}>Senha MTR</label>
                         {isEditing && initialData?.id && <ViewPasswordButton clienteId={initialData.id} />}
                     </div>
                     <input 
                         type="password" 
-                        id="form-cliente-inea-senha" 
-                        value={ineaSenha} 
-                        onChange={(e) => setIneaSenha(e.target.value)} 
+                        id="form-cliente-mtr-senha" 
+                        value={mtrSenha} 
+                        onChange={(e) => setMtrSenha(e.target.value)} 
                         className={inputStyle} 
                         placeholder={isEditing ? "Preencha apenas para alterar a senha atual" : "Digite a nova senha"} 
                         autoComplete="new-password"
