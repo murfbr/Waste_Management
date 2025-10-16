@@ -3,6 +3,7 @@ import React, { useState, useEffect, useContext,forwardRef, useMemo } from 'reac
 import AuthContext from '../../context/AuthContext';
 import { collection, doc, getDoc, getDocs, query, where, orderBy } from 'firebase/firestore';
 import DatePicker, { registerLocale } from 'react-datepicker';
+import { SearchableSelect } from '../../components/app/SearchableSelect';
 import ptBR from 'date-fns/locale/pt-BR';
 import "react-datepicker/dist/react-datepicker.css";
 registerLocale('pt-BR', ptBR);
@@ -486,9 +487,25 @@ const handleDateChange = (date) => {
             <div className="pt-6 border-t border-early-frost space-y-4">
                 <h3 className="font-lexend text-xl text-rain-forest">Detalhar Resíduo</h3>
                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Resíduo (IBAMA) <span className="text-apricot-orange">*</span></label>
-                    <select name="resCodigoIbama" value={currentResiduo.resCodigoIbama} onChange={handleCurrentResiduoChange} className="w-full p-2 border border-early-frost rounded-md" disabled={!listasDeApoio}><option value="">Selecione o Resíduo</option>{listasDeApoio?.Residuo.map(r => <option key={r.resCodigoIbama} value={r.resCodigoIbama}>{r.resCodigoIbama} - {r.resDescricao}</option>)}</select>
-                </div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Resíduo (IBAMA) <span className="text-apricot-orange">*</span></label>
+                      
+                      <SearchableSelect
+                          // Transforma a lista de resíduos no formato que o componente espera
+                          options={listasDeApoio?.Residuo.map(r => ({
+                              value: r.resCodigoIbama,
+                              label: `${r.resCodigoIbama} - ${r.resDescricao}`
+                          })) || []}
+                          
+                          // Passa o valor atual do estado
+                          value={currentResiduo.resCodigoIbama}
+
+                          // Função para atualizar o estado quando uma opção for selecionada
+                          onChange={(selectedValue) => handleCurrentResiduoChange({ target: { name: 'resCodigoIbama', value: selectedValue } })}
+
+                          // Texto que aparece quando nada está selecionado
+                          placeholder="Selecione ou busque um resíduo"
+                      />
+                  </div>
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade <span className="text-apricot-orange">*</span></label>
