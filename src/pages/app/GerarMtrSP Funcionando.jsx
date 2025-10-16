@@ -208,20 +208,20 @@ const GerarMtrSP = () => {
 
     // Cria um objeto 'limpo' para o payload, garantindo os tipos corretos
     const residuoParaAdicionar = {
-        resCodigoIbama: currentResiduo.resCodigoIbama,
-        tieCodigo: currentResiduo.tieCodigo,
-        tiaCodigo: currentResiduo.tiaCodigo,
-        uniCodigo: currentResiduo.uniCodigo ? parseInt(currentResiduo.uniCodigo, 10) : null,
-        traCodigo: currentResiduo.traCodigo ? parseInt(currentResiduo.traCodigo, 10) : null,
-        claCodigo: currentResiduo.claCodigo ? parseInt(currentResiduo.claCodigo, 10) : null,
-        marQuantidade: currentResiduo.marQuantidade ? parseFloat(currentResiduo.marQuantidade) : null,
-        // AQUI É A MUDANÇA CRÍTICA:
-        marDensidade: currentResiduo.marDensidade,
-        marNumeroONU: currentResiduo.marNumeroONU,
-        marClasseRisco: currentResiduo.marClasseRisco,
-        marNomeEmbarque: currentResiduo.marNomeEmbarque,
-        greCodigo: currentResiduo.greCodigo
-      };
+  resCodigoIbama: currentResiduo.resCodigoIbama,
+  tieCodigo: currentResiduo.tieCodigo,
+  tiaCodigo: currentResiduo.tiaCodigo,
+  uniCodigo: currentResiduo.uniCodigo ? parseInt(currentResiduo.uniCodigo, 10) : null,
+  traCodigo: currentResiduo.traCodigo ? parseInt(currentResiduo.traCodigo, 10) : null,
+  claCodigo: currentResiduo.claCodigo ? parseInt(currentResiduo.claCodigo, 10) : null,
+  marQuantidade: currentResiduo.marQuantidade ? parseFloat(currentResiduo.marQuantidade) : null,
+  // AQUI É A MUDANÇA CRÍTICA:
+  marDensidade: currentResiduo.marDensidade,
+  marNumeroONU: currentResiduo.marNumeroONU,
+  marClasseRisco: currentResiduo.marClasseRisco,
+  marNomeEmbarque: currentResiduo.marNomeEmbarque,
+  greCodigo: currentResiduo.greCodigo
+};
     
     console.log("Log: Adicionando resíduo com tipos corrigidos ao payload:", residuoParaAdicionar);
     
@@ -368,186 +368,137 @@ const handleDateChange = (date) => {
       destinadorSelecionado.tratamentosOferecidos.includes(tratamento.traDescricao)
     );
   }, [mtrPayload.destinador, listasDeApoio, allDestinadores]);
-
-  const [isLogVisible, setIsLogVisible] = useState(false);
   
   return (
-    <div className="p-4 sm:p-6 md:p-8 bg-gray-50 min-h-full font-comfortaa text-rich-soil">
-      <div className="max-w-4xl mx-auto space-y-8">
-        
-        <header>
-          <h1 className="font-lexend text-titulo text-blue-coral">Gerar MTR - SP</h1>
-          <p className="text-corpo text-gray-600 mt-2">Preencha os campos abaixo para emitir um novo Manifesto de Transporte de Resíduos.</p>
-        </header>
+    <div className="p-6 bg-gray-50 min-h-full">
+      <div className="max-w-4xl mx-auto space-y-6">
+        <h1 className="text-2xl font-bold text-gray-800">Geração de MTR - SP (Modo de Desenvolvimento)</h1>
 
-        {/* --- CARD 1: CONTEXTO DE TRABALHO --- */}
-        <section className="bg-white p-6 rounded-lg shadow-md space-y-4">
-          <h2 className="text-subtitulo font-lexend text-blue-coral border-b border-early-frost pb-3">Passo 1: Gerador</h2>
-          <div>
-            <label htmlFor="cliente-selector" className="block text-sm font-medium mb-1">Selecione o Cliente (Gerador) <span className="text-apricot-orange">*</span></label>
-            <select id="cliente-selector" value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} className="w-full p-2 border border-early-frost rounded-md">
-                <option value="">-- Selecione um cliente --</option>
+        <div className="bg-white p-4 rounded-lg shadow-md">
+            <h2 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Contexto de Trabalho</h2>
+            <label htmlFor="cliente-selector" className="block text-sm font-medium text-gray-700">Selecione o Cliente (Gerador)</label>
+            <select id="cliente-selector" value={selectedClientId} onChange={(e) => setSelectedClientId(e.target.value)} className="mt-1 block w-full p-2 border border-gray-300 rounded-md shadow-sm">
+                <option value="">-- Selecione --</option>
                 {allClients.map(client => (<option key={client.id} value={client.id}>{client.nome}</option>))}
             </select>
-          </div>
-        </section>
-
-        {/* --- CARD 2: AUTENTICAÇÃO E DADOS GERAIS --- */}
-        <section className="bg-white p-6 rounded-lg shadow-md space-y-6" disabled={!cliente}>
-            <h2 className="text-subtitulo font-lexend text-blue-coral border-b border-early-frost pb-3">Passo 2: Dados da Emissão</h2>
-            
-            <div>
-                <h3 className="font-lexend text-xl text-rain-forest mb-3">Autenticação SIGOR</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <input type="text" name="cpfCnpj" placeholder="CPF/CNPJ (automático)" value={credentials.cpfCnpj} className="p-2 border rounded-md bg-gray-100" readOnly />
-                    <input type="password" name="senha" placeholder="Senha SIGOR" value={credentials.senha} onChange={handleCredentialChange} className="p-2 border rounded-md" />
-                    <input type="text" name="unidade" placeholder="Unidade (automático)" value={credentials.unidade} className="p-2 border rounded-md bg-gray-100" readOnly />
-                </div>
-                <button onClick={handleAuth} className="mt-4 w-full bg-rain-forest text-white font-bold py-2 px-4 rounded-md hover:bg-abundant-green transition-colors">Obter Token de Acesso</button>
-            </div>
-
-            <div className="pt-6 border-t border-early-frost">
-                 <h3 className="font-lexend text-xl text-rain-forest mb-3">Informações da Viagem</h3>
-                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Data e Hora de Expedição <span className="text-apricot-orange">*</span></label>
-                        <DatePicker
-                            selected={new Date(mtrPayload.dataExpedicao)}
-                            onChange={handleDateChange}
-                            locale="pt-BR"
-                            className="w-full p-2 border border-early-frost rounded-md"
-                            showTimeSelect
-                            timeFormat="HH:mm"
-                            timeIntervals={15}
-                            timeCaption="Hora"
-                            dateFormat="dd/MM/yyyy HH:mm"
-                            shouldCloseOnSelect={false}
-                        />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Nome do Motorista <span className="text-apricot-orange">*</span></label>
-                        <input type="text" value={mtrPayload.nomeMotorista} onChange={(e) => handlePayloadChange('nomeMotorista', e.target.value)} className="w-full p-2 border border-early-frost rounded-md"/>
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium mb-1">Placa do Veículo <span className="text-apricot-orange">*</span></label>
-                        <input type="text" value={mtrPayload.placaVeiculo} onChange={(e) => handlePayloadChange('placaVeiculo', e.target.value)} className="w-full p-2 border border-early-frost rounded-md"/>
-                    </div>
-                    <div className="md:col-span-2">
-                        <label className="block text-sm font-medium mb-1">Observações <span className="text-gray-400 font-normal">(opcional)</span></label>
-                        <textarea value={mtrPayload.observacoes} onChange={(e) => handlePayloadChange('observacoes', e.target.value)} rows="3" className="w-full p-2 border border-early-frost rounded-md"/>
-                    </div>
-                 </div>
-            </div>
-        </section>
-
-        {/* --- CARD 3: RESÍDUOS (AGORA COMPLETO) --- */}
-        <section className="bg-white p-6 rounded-lg shadow-md space-y-4" disabled={!token}>
-            <h2 className="text-subtitulo font-lexend text-blue-coral border-b border-early-frost pb-3">Passo 3: Adicionar Resíduos</h2>
-            
-            <div className="space-y-4">
-                <h3 className="font-lexend text-xl text-rain-forest">Vincular Coleta</h3>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">1. Selecione o Tipo de Resíduo <span className="text-apricot-orange">*</span></label>
-                    <select name="tipoResiduo" value={currentResiduo.tipoResiduo} onChange={handleCurrentResiduoChange} className="w-full p-2 border border-early-frost rounded-md"><option value="">-- Selecione --</option>{tiposDeResiduoDisponiveis.map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}</select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">2. Selecione o Transportador <span className="text-apricot-orange">*</span></label>
-                    <select value={selectedTransportadorId} onChange={(e) => {
-                            const transportadorId = e.target.value;
-                            setSelectedTransportadorId(transportadorId);
-                            handlePayloadChange('destinador', null);
-                            const transportador = transportadores.find(t => t.id === transportadorId);
-                            if (transportador) {
-                                const unidade = transportador.codigoUnidade ? parseInt(transportador.codigoUnidade, 10) : null;
-                                handlePayloadChange('transportador', { unidade: isNaN(unidade) ? null : unidade, cpfCnpj: transportador.cnpj.replace(/\D/g,'') });
-                            } else { handlePayloadChange('transportador', null); }
-                        }} className="w-full p-2 border border-early-frost rounded-md" disabled={transportadoresFiltrados.length === 0}>
-                        <option value="">-- Selecione --</option>
-                        {transportadoresFiltrados.map(t => <option key={t.id} value={t.id}>{t.nomeFantasia}</option>)}
-                    </select>
-                </div>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">3. Selecione o Destinador <span className="text-apricot-orange">*</span></label>
-                    <select value={mtrPayload.destinador ? allDestinadores.find(d => d.cnpj.replace(/\D/g, '') === mtrPayload.destinador.cpfCnpj)?.id : ''} className="w-full p-2 border border-early-frost rounded-md" disabled={destinadoresFiltrados.length === 0} onChange={(e) => {
-                            const destinadorId = e.target.value;
-                            const destinador = allDestinadores.find(d => d.id === destinadorId);
-                            if (destinador) {
-                                const unidade = destinador.codigoUnidade ? parseInt(destinador.codigoUnidade, 10) : null;
-                                handlePayloadChange('destinador', { unidade: isNaN(unidade) ? null : unidade, cpfCnpj: destinador.cnpj.replace(/\D/g,'') });
-                                setCurrentResiduo(prev => ({ ...prev, traCodigo: '' }));
-                            } else { handlePayloadChange('destinador', null); }
-                        }}>
-                        <option value="">-- Selecione --</option>
-                        {destinadoresFiltrados.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
-                    </select>
-                </div>
-            </div>
-
-            <div className="pt-6 border-t border-early-frost space-y-4">
-                <h3 className="font-lexend text-xl text-rain-forest">Detalhar Resíduo</h3>
-                <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Resíduo (IBAMA) <span className="text-apricot-orange">*</span></label>
-                    <select name="resCodigoIbama" value={currentResiduo.resCodigoIbama} onChange={handleCurrentResiduoChange} className="w-full p-2 border border-early-frost rounded-md" disabled={!listasDeApoio}><option value="">Selecione o Resíduo</option>{listasDeApoio?.Residuo.map(r => <option key={r.resCodigoIbama} value={r.resCodigoIbama}>{r.resCodigoIbama} - {r.resDescricao}</option>)}</select>
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Quantidade <span className="text-apricot-orange">*</span></label>
-                        <input type="number" step="0.001" name="marQuantidade" placeholder="Ex: 1.250" value={currentResiduo.marQuantidade} onChange={handleCurrentResiduoChange} className="w-full p-2 border rounded-md" disabled={!listasDeApoio} />
-                    </div>
-                    <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Unidade <span className="text-apricot-orange">*</span></label>
-                        <select name="uniCodigo" value={currentResiduo.uniCodigo} onChange={handleCurrentResiduoChange} className="w-full p-2 border rounded-md" disabled={!listasDeApoio}><option value="">Unidade</option>{listasDeApoio?.Unidade.map(u => <option key={u.uniCodigo} value={u.uniCodigo}>{u.uniDescricao}</option>)}</select>
-                    </div>
-                </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Tratamento <span className="text-apricot-orange">*</span></label>
-                    <select name="traCodigo" value={currentResiduo.traCodigo} onChange={handleCurrentResiduoChange} className="w-full p-2 border border-early-frost rounded-md" disabled={!listasDeApoio}><option value="">Selecione o Tratamento</option>{tratamentosFiltrados.map(t => <option key={t.traCodigo} value={t.traCodigo}>{t.traDescricao}</option>)}</select>
-                </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Classe <span className="text-apricot-orange">*</span></label>
-                    <select name="claCodigo" value={currentResiduo.claCodigo} onChange={handleCurrentResiduoChange} className="w-full p-2 border border-early-frost rounded-md" disabled={!listasDeApoio}><option value="">Selecione a Classe</option>{listasDeApoio?.Classe.map(c => <option key={c.claCodigo} value={c.claCodigo}>{c.claDescricao}</option>)}</select>
-                </div>
-                <button type="button" onClick={handleAddResiduo} className="w-full bg-abundant-green text-white py-2 px-3 rounded-md hover:bg-rain-forest transition-colors mt-4">Adicionar Resíduo à Lista</button>
-            </div>
-             <div className="pt-4">
-                <h4 className="font-lexend text-lg">Resíduos Adicionados: {mtrPayload.listaManifestoResiduos.length}</h4>
-            </div>
-        </section>
-
-        {/* --- CARD 4: AÇÕES FINAIS --- */}
-        <section className="bg-white p-6 rounded-lg shadow-md space-y-4">
-            <h2 className="text-subtitulo font-lexend text-blue-coral border-b border-early-frost pb-3">Passo 4: Finalizar</h2>
-            <div className="flex flex-col sm:flex-row gap-4">
-                <button onClick={handlePreviewPayload} className="flex-1 bg-golden-orange text-white font-bold py-2 px-4 rounded-md hover:opacity-90 transition-opacity">Pré-visualizar Dados</button>
-                <button onClick={handleFinalSubmit} className="flex-1 bg-apricot-orange text-white font-lexend text-acao py-3 px-4 rounded-md hover:opacity-90 transition-opacity">GERAR MTR OFICIAL</button>
-            </div>
-        </section>
-        
-        {/* --- SANFONA (ACCORDION) PARA O LOG --- */}
-        <div className="bg-white rounded-lg shadow-md">
-          <button 
-            onClick={() => setIsLogVisible(!isLogVisible)}
-            className="w-full flex justify-between items-center p-4 text-left"
-          >
-            <h2 className="font-lexend text-lg text-gray-700">Painel de Resposta (Log Visual)</h2>
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className={`w-6 h-6 transform transition-transform duration-300 ${isLogVisible ? 'rotate-180' : ''}`}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5" />
-            </svg>
-          </button>
-          
-          {isLogVisible && (
-            <div className="p-4 border-t border-early-frost">
-              <div className="bg-gray-800 text-white p-4 rounded-md min-h-[200px] text-sm font-mono overflow-x-auto">
-                {status === 'carregando' && <p>Carregando...</p>}
-                {apiResponse && (<pre className="whitespace-pre-wrap break-all">{JSON.stringify(apiResponse, null, 2)}</pre>)}
-              </div>
-            </div>
-          )}
         </div>
 
+        <div className="bg-white p-4 rounded-lg shadow-md disabled:opacity-50" disabled={!cliente}>
+            <h2 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Passo 3: Autenticação SIGOR</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+                <input type="text" name="cpfCnpj" placeholder="CPF/CNPJ (automático)" value={credentials.cpfCnpj} onChange={handleCredentialChange} className="p-2 border rounded-md bg-gray-100" readOnly />
+                 <input type="password" name="senha" placeholder="Senha" value={credentials.senha} onChange={handleCredentialChange} className="p-2 border rounded-md" />
+                <input type="text" name="unidade" placeholder="Unidade (automático)" value={credentials.unidade} onChange={handleCredentialChange} className="p-2 border rounded-md bg-gray-100" readOnly />
+            </div>
+                <button onClick={handleAuth} className="bg-gray-700 text-white font-bold py-2 px-4 rounded-md hover:bg-gray-800 w-full">Obter Token de Acesso</button>
+        </div>
+
+        <div className="disabled:opacity-50" disabled={!token}>
+            <div className="bg-white p-4 rounded-lg shadow-md">
+                <h2 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Passo 4: Montar Objeto MTR</h2>
+                <div className="space-y-4">
+                    <fieldset className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div><label className="block text-sm font-medium text-gray-700">Data de Expedição</label>
+                          <DatePicker
+                              // Props que você já tem
+                              selected={new Date(mtrPayload.dataExpedicao)}
+                              onChange={handleDateChange}
+                              locale="pt-BR"
+                              className="w-full p-2 border border-gray-300 rounded-md"
+                              showTimeSelect
+                              timeFormat="HH:mm"
+                              timeIntervals={15}
+                              timeCaption="Hora"
+                              dateFormat="dd/MM/yyyy HH:mm"
+                              shouldCloseOnSelect={false}
+                          />
+                        </div>
+                        <div><label className="block text-sm font-medium text-gray-700">Nome do Motorista</label><input type="text" value={mtrPayload.nomeMotorista} onChange={(e) => handlePayloadChange('nomeMotorista', e.target.value)} className="mt-1 block w-full p-2 border border-gray-300 rounded-md"/></div>
+                        <div><label className="block text-sm font-medium text-gray-700">Placa do Veículo</label><input type="text" value={mtrPayload.placaVeiculo} onChange={(e) => handlePayloadChange('placaVeiculo', e.target.value)} className="mt-1 block w-full p-2 border border-gray-300 rounded-md"/></div>
+                        <div className="md:col-span-2"><label className="block text-sm font-medium text-gray-700">Observações</label><textarea value={mtrPayload.observacoes} onChange={(e) => handlePayloadChange('observacoes', e.target.value)} className="mt-1 block w-full p-2 border border-gray-300 rounded-md"/></div>
+                    </fieldset>
+                    <fieldset className="border p-4 rounded-md space-y-4">
+                        <legend className="text-md font-medium px-2">Adicionar Resíduo</legend>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">1. Selecione o Tipo de Resíduo</label>
+                            <select name="tipoResiduo" value={currentResiduo.tipoResiduo} onChange={handleCurrentResiduoChange} className="mt-1 block w-full p-2 border border-gray-300 rounded-md"><option value="">-- Selecione --</option>{tiposDeResiduoDisponiveis.map(tipo => <option key={tipo} value={tipo}>{tipo}</option>)}</select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">2. Selecione o Transportador</label>
+                            <select value={selectedTransportadorId} onChange={(e) => {
+                                    const transportadorId = e.target.value;
+                                    setSelectedTransportadorId(transportadorId);
+                                    handlePayloadChange('destinador', null);
+                                    const transportador = transportadores.find(t => t.id === transportadorId);
+                                    if (transportador) {
+                                        const unidade = transportador.codigoUnidade ? parseInt(transportador.codigoUnidade, 10) : null;
+                                        handlePayloadChange('transportador', { unidade: isNaN(unidade) ? null : unidade, cpfCnpj: transportador.cnpj.replace(/\D/g,'') });
+                                    } else { handlePayloadChange('transportador', null); }
+                                }} className="mt-1 block w-full p-2 border border-gray-300 rounded-md" disabled={transportadoresFiltrados.length === 0}>
+                                <option value="">-- Selecione --</option>
+                                {transportadoresFiltrados.map(t => <option key={t.id} value={t.id}>{t.nomeFantasia}</option>)}
+                            </select>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">3. Selecione o Destinador</label>
+                            <select value={mtrPayload.destinador ? allDestinadores.find(d => d.cnpj.replace(/\D/g, '') === mtrPayload.destinador.cpfCnpj)?.id : ''} className="mt-1 block w-full p-2 border border-gray-300 rounded-md" disabled={destinadoresFiltrados.length === 0} onChange={(e) => {
+                                    const destinadorId = e.target.value;
+                                    const destinador = allDestinadores.find(d => d.id === destinadorId);
+                                    if (destinador) {
+                                        const unidade = destinador.codigoUnidade ? parseInt(destinador.codigoUnidade, 10) : null;
+                                        handlePayloadChange('destinador', { unidade: isNaN(unidade) ? null : unidade, cpfCnpj: destinador.cnpj.replace(/\D/g,'') });
+                                        setCurrentResiduo(prev => ({ ...prev, traCodigo: '' }));
+                                    } else { handlePayloadChange('destinador', null); }
+                                }}>
+                                <option value="">-- Selecione --</option>
+                                {destinadoresFiltrados.map(d => <option key={d.id} value={d.id}>{d.nome}</option>)}
+                            </select>
+                        </div>
+                        <div className="pt-4 border-t">
+                            <h3 className="text-sm font-medium text-gray-700">4. Detalhe o Resíduo</h3>
+                            <select name="resCodigoIbama" value={currentResiduo.resCodigoIbama} onChange={handleCurrentResiduoChange} className="mt-2 block w-full p-2 border border-gray-300 rounded-md" disabled={!listasDeApoio}><option value="">Selecione o Resíduo (IBAMA)</option>{listasDeApoio?.Residuo.map(r => <option key={r.resCodigoIbama} value={r.resCodigoIbama}>{r.resCodigoIbama} - {r.resDescricao}</option>)}</select>
+                            <div className="grid grid-cols-2 gap-4 mt-2">
+                                <input type="number" step="0.001" name="marQuantidade" placeholder="Quantidade" value={currentResiduo.marQuantidade} onChange={handleCurrentResiduoChange} className="p-2 border rounded-md" disabled={!listasDeApoio} />
+                                <select name="uniCodigo" value={currentResiduo.uniCodigo} onChange={handleCurrentResiduoChange} className="p-2 border rounded-md" disabled={!listasDeApoio}><option value="">Unidade</option>{listasDeApoio?.Unidade.map(u => <option key={u.uniCodigo} value={u.uniCodigo}>{u.uniDescricao}</option>)}</select>
+                            </div>
+                            <select name="traCodigo" value={currentResiduo.traCodigo} onChange={handleCurrentResiduoChange} className="mt-2 block w-full p-2 border border-gray-300 rounded-md" disabled={!listasDeApoio}><option value="">Tratamento</option>{tratamentosFiltrados.map(t => <option key={t.traCodigo} value={t.traCodigo}>{t.traDescricao}</option>)}</select>
+                            <select name="claCodigo" value={currentResiduo.claCodigo} onChange={handleCurrentResiduoChange} className="mt-2 block w-full p-2 border border-gray-300 rounded-md" disabled={!listasDeApoio}><option value="">Classe</option>{listasDeApoio?.Classe.map(c => <option key={c.claCodigo} value={c.claCodigo}>{c.claDescricao}</option>)}</select>
+                            <button type="button" onClick={handleAddResiduo} className="bg-gray-200 text-gray-800 py-1 px-3 rounded-md hover:bg-gray-300 w-full mt-4">Adicionar Resíduo à Lista</button>
+                        </div>
+                    </fieldset>
+                    <div><h4 className="text-md font-medium">Resíduos Adicionados: {mtrPayload.listaManifestoResiduos.length}</h4></div>
+                    <hr/>
+                    <button onClick={handlePreviewPayload} className="bg-green-600 text-white font-bold py-2 px-4 rounded-md hover:bg-green-700 w-full">Pré-visualizar Objeto MTR</button>
+                </div>
+            </div>
+
+            <div className="bg-white p-4 rounded-lg shadow-md mt-6">
+              <h2 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Passo 5: Envio Final</h2>
+              <p className="text-sm text-gray-500 mb-4">Este botão pegará o objeto MTR montado e o enviará para a API da SIGOR para geração oficial.</p>
+              <button onClick={handleFinalSubmit} className="bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700 transition-colors w-full">GERAR MTR NA SIGOR</button>
+            </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-inner">
+          <h2 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Painel de Resposta (Log Visual)</h2>
+          <div className="bg-gray-800 text-white p-4 rounded-md min-h-[200px] text-sm font-mono">
+            {status === 'carregando' && <p>Carregando...</p>}
+            {apiResponse && (<pre className="whitespace-pre-wrap break-all">{JSON.stringify(apiResponse, null, 2)}</pre>)}
+          </div>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-md">
+          <h2 className="text-lg font-semibold text-gray-700 border-b pb-2 mb-4">Fase 4: Envio Final</h2>
+          <p className="text-sm text-gray-500 mb-4">Este botão pegará o objeto MTR montado e o enviará para a API da SIGOR para geração oficial.</p>
+          <button onClick={handleFinalSubmit} className="bg-red-600 text-white font-bold py-2 px-4 rounded-md hover:bg-red-700 transition-colors w-full">
+            4. GERAR MTR NA SIGOR
+          </button>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-inner"></div>
       </div>
     </div>
-);
+  );
 };
 
 export default GerarMtrSP;
